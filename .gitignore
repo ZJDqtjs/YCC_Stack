@@ -1,0 +1,24 @@
+# 构建产物
+bin/
+dist/
+
+# 运行时数据与本地测试产生的目录
+data/
+data-e2e/
+ft/
+ft-data/
+rt/
+rt-a/
+rt-b/
+rt-data/
+run/
+smoke/
+worker-cache/
+samples/
+
+# 临时文件
+*.log
+cookies.txt
+agent.key
+__pycache__/
+*.pyc

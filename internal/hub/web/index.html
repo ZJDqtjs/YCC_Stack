@@ -1,0 +1,747 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>星栈算力 · 闲置算力共享平台</title>
+<style>
+:root{
+  --bg:#0b0f14; --panel:#131a22; --panel2:#182230; --line:#243244;
+  --fg:#dce6f2; --dim:#8296ad; --acc:#48c9b0; --warn:#e0a458;
+  --bad:#e05c5c; --ok:#57c98a; --pend:#3a4a5e;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);
+  font:14px/1.5 ui-sans-serif,system-ui,"Segoe UI","Microsoft YaHei",sans-serif}
+header{padding:14px 24px;border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+header h1{margin:0;font-size:17px;font-weight:600;letter-spacing:.3px}
+header .sub{color:var(--dim);font-size:12px}
+.spacer{flex:1}
+.wallet{font-size:13px;color:var(--dim)}
+.wallet b{color:var(--acc);font-size:16px;font-weight:600}
+nav{display:flex;gap:6px;padding:10px 24px;border-bottom:1px solid var(--line);
+  flex-wrap:wrap;background:#0d131b;position:sticky;top:0;z-index:5}
+nav button{width:auto;margin:0;padding:6px 14px;font-size:13px;background:transparent;
+  color:var(--dim);border:1px solid transparent;border-radius:7px;font-weight:500}
+nav button.on{background:var(--panel2);color:var(--fg);border-color:var(--line)}
+main{padding:20px 24px 60px;max-width:1280px;margin:0 auto}
+.view{display:none}.view.on{display:block}
+.grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:16px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:16px}
+.card h2{margin:0 0 10px;font-size:13px;font-weight:600;color:var(--dim);
+  text-transform:uppercase;letter-spacing:.8px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;color:var(--dim);font-weight:500;padding:4px 6px;border-bottom:1px solid var(--line)}
+td{padding:6px;border-bottom:1px solid #1c2634;vertical-align:top}
+.tag{display:inline-block;padding:1px 7px;border-radius:99px;font-size:11px;
+  background:#1e2b3a;color:#9fb4cc;margin:1px 3px 1px 0;white-space:nowrap}
+.tag.on{background:#153028;color:var(--ok)}
+.tag.off{background:#30191b;color:var(--bad)}
+.tag.mine{background:#1b2b3f;color:#7fb2e0}
+.tag.gpu{background:#2a2338;color:#c8b3e8}
+.bar{height:8px;background:#1a2634;border-radius:4px;overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--acc);transition:width .3s}
+.pieces{display:flex;gap:4px;flex-wrap:wrap;margin-top:8px}
+.pc{width:64px;height:44px;border-radius:6px;background:var(--panel2);border:1px solid var(--line);
+  padding:4px 5px;font-size:10px;color:var(--dim);position:relative;overflow:hidden}
+.pc .fill{position:absolute;left:0;bottom:0;width:100%;background:#1f5f52;opacity:.75}
+.pc .lbl{position:relative;z-index:1;font-weight:600;color:var(--fg)}
+.pc.done{border-color:#2c6b4f}.pc.running{border-color:var(--acc)}
+.pc.failed{border-color:var(--bad)}.pc.pending{border-style:dashed}
+label{display:block;font-size:11px;color:var(--dim);margin:10px 0 3px}
+input,select,button{width:100%;padding:7px 9px;border-radius:6px;border:1px solid var(--line);
+  background:#0e1520;color:var(--fg);font:inherit;font-size:13px}
+input[type=checkbox]{width:auto}
+button{background:var(--acc);color:#06231c;font-weight:600;border:0;cursor:pointer;margin-top:14px}
+button:disabled{opacity:.45;cursor:default}
+button.ghost{background:transparent;color:var(--acc);border:1px solid var(--acc);font-weight:500;
+  width:auto;padding:5px 12px;margin:0;font-size:12px}
+button.tiny{width:auto;padding:3px 10px;margin:0;font-size:11.5px;font-weight:500}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.job{border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px;background:var(--panel)}
+.job h3{margin:0 0 4px;font-size:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.st{font-size:11px;padding:2px 8px;border-radius:99px;background:var(--pend);color:#cfe0f0}
+.st.done{background:#153028;color:var(--ok)}.st.running{background:#12303a;color:var(--acc)}
+.st.failed{background:#30191b;color:var(--bad)}.st.queued,.st.merging{background:#2a2338;color:#b9a8d8}
+.note{color:var(--dim);font-size:11.5px;margin:2px 0 8px;word-break:break-all}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-top:10px}
+.stat{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:7px 9px}
+.stat b{display:block;font-size:16px;font-weight:600}
+.stat span{font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
+.stat.hl b{color:var(--acc)}
+.err{color:var(--bad);font-size:12px;margin-top:8px}
+.empty{color:var(--dim);font-size:12.5px;padding:16px 0;text-align:center}
+.hint{color:var(--dim);font-size:11.5px;margin-top:10px;line-height:1.6}
+code{background:#0e1520;padding:1px 5px;border-radius:4px;font-size:11.5px;color:#a8c7e0}
+.prog{display:flex;align-items:center;gap:10px;margin-top:10px}
+.prog .bar{flex:1}
+.quote{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-top:12px;font-size:12.5px}
+.quote .big{font-size:20px;font-weight:600;color:var(--acc)}
+.quote .no{color:var(--warn)}
+.split{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:16px;align-items:start}
+@media(max-width:900px){.split{grid-template-columns:1fr}}
+.auth{max-width:360px;margin:40px auto}
+.tabs{display:flex;gap:6px;margin-bottom:12px}
+.tabs button{margin:0;flex:1;background:var(--panel2);color:var(--fg);font-weight:500;border:1px solid var(--line)}
+.tabs button.on{background:var(--acc);color:#06231c;font-weight:600}
+.kind{font-size:11px;padding:1px 7px;border-radius:99px;background:#1e2b3a;color:#9fb4cc}
+.kind.hold{background:#2a2338;color:#c8b3e8}.kind.settle{background:#153028;color:var(--ok)}
+.kind.refund{background:#12303a;color:var(--acc)}.kind.earn{background:#153028;color:var(--ok)}
+.kind.recharge{background:#1b2b3f;color:#7fb2e0}
+.pos{color:var(--ok)}.neg{color:var(--warn)}
+</style>
+</head>
+<body>
+<header>
+  <h1>星栈算力</h1>
+  <div class="sub">闲置算力共享：Provider Agent 上报软硬件清单 → Broker 两阶段匹配 → 分片并行执行 → 校验后按用量结算</div>
+  <div class="spacer"></div>
+  <div class="wallet" id="wallet"></div>
+</header>
+
+<nav id="nav" style="display:none">
+  <button data-v="submit" class="on">提交任务</button>
+  <button data-v="jobs">我的任务</button>
+  <button data-v="market">算力市场</button>
+  <button data-v="nodes">我的节点</button>
+  <button data-v="bill">账单</button>
+  <button class="ghost" id="logout" style="margin:0 0 0 auto">退出</button>
+</nav>
+
+<main>
+<!-- ---------- 未登录 ---------- -->
+<section class="view on" id="v-auth">
+  <div class="card auth">
+    <div class="tabs">
+      <button id="t-login" class="on">登录</button>
+      <button id="t-reg">注册</button>
+    </div>
+    <label>用户名</label><input id="name" autocomplete="username" placeholder="2-24 个字符">
+    <label>密码</label><input id="pass" type="password" autocomplete="current-password" placeholder="至少 8 位">
+    <div id="reg2" style="display:none">
+      <label>确认密码</label><input id="pass2" type="password" autocomplete="new-password">
+    </div>
+    <button id="go">登录</button>
+    <div id="authmsg" class="hint"></div>
+    <div class="hint">口令以 PBKDF2-HMAC-SHA256（20 万次迭代 + 随机盐）存储，服务端不保存明文；
+      会话为 HttpOnly Cookie，有效期 30 天。<span id="signupnote"></span></div>
+  </div>
+</section>
+
+<!-- ---------- 提交任务 ---------- -->
+<section class="view" id="v-submit">
+  <div class="grid">
+    <div class="card">
+      <h2>转码任务（Consumer 侧）</h2>
+      <form id="f">
+        <label>上传视频文件</label>
+        <input type="file" name="file" accept="video/*,audio/*">
+        <div id="pathbox">
+        <label>…或使用服务端本机路径（同机演示更快）</label>
+        <input name="path" placeholder="D:/videos/input.mp4">
+        </div>
+        <div class="row3">
+          <div><label>目标编码器</label><select name="vcodec">
+            <option value="h264_nvenc">h264_nvenc (GPU)</option>
+            <option value="hevc_nvenc">hevc_nvenc (GPU)</option>
+            <option value="libx264" selected>libx264 (CPU)</option>
+            <option value="libx265">libx265 (CPU)</option>
+          </select></div>
+          <div><label>preset</label><select name="preset">
+            <option>ultrafast</option><option>veryfast</option><option selected>fast</option>
+            <option>medium</option><option>slow</option>
+          </select></div>
+          <div><label>切分片数</label><input name="segs" value="4" inputmode="numeric"></div>
+        </div>
+        <div class="row3">
+          <div><label>质量 QP/CRF</label><input name="q" value="26" inputmode="numeric"></div>
+          <div><label>目标高度 (0=原始)</label><input name="height" value="0" inputmode="numeric"></div>
+          <div><label>音轨</label><select name="audio"><option value="1" selected>保留</option><option value="0">丢弃</option></select></div>
+        </div>
+
+        <h2 style="margin-top:18px">硬件与运行时要求（硬约束过滤）</h2>
+        <div class="row">
+          <div><label>需要独显</label><select name="need_gpu"><option value="0">不限</option><option value="1">必须有 GPU</option></select></div>
+          <div><label>最小显存 MB</label><input name="min_gpu_mem" value="0" inputmode="numeric" placeholder="0=不限"></div>
+        </div>
+        <div class="row">
+          <div><label>最少 CPU 核</label><input name="min_cpus" value="0" inputmode="numeric"></div>
+          <div><label>最小内存 MB</label><input name="min_mem" value="0" inputmode="numeric"></div>
+        </div>
+        <div class="row">
+          <div><label>要求运行时</label><select name="runtime">
+            <option value="">不限</option><option value="ffmpeg">ffmpeg</option>
+            <option value="blender">blender</option><option value="cuda">cuda (nvcc)</option>
+            <option value="docker">docker</option><option value="python">python</option>
+          </select></div>
+          <div><label>限定系统架构</label><select name="arch">
+            <option value="">不限</option><option value="amd64">amd64</option><option value="arm64">arm64</option>
+          </select></div>
+        </div>
+        <div class="row">
+          <div><label>单价上限 点/视频秒</label><input name="max_price" value="0" inputmode="decimal" placeholder="0=不限"></div>
+          <div><label>视频时长（估费用用，秒）</label><input name="duration" value="0" inputmode="decimal"></div>
+        </div>
+
+        <label id="baselinebox" style="display:flex;align-items:center;gap:8px;margin-top:12px;color:var(--fg);font-size:12.5px">
+          <input type="checkbox" name="baseline" value="1" checked style="width:auto">
+          同时跑单机基线（真实加速比的可测量依据；基线用 broker 本机算力，不结算给任何节点）
+        </label>
+        <button type="submit" id="submitbtn">提交任务</button>
+        <div id="msg" class="hint"></div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>报价与可调度算力</h2>
+      <div id="quote" class="quote">选择文件后自动估算</div>
+      <div class="hint">
+        预扣 = 视频总时长 ×「满足全部硬约束的最贵在线节点」单价：宁可多扣，也不让任务中途故障转移
+        到更贵机器时平台倒贴。实际按每个分片「视频秒数 × 派发时锁定的单价」结算，差额在完成或失败时退还。
+      </div>
+      <div id="deadlinenote" class="hint"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ---------- 我的任务 ---------- -->
+<section class="view" id="v-jobs"><div id="jobs"><div class="empty">加载中…</div></div></section>
+
+<!-- ---------- 算力市场 ---------- -->
+<section class="view" id="v-market">
+  <div class="card">
+    <h2>按能力聚合的可调度切片</h2>
+    <table id="market"><thead><tr>
+      <th>编码能力</th><th>在线节点</th><th>空闲槽位</th><th>单价区间</th><th>实测吞吐</th><th>最强独显</th>
+    </tr></thead><tbody><tr><td colspan="6" class="empty">尚无在线算力</td></tr></tbody></table>
+    <div class="hint">同一台机器可同时提供多种编码能力，因此按能力分桶后节点数会重复计数；
+      真实可用并行度看「空闲槽位」。他人机器只展示规格与价格，不展示主机名与地址。</div>
+  </div>
+  <div class="card">
+    <h2>全部在线节点</h2>
+    <table id="pool"><thead><tr>
+      <th>节点</th><th>硬件</th><th>运行时</th><th>编码能力</th><th>占用</th><th>吞吐</th><th>信誉</th><th>单价</th>
+    </tr></thead><tbody><tr><td colspan="8" class="empty">尚无节点注册</td></tr></tbody></table>
+  </div>
+</section>
+
+<!-- ---------- 我的节点 ---------- -->
+<section class="view" id="v-nodes">
+  <div class="split">
+    <div class="card">
+      <h2>一键提供算力</h2>
+      <div class="hint" style="margin-top:0">
+        不用装环境、不用复制令牌：填好下面的参数，下载一个启动脚本，在要贡献的那台机器上双击运行，
+        这台机器就会以你的账户身份加入算力池并开始计收益。关掉窗口即停止。
+      </div>
+      <label>机器名称</label>
+      <input id="lname" placeholder="例如 宿舍的台式机">
+      <div style="display:flex;gap:8px">
+        <div style="flex:1"><label>单价（算力点 / 视频秒）</label>
+          <input id="lprice" type="number" min="0.05" max="1000" step="0.05" value="0.80"></div>
+        <div style="flex:1"><label>并发槽</label>
+          <input id="lslots" type="number" min="1" value="2"></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <div style="flex:1"><label>那台机器的系统</label>
+          <select id="los"><option value="windows">Windows</option>
+            <option value="linux">Linux</option><option value="darwin">macOS</option></select></div>
+        <div style="flex:1"><label>芯片</label>
+          <select id="larch"><option value="amd64">x86_64 / Intel·AMD</option>
+            <option value="arm64">arm64 / 苹果 M 系·麒麟</option></select></div>
+      </div>
+      <button id="launchbtn" style="margin-top:14px">下载启动脚本</button>
+      <div id="launchmsg" class="hint"></div>
+      <div id="launchwarn" class="hint" style="color:#e8a33d"></div>
+      <details style="margin-top:14px">
+        <summary class="hint">高级用法：手动运行 Provider Agent</summary>
+        <pre id="agentcmd" style="background:#0e1520;border:1px solid var(--line);border-radius:8px;padding:10px;
+      font-size:11.5px;overflow:auto;margin:10px 0;color:#a8c7e0"></pre>
+        <div class="hint">启动后 Agent 会打印一个一次性配对码，输入后即可把这机器挂到你的账户下并开始获得收益。</div>
+        <label>配对码</label>
+        <div style="display:flex;gap:8px">
+          <input id="code" placeholder="例如 A1B2C3" style="text-transform:uppercase">
+          <button class="ghost tiny" id="pair" style="margin:14px 0 0">认领</button>
+        </div>
+        <div id="pairmsg" class="hint"></div>
+      </details>
+      <div id="pendingbox">
+      <div class="hint" style="margin-top:14px">本机已上报、等待认领的 Agent：</div>
+      <div id="pending"><div class="empty">加载中…</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>我的机器</h2>
+      <div id="mynodes"><div class="empty">还没有属于你的节点</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ---------- 账单 ---------- -->
+<section class="view" id="v-bill">
+  <div class="grid">
+    <div class="card">
+      <h2>账户流水</h2>
+      <div id="recharge" style="display:flex;gap:8px;margin-bottom:10px">
+        <input id="ramount" type="number" min="1" value="100" placeholder="充值算力点">
+        <button class="ghost tiny" id="dochARGE" style="margin:0">充值</button>
+      </div>
+      <table id="spend"><thead><tr><th>时间</th><th>类型</th><th>变动</th><th>余额</th><th>说明</th></tr></thead>
+      <tbody><tr><td colspan="5" class="empty">暂无记录</td></tr></tbody></table>
+    </div>
+    <div class="card">
+      <h2>我的节点收益</h2>
+      <table id="earn"><thead><tr><th>时间</th><th>节点</th><th>算力点</th><th>说明</th></tr></thead>
+      <tbody><tr><td colspan="4" class="empty">暂无收益</td></tr></tbody></table>
+      <div class="hint">收益只在「节点自报哈希 == broker 重算哈希」的分片上发放：校验不通过不结算，
+        这是半可信平台敢于付钱的前提。</div>
+    </div>
+  </div>
+</section>
+</main>
+
+<script>
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+// A reverse proxy may mount the broker under a prefix (nginx: /starstack/).
+// Every path in this page is written absolute against the broker, so derive the
+// prefix from where the console itself was served and prepend it to each
+// same-origin fetch instead of hard-coding a deployment shape.
+const BASE=(location.pathname.match(/^(\/[A-Za-z0-9_-]+(?:\/[A-Za-z0-9_-]+)*)\/[^/]*$/)||['',''])[1];
+const rawFetch=window.fetch.bind(window);
+window.fetch=(u,o)=>rawFetch(typeof u==='string'&&u.startsWith('/')?BASE+u:u,o);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const f1=v=>Number(v||0).toFixed(1), f2=v=>Number(v||0).toFixed(2), pt=v=>Number(v||0).toFixed(2)+' 点';
+const api=async(u,o)=>{const r=await fetch(u,o);const t=await r.text();
+  let d=null;try{d=JSON.parse(t)}catch(e){}
+  if(!r.ok) throw (d&&d.error)||t||('HTTP '+r.status);return d};
+const post=(u,body)=>api(u,{method:'POST',headers:{'Content-Type':'application/json'},
+  body:JSON.stringify(body)});
+
+let ME=null, POOL=[], LIVE={}, TIMER=null, DUR=0, POL=null;
+
+/* ---------------- 视图切换 ---------------- */
+$$('#nav button[data-v]').forEach(b=>b.onclick=()=>{
+  $$('#nav button[data-v]').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+  $$('.view').forEach(v=>v.classList.remove('on'));
+  $('#v-'+b.dataset.v).classList.add('on');
+  paint();
+});
+
+/* ---------------- 登录 / 注册 ---------------- */
+let mode='login';
+$('#t-login').onclick=()=>setMode('login');
+$('#t-reg').onclick=()=>setMode('reg');
+function setMode(m){mode=m;$('#t-login').classList.toggle('on',m==='login');
+  $('#t-reg').classList.toggle('on',m==='reg');
+  $('#reg2').style.display=m==='reg'?'block':'none';
+  $('#go').textContent=m==='reg'?'注册并登录':'登录';$('#authmsg').textContent=''}
+$('#go').onclick=async()=>{
+  const name=$('#name').value.trim(), pass=$('#pass').value;
+  if(mode==='reg' && pass!==$('#pass2').value){$('#authmsg').textContent='两次密码不一致';return}
+  $('#go').disabled=true;$('#authmsg').textContent='正在计算口令哈希…';
+  try{
+    ME=await post('/api/auth/'+(mode==='reg'?'register':'login'),{name,password:pass});
+    $('#authmsg').textContent='';$('#pass').value='';$('#pass2').value='';
+    enter();
+  }catch(e){$('#authmsg').textContent='失败：'+e}
+  finally{$('#go').disabled=false}
+};
+$('#logout').onclick=async()=>{await post('/api/auth/logout',{});location.reload()};
+
+function enter(){
+  $('#v-auth').classList.remove('on');
+  // the auth card owns the only .view.on in the markup; without activating a
+  // section here, login leaves the page blank until you click a tab
+  $('#v-'+activeView()).classList.add('on');
+  $('#nav').style.display='flex';
+  $('#wallet').innerHTML=`${esc(ME.name)} · 余额 <b>${f2(ME.credits)}</b> 算力点`;
+  refresh();
+}
+
+/* ---------------- 部署形态 ---------------- */
+// The same console serves the thesis demo and the internet-facing broker, and the
+// server decides which affordances exist. Rendering a recharge box or a
+// broker-local path field that the API refuses anyway only teaches people that
+// the UI lies, so the page asks the broker what it is allowed to show.
+function applyPolicy(){
+  if(!POL) return;
+  $('#signupnote').innerHTML = POL.signup_credit > 0
+    ? `新用户注册赠送 <code>${f2(POL.signup_credit)}</code> 算力点用于体验完整链路`
+      + (POL.recharge ? '。' : '；本部署关闭了自助充值，额度用完请联系管理员。')
+    : '本注册不赠送算力点。';
+  $('#recharge').style.display = POL.recharge ? 'flex' : 'none';
+  $('#pathbox').style.display = POL.local_path ? 'block' : 'none';
+  $('#baselinebox').style.display = POL.public ? 'none' : 'flex';
+  $('#pendingbox').style.display = POL.pending ? 'block' : 'none';
+  const tok = POL.public ? ' \\\n  --token <运维分配的接入令牌>' : '';
+  $('#agentcmd').textContent =
+    `starstack-worker --server ${location.origin + BASE} \\\n  --name 我的旧台式机 --price 0.8${tok}`;
+  // The launcher only works if the operator published the worker binaries, and
+  // the only ones the console can promise are the platform builds that exist on
+  // disk, so the dropdowns list exactly those.
+  const bins = {windows:'launch_windows', linux:'launch_linux', darwin:'launch_darwin'};
+  const sel = $('#los'), cur = sel.value;
+  [...sel.options].forEach(o=>{o.disabled = !POL[bins[o.value]]});
+  if(!POL[bins[cur]]){
+    const first = [...sel.options].find(o=>POL[bins[o.value]]);
+    if(first) sel.value = first.value;
+  }
+  $('#launchbtn').disabled = !POL[bins[sel.value]];
+  $('#launchwarn').textContent = $('#launchbtn').disabled
+    ? '这台 Broker 还没有配置 --node-bin-dir，服务器上没有可下发的节点程序，一键启动暂不可用；'
+      + '可以用下面的手动方式，或让运维把 starstack-worker-<os>-<arch> 放进 --node-bin-dir。'
+    : '';
+  const dl = POL.min_job_deadline_sec ? Math.round(POL.min_job_deadline_sec / 60) : 0;
+  $('#deadlinenote').textContent = dl > 0
+    ? `任务从提交起最多运行 max(${dl} 分钟, ${f1(POL.job_slow_factor)} × 视频时长)，超时自动失败并退还未使用的预扣。`
+    : '';
+}
+
+/* ---------------- 轮询 ---------------- */
+async function refresh(){
+  try{
+    const st=await api('/api/state');
+    if(!st.signed_in){clearTimeout(TIMER);location.reload();return}
+    ME=st.me;POOL=st.workers||[];
+    if(st.policy) POL=st.policy;
+    applyPolicy();
+    LIVE={};(st.jobs||[]).forEach(j=>LIVE[j.id]=j);
+    $('#wallet').innerHTML=`${esc(ME.name)} · 余额 <b>${f2(ME.credits)}</b> 算力点`;
+    paint();
+  }catch(e){/* broker 正在重启 */}
+  TIMER=setTimeout(refresh,1000);
+}
+
+function activeView(){return $$('#nav button[data-v]').find(b=>b.classList.contains('on'))?.dataset.v||'submit'}
+
+function paint(){
+  const v=activeView();
+  if(v==='market') paintMarket();
+  if(v==='nodes') paintNodes();
+  if(v==='jobs') paintJobs();
+  if(v==='bill') paintBill();
+  if(v==='submit') quote();
+}
+
+/* ---------------- 硬件要求 → 预估 ---------------- */
+function reqFromForm(){
+  const g=n=>$('#f [name='+n+']')?$('#f [name='+n+']').value:'';
+  const r={};
+  if(g('need_gpu')==='1') r.need_gpu=true;
+  if(+g('min_gpu_mem')>0) r.min_gpu_mem_mb=+g('min_gpu_mem');
+  if(+g('min_cpus')>0) r.min_cpus=+g('min_cpus');
+  if(+g('min_mem')>0) r.min_mem_mb=+g('min_mem');
+  if(+g('max_price')>0) r.max_price=+g('max_price');
+  if(g('runtime')) r.runtime=g('runtime');
+  if(g('arch')) r.arch=g('arch');
+  return r;
+}
+$('#f').addEventListener('change',e=>{
+  if(e.target.name==='file'){
+    const f=e.target.files[0];if(!f)return;
+    const v=document.createElement('video');v.preload='metadata';
+    v.onloadedmetadata=()=>{if(isFinite(v.duration)&&v.duration>0){DUR=v.duration;
+      $('#f [name=duration]').value=Math.round(v.duration);quote()}};
+    v.src=URL.createObjectURL(f);
+  }
+  quote();
+});
+
+let quoteTimer=null;
+function quote(){
+  clearTimeout(quoteTimer);quoteTimer=setTimeout(async()=>{
+    const dur=+($('#f [name=duration]').value||DUR||0);
+    if(!(dur>0)){$('#quote').innerHTML='填视频时长或选择文件后自动估算';return}
+    const q=encodeURIComponent(JSON.stringify(reqFromForm()));
+    const vc=$('#f [name=vcodec]').value;
+    try{
+      const e=await api(`/api/estimate?duration=${dur}&vcodec=${vc}&req=${q}`);
+      const ok=e.affordable&&e.eligible>0;
+      const pick=e.first_pick?` · 首片预计派给 <b>${esc(e.first_pick.name)}</b>（${f2(e.first_pick.price)} 点/秒）`:'';
+      $('#quote').innerHTML=`
+        <div>时长 <b>${f1(dur)}</b> 秒 · 满足硬约束的在线节点 <b>${e.eligible}</b> 台</div>
+        <div style="margin:6px 0" class="${ok?'':'no'}">预扣 <span class="big">${f2(e.hold)}</span> 点
+          （${esc(e.hold_basis)} ${f2(e.hold_price)} 点/秒） · 最省 <b>${f2(e.cheapest)}</b> 点${pick}</div>
+        <div>余额 ${f2(e.balance)} 点 ${e.affordable?'· 足够':'· <span class="no">不足，请到账单页充值</span>'}</div>
+        ${e.eligible>0?`<div class="hint">可派发到：${e.nodes.map(n=>
+          `${esc(n.name)}（${f2(n.price)} 点/秒${n.mine?' · 我的机器':''}）`).join('、')}</div>`
+          :`<div class="hint no">没有任何在线节点满足这些硬约束，任务会一直排队到匹配的算力上线。</div>`}
+        ${POL&&POL.cost_weight>0?`<div class="hint">派发打分 = 实测吞吐 × 信誉 ×（可行池均价 ÷ 该节点单价）^${f2(POL.cost_weight)}，
+          便宜与快一起参与竞争，不是只看速度。</div>`:''}`;
+    }catch(err){$('#quote').textContent='估算失败：'+err}
+  },250);
+}
+
+$('#f').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const fd=new FormData(e.target);
+  if(!fd.get('baseline')) fd.set('baseline','0');
+  if(!fd.get('file')||!fd.get('file').size) fd.delete('file');
+  fd.set('req',JSON.stringify(reqFromForm()));
+  ['need_gpu','min_gpu_mem','min_cpus','min_mem','max_price','runtime','arch','duration']
+    .forEach(n=>fd.delete(n));
+  $('#submitbtn').disabled=true;$('#msg').textContent='上传并登记任务中…';
+  try{
+    const r=await fetch('/api/jobs',{method:'POST',body:fd});
+    const t=await r.text();let d=null;try{d=JSON.parse(t)}catch(x){}
+    if(!r.ok) throw (d&&d.error)||t;
+    $('#msg').textContent=`已入队 ${d.id}，预扣 ${f2(d.hold)} 点`;
+    $$('#nav button[data-v]').find(b=>b.dataset.v==='jobs').click();
+  }catch(err){$('#msg').textContent='失败：'+err}
+  finally{$('#submitbtn').disabled=false}
+});
+
+/* ---------------- 我的任务 ---------------- */
+const ST={pending:'待调度',leased:'已派发',fetching:'取源中',running:'转码中',uploading:'回传中',done:'完成',failed:'失败'};
+const INFLIGHT=['fetching','leased','running','uploading'];
+function pieceHTML(s){
+  const cls=s.status==='done'?'done':s.status==='failed'?'failed':
+    INFLIGHT.includes(s.status)?'running':'pending';
+  const h=Math.max(2,Math.min(100,(s.status==='done'?100:s.pct)))/100*36;
+  const who=s.worker? s.worker.slice(0,10):'—';
+  return `<div class="pc ${cls}" title="#${s.index} ${f1(s.start)}→${f1(s.start+s.dur)}s · ${who}
+      · ${s.status} · 成本 ${f2(s.cost||0)} 点">
+    <div class="fill" style="height:${h}px"></div><div class="lbl">#${s.index}<br>${esc(who)}</div></div>`;
+}
+function jobHTML(j){
+  const done=j.segs.filter(s=>s.status==='done').length;
+  const pct=j.segs.length? done/j.segs.length*100:0;
+  // 跨 Broker 重启的任务：墙钟里混进了停机窗口，任何比值都不再是调度的测量值
+  const speedup=(!j.resumed&&j.wall>0)? j.sum_wall/j.wall:0;
+  const real=(!j.resumed&&j.baseline&&j.baseline.status==='done'&&j.wall>0)? j.baseline.wall/j.wall:0;
+  const verified=j.segs.filter(s=>s.match).length;
+  let st=`<div class="stat"><b>${f1(j.wall||0)}s</b><span>分布式墙钟</span></div>
+    <div class="stat"><b>${f1(j.sum_wall||0)}s</b><span>分片耗时之和</span></div>
+    <div class="stat"><b>${speedup>0?f2(speedup)+'x':'—'}</b><span>分片并行比${j.resumed?'（跨重启不计量）':''}</span></div>
+    <div class="stat"><b>${done}/${j.segs.length}</b><span>分片完成</span></div>
+    <div class="stat"><b>${verified}/${j.segs.length}</b><span>哈希校验一致</span></div>
+    <div class="stat"><b>${f2(j.credits_spent||0)}</b><span>实结算点数</span></div>`;
+  if(j.released&&j.credits_hold>j.credits_spent)
+    st+=`<div class="stat"><b>+${f2(j.credits_hold-j.credits_spent)}</b><span>预扣退还</span></div>`;
+  if(j.baseline){
+    st+=`<div class="stat"><b>${j.baseline.status==='done'?f1(j.baseline.wall)+'s':
+      j.baseline.status==='failed'?'失败':j.baseline.status==='running'?'运行中':'排队'}</b><span>单机基线</span></div>`;
+    if(j.baseline.status==='done') st+=`<div class="stat hl"><b>${real>0?f2(real)+'x':'—'}</b>
+      <span>真实加速比${j.resumed?'（跨重启不计量）':''}</span></div>`;
+  }
+  const rq=[];
+  if(j.req.need_gpu) rq.push('需 GPU');
+  if(j.req.min_cpus) rq.push('≥'+j.req.min_cpus+' 核');
+  if(j.req.min_gpu_mem_mb) rq.push('显存≥'+j.req.min_gpu_mem_mb+'MB');
+  if(j.req.runtime) rq.push('需 '+j.req.runtime);
+  if(j.req.arch) rq.push(j.req.arch);
+  if(j.req.max_price) rq.push('≤'+f2(j.req.max_price)+' 点/秒');
+  return `<div class="job">
+    <h3>${esc(j.name)} <span class="st ${j.status}">${j.status}</span>
+      <span class="tag">${esc(j.profile.vcodec)} · Q${j.profile.q} · ${esc(j.profile.preset)}</span>
+      <span class="tag">${j.profile.height?j.profile.height+'p':'原始分辨率'}</span>
+      <span class="tag">${f1(j.duration)}s · ${j.segs.length} 片</span>
+      <span class="tag">预扣 ${f2(j.credits_hold||0)} 点</span>
+      ${j.resumed?'<span class="tag gpu">跨 Broker 重启恢复</span>':''}
+      ${rq.length?`<span class="tag gpu">硬约束：${rq.join(' / ')}</span>`:''}
+      ${j.status==='done'?`<button class="ghost" onclick="location='${BASE}/download/${j.id}'">下载产物</button>`:''}
+      ${(j.baseline&&j.baseline.status==='done')?`<button class="ghost" onclick="location='${BASE}/download/${j.id}?which=baseline'">下载基线</button>`:''}
+    </h3>
+    <div class="note">${esc(j.note)}</div>
+    <div class="prog"><div class="bar" style="flex:1"><i style="width:${pct}%"></i></div>
+      <span style="font-size:11.5px;color:var(--dim)">${done}/${j.segs.length}</span></div>
+    <div class="pieces">${j.segs.map(pieceHTML).join('')}</div>
+    <div class="stats">${st}</div>
+    ${j.err?`<div class="err">错误：${esc(j.err)}</div>`:''}
+  </div>`;
+}
+async function paintJobs(){
+  try{
+    const d=await api('/api/jobs');
+    const jobs=(d.jobs||[]).slice().reverse();
+    $('#jobs').innerHTML=jobs.length? jobs.map(jobHTML).join(''):'<div class="empty">还没有任务</div>';
+  }catch(e){$('#jobs').innerHTML='<div class="empty">'+esc(e)+'</div>'}
+}
+
+/* ---------------- 算力市场 ---------------- */
+function spec(w){
+  const g=(w.gpus||[]).map(x=>`${esc(x.name)} ${x.mem_mb}MB`).join('<br>')||'无独显';
+  return `${w.cpus} 核 · ${w.mem_mb?Math.round(w.mem_mb/1024)+'GB 内存':'内存未知'}<br>${g}`;
+}
+function poolRow(w){
+  const rel=w.ok+w.bad>0? Math.round(100*w.ok/(w.ok+w.bad))+'%':'—';
+  const who=w.mine?`<span class="tag mine">我的机器</span>`:'';
+  return `<tr>
+    <td><b>${esc(w.name||w.id)}</b><br><span style="color:var(--dim);font-size:11px">${esc(w.os)}</span>
+      ${who}<br><span class="tag ${w.online?'on':'off'}">${w.online?'在线':'离线 '+f1(w.since)+'s'}</span></td>
+    <td>${spec(w)}</td>
+    <td>${(w.runtimes||[]).map(r=>`<span class="tag">${esc(r.name)}</span>`).join('')||'<span class="tag off">无</span>'}</td>
+    <td style="max-width:170px">${(w.encoders||[]).map(e=>`<span class="tag">${esc(e)}</span>`).join('')}</td>
+    <td>${w.active}/${w.slots}</td>
+    <td>${w.speed>0?f2(w.speed)+'×':'—'}</td>
+    <td>${rel}<br><span style="color:var(--dim);font-size:11px">✓${w.ok} ✗${w.bad}</span>
+      ${w.parked_sec?`<br><span class="tag off">连续失败，停派 ${w.parked_sec}s</span>`:''}
+      ${w.paused&&w.mine?`<br><span class="tag off">你已停止派活</span>`:''}</td>
+    <td>${f2(w.price)} 点/秒${w.mine?`<br><button class="ghost tiny" onclick="reprice('${esc(w.id)}',${w.price})">改价</button>`:''}</td>
+  </tr>`;
+}
+function paintMarket(){
+  const on=POOL.filter(w=>w.online);
+  $('#pool tbody').innerHTML=on.length? POOL.map(poolRow).join('')
+    : '<tr><td colspan="8" class="empty">尚无节点注册</td></tr>';
+  const buckets={};
+  on.forEach(w=>{
+    const free=Math.max(0,w.slots-w.active);
+    const gpu=(w.gpus||[]).reduce((a,b)=>b.mem_mb>(a&&a.mem_mb||0)?b:a,w.gpus[0]);
+    (w.encoders||[]).forEach(e=>{
+      const b=buckets[e]||(buckets[e]={enc:e,nodes:0,free:0,min:w.price,max:w.price,speed:0,gpu:null});
+      b.nodes++;b.free+=free;b.speed+=w.speed;
+      if(w.price<b.min)b.min=w.price;
+      if(w.price>b.max)b.max=w.price;
+      if(gpu&&(!b.gpu||gpu.mem_mb>b.gpu.mem_mb))b.gpu=gpu;
+    });
+  });
+  const rows=Object.values(buckets);
+  $('#market tbody').innerHTML=rows.length? rows.map(b=>`<tr>
+    <td><b>${esc(b.enc)}</b>${/nvenc|qsv|amf/.test(b.enc)?' <span class="tag gpu">GPU/ASIC</span>':''}</td>
+    <td>${b.nodes}</td><td>${b.free}</td>
+    <td>${b.min===b.max?f2(b.min)+' 点/秒':f2(b.min)+' ~ '+f2(b.max)+' 点/秒'}</td>
+    <td>${(b.speed/b.nodes)>0?f2(b.speed/b.nodes)+'×':'—'}</td>
+    <td>${b.gpu?esc(b.gpu.name)+' '+b.gpu.mem_mb+'MB':'—'}</td></tr>`).join('')
+    : '<tr><td colspan="6" class="empty">尚无在线算力</td></tr>';
+}
+async function reprice(id,cur){
+  const v=prompt('这台机器要的单价（算力点 / 视频秒）',cur);
+  if(v===null)return;
+  try{await api('/api/nodes/'+encodeURIComponent(id),
+    {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({price:+v})});
+    refresh()}catch(e){alert('改价失败：'+e)}
+}
+
+/* ---------------- 我的节点 ---------------- */
+// The one-click path: the console mints a single-use launch code, the browser
+// downloads the launcher that carries it, and the machine arrives already bound
+// to this account. Nothing here asks the provider to install, copy or type a
+// secret, which is the whole point of the button.
+{
+  const ua=(navigator.userAgent||'').toLowerCase();
+  $('#los').value = ua.includes('windows') ? 'windows' : ua.includes('mac') ? 'darwin' : 'linux';
+}
+$('#launchbtn').onclick=async()=>{
+  const msg=$('#launchmsg'), btn=$('#launchbtn');
+  const body={name:$('#lname').value.trim(),price:+$('#lprice').value,slots:+$('#lslots').value,
+    os:$('#los').value,arch:$('#larch').value};
+  if(!(body.price>=0.05)){msg.textContent='单价至少 0.05 算力点 / 视频秒';return}
+  if(!(body.slots>=1)){msg.textContent='并发槽至少 1 个';return}
+  btn.disabled=true;msg.textContent='正在生成启动码…';
+  try{
+    const d=await post('/api/nodes/launch',body);
+    const a=document.createElement('a');
+    a.href=BASE+d.script;a.rel='noopener';document.body.appendChild(a);a.click();a.remove();
+    const mins=Math.max(1,Math.round(d.expires_in_sec/60));
+    msg.innerHTML=`脚本正在下载：拷到要提供算力的那台机器上双击运行即可（${esc(d.node_id)}，`+
+      `${mins} 分钟内有效，只能用一次）。它会自动挂到你的账户下，不需要配对码；`+
+      `关掉那个窗口就是停止提供算力，下次重新双击还会是这台机器。`+
+      (d.ready?'':`<br><b style="color:#e8a33d">注意：这台 Broker 上还没有 ${esc(d.worker)}，`+
+        `脚本会在下载节点程序那一步失败，需要运维先把对应平台的二进制放到 --node-bin-dir。</b>`);
+    refresh();
+  }catch(e){msg.textContent='生成失败：'+e}
+  finally{btn.disabled=false}
+};
+async function togglePause(id,paused){
+  try{await api('/api/nodes/'+encodeURIComponent(id)+'/pause',
+    {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({paused})});
+    refresh()}catch(e){alert('操作失败：'+e)}
+}
+$('#pair').onclick=async()=>{
+  const code=$('#code').value.trim().toUpperCase();
+  if(!code)return;
+  try{const r=await post('/api/pair',{code});
+    $('#pairmsg').textContent='已认领节点 '+r.node_id;$('#code').value='';refresh()}
+  catch(e){$('#pairmsg').textContent='认领失败：'+e}
+};
+async function paintPending(){
+  try{
+    const d=await api('/api/pending');
+    const p=d.pending||[];
+    const taken=POOL.filter(w=>w.online&&!w.mine&&w.claimed);
+    $('#pending').innerHTML=(p.length?p.map(x=>`<div class="hint" style="display:flex;gap:8px;
+      justify-content:space-between;align-items:center;margin:6px 0">
+      <span>${esc(x.name||x.id)}（${esc(x.id)}） · ${esc(x.os)} · ${x.cpus} 核 · ${f2(x.price)} 点/秒
+        <span class="tag ${x.online?'on':'off'}">${x.online?'在线':'离线'}</span>
+        <span class="tag">${esc(x.code)}</span></span>
+      <button class="ghost tiny" onclick="claim('${esc(x.code)}')">认领</button>
+    </div>`).join(''):'<div class="empty">没有待认领的机器</div>')
+      // an agent that reports in but never appears here is already bound to
+      // another account; without this line that looks like a broken list
+      +(taken.length?`<div class="hint" style="margin-top:8px">${taken.length} 台在线 Agent 已归属其他账户：${
+        taken.map(w=>esc((w.name||w.id)+'（'+w.id+'）')).join('、')}</div>`:'');
+  }catch(e){/* broker 正在重启 */}
+}
+async function claim(code){
+  try{const r=await post('/api/pair',{code});
+    $('#pairmsg').textContent='已认领节点 '+r.node_id;refresh();paintNodes()}
+  catch(e){$('#pairmsg').textContent='认领失败：'+e}
+}
+function paintNodes(){
+  const mine=POOL.filter(w=>w.mine);
+  if(!POL||POL.pending) paintPending();
+  if(!mine.length){$('#mynodes').innerHTML='<div class="empty">还没有属于你的节点</div>';return}
+  $('#mynodes').innerHTML=mine.map(w=>`<div class="card" style="margin-bottom:10px">
+    <h2 style="text-transform:none;font-size:14px;color:var(--fg)">
+      ${esc(w.name||w.id)} <span class="tag ${w.online?'on':'off'}">${w.online?'在线':'离线'}</span></h2>
+    <div class="stats">
+      <div class="stat"><b>${f2(w.earned||0)}</b><span>累计收益点</span></div>
+      <div class="stat"><b>${f1(w.seconds_billed||0)}s</b><span>已结算算力</span></div>
+      <div class="stat"><b>${w.active}/${w.slots}</b><span>占用槽位</span></div>
+      <div class="stat"><b>${f2(w.price)}</b><span>当前单价</span></div>
+      <div class="stat"><b>${w.speed>0?f2(w.speed)+'×':'—'}</b><span>实测吞吐</span></div>
+      <div class="stat"><b>${w.ok}/${w.ok+w.bad}</b><span>成功/总数</span></div>
+    </div>
+    <div class="hint">编号 ${esc(w.id)} · ${esc(w.hostname||'')} · ${esc(w.os)} · ${w.cpus} 核 ·
+      ${w.mem_mb?Math.round(w.mem_mb/1024)+'GB':''} · 空闲磁盘 ${w.disk_free_mb?Math.round(w.disk_free_mb/1024)+'GB':'未知'}</div>
+    ${w.paused?'<div class="hint" style="color:#e8a33d;margin-top:8px">已停止派活：正在跑的分片会做完，但不再接新的。</div>':''}
+    <button class="ghost tiny" style="margin-top:8px" onclick="reprice('${esc(w.id)}',${w.price})">调整单价</button>
+    <button class="ghost tiny" style="margin-top:8px"
+      onclick="togglePause('${esc(w.id)}',${!w.paused})">${w.paused?'恢复派活':'暂停派活'}</button>
+  </div>`).join('');
+}
+
+/* ---------------- 账单 ---------------- */
+const KIND={hold:'预扣',settle:'结算',refund:'退还',earn:'收益',recharge:'充值'};
+async function paintBill(){
+  try{
+    const d=await api('/api/ledger');
+    const ts=t=>new Date(t*1000).toLocaleString('zh-CN',{hour12:false});
+    $('#spend tbody').innerHTML=(d.spend||[]).length? d.spend.map(e=>`<tr>
+      <td>${ts(e.ts)}</td><td><span class="kind ${e.kind}">${KIND[e.kind]||e.kind}</span></td>
+      <td class="${e.amount>=0?'pos':'neg'}">${e.amount>=0?'+':''}${f2(e.amount)}</td>
+      <td>${f2(e.balance)}</td><td>${esc(e.note||'')}${e.job_id?` <span class="tag">${e.job_id.slice(0,10)}</span>`:''}</td>
+      </tr>`).join(''):'<tr><td colspan="5" class="empty">暂无记录</td></tr>';
+    $('#earn tbody').innerHTML=(d.earn||[]).length? d.earn.map(e=>`<tr>
+      <td>${ts(e.ts)}</td><td>${esc(e.node_id||'').slice(0,14)}</td>
+      <td class="pos">+${f2(e.amount)}</td><td>${esc(e.note||'')}</td></tr>`).join('')
+      :'<tr><td colspan="4" class="empty">暂无收益</td></tr>';
+  }catch(e){/* ignore */}
+}
+$('#dochARGE').onclick=async()=>{
+  const a=+$('#ramount').value;
+  if(!(a>0))return;
+  try{await post('/api/me/recharge',{amount:a});refresh();paintBill()}
+  catch(e){alert('充值失败：'+e)}
+};
+
+/* ---------------- 启动 ---------------- */
+(async()=>{
+  try{
+    // the login card advertises the signup grant, so the deployment profile is
+    // read before anyone signs in — an anonymous /api/state only returns this
+    POL=(await api('/api/state')).policy; applyPolicy();
+  }catch(e){/* 停留在默认文案 */}
+  try{
+    const me=await api('/api/me');
+    if(me.signed_in){ME=me;enter()}
+  }catch(e){/* 停留在登录页 */}
+})();
+</script>
+</body>
+</html>

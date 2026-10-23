@@ -1,0 +1,49 @@
+[Unit]
+Description=星栈算力 Broker（算力共享调度与结算）
+Documentation=https://github.com/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=starstack
+Group=starstack
+# /var/lib/starstack holds the SQLite database, uploaded sources and slice
+# results; /opt/starstack holds only the binaries.
+StateDirectory=starstack
+EnvironmentFile=-/etc/starstack/env
+WorkingDirectory=/opt/starstack
+# 直连模式：这台 VM 的 NSG 已单独放开 8787，公网请求直接落到 Broker，
+# 没有反代在前面，所以既不设 --cookie-path（会话 Cookie 就落在 /），
+# 也不加 --trust-proxy——相信 X-Forwarded-For 会让任何人自己挑一个假来源，
+# 把登录限流整个绕过去。
+# --node-bin-dir 是网页「一键提供算力」要下发的节点程序目录（deploy.sh 会把六个
+# 平台的 starstack-worker-<os>-<arch> 放进去）；ProtectSystem=strict 让它只读，
+# 正好——运行时没有任何东西该往 /opt 里写。
+# __STARSTACK_BASE_URL__ 由 deploy.sh 替换成 BASE_URL（默认 http://<部署的 HOST>:8787）；
+# 直接手动装这个单元的话记得自己改，worker 是按这里的地址回连的。
+ExecStart=/opt/starstack/starstack-server \
+  --addr 0.0.0.0:8787 \
+  --data /var/lib/starstack \
+  --public \
+  --node-bin-dir /opt/starstack/dl \
+  --base-url __STARSTACK_BASE_URL__
+
+Restart=always
+RestartSec=3
+
+# 这台机器只有 891 MB 内存，而且上面还跑着别的服务。上限设得比 Broker 自己的
+# 需要大一档，但远小于整机内存：越界时先杀它，而不是让内核挑一个受害者。
+MemoryMax=512M
+MemoryHigh=384M
+TasksMax=128
+LimitNOFILE=8192
+
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/starstack
+
+[Install]
+WantedBy=multi-user.target
