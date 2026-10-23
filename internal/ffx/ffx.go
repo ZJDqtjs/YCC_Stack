@@ -273,7 +273,159 @@ func tail(s string, n int) string {
 	return s[len(s)-n:]
 }
 
+// ClipOpts describes one cut of an edited timeline. Every piece of a parallel
+// timeline render goes through this same shape, because the broker joins the
+// results with a stream copy: same size, same rate, same pixel format, same
+// audio layout is what makes the pieces interchangeable.
+type ClipOpts struct {
+	Src, Dst      string
+	In, Dur       float64
+	Width, Height int
+	FPS           float64
+	CRF           int
+	HasAudio      bool
+}
+
+func (o ClipOpts) args() []string {
+	crf := o.CRF
+	if crf <= 0 {
+		crf = 20
+	}
+	fps := o.FPS
+	if fps <= 0 {
+		fps = 30
+	}
+	w, h := o.Width, o.Height
+	if w <= 0 {
+		w = 1920
+	}
+	if h <= 0 {
+		h = 1080
+	}
+	// libx264 wants even dimensions; a 1919-wide source must not fail the slice
+	w, h = w&^1, h&^1
+	a := []string{"-hide_banner", "-nostdin", "-loglevel", "error", "-nostats",
+		"-progress", "pipe:1", "-y"}
+	if o.In > 0 {
+		a = append(a, "-ss", secStr(o.In))
+	}
+	a = append(a, "-i", o.Src)
+	if !o.HasAudio {
+		// a silent bed keeps every slice's stream layout identical, so a clip
+		// without sound cannot force the final concat into a re-encode
+		a = append(a, "-f", "lavfi", "-t", secStr(o.Dur), "-i", "anullsrc=r=48000:cl=stereo")
+	}
+	if o.Dur > 0 {
+		a = append(a, "-t", secStr(o.Dur))
+	}
+	a = append(a, "-map", "0:v:0")
+	if o.HasAudio {
+		a = append(a, "-map", "0:a:0")
+	} else {
+		a = append(a, "-map", "1:a:0")
+	}
+	vf := fmt.Sprintf("scale=%d:%d:force_original_aspect_ratio=decrease,"+
+		"pad=%d:%d:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=%s,format=yuv420p",
+		w, h, w, h, secStr(fps))
+	a = append(a, "-vf", vf, "-c:v", "libx264", "-preset", "veryfast", "-crf",
+		strconv.Itoa(crf), "-g", strconv.Itoa(int(fps+0.5)), "-keyint_min", strconv.Itoa(int(fps+0.5)),
+		"-sc_threshold", "0",
+		"-c:a", "aac", "-b:a", "128k", "-ar", "48000", "-ac", "2",
+		"-movflags", "+faststart", o.Dst)
+	return a
+}
+
+// RenderClip encodes one trimmed, normalised piece of a timeline.
+func RenderClip(ctx context.Context, o ClipOpts, onProgress func(Progress)) error {
+	if err := os.MkdirAll(filepath.Dir(o.Dst), 0o755); err != nil {
+		return err
+	}
+	cmd := exec.CommandContext(ctx, Ffmpeg, o.args()...)
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	var errBuf strings.Builder
+	cmd.Stderr = &errBuf
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	lastNotify := time.Time{}
+	sc := bufio.NewScanner(stdout)
+	sc.Buffer(make([]byte, 64*1024), 1024*1024)
+	for sc.Scan() {
+		kv := strings.SplitN(sc.Text(), "=", 2)
+		if len(kv) != 2 || onProgress == nil {
+			continue
+		}
+		var p Progress
+		switch kv[0] {
+		case "out_time_us":
+			if us, err := strconv.ParseInt(kv[1], 10, 64); err == nil {
+				p.Out = float64(us) / 1e6
+			}
+		case "speed":
+			p.Speed, _ = strconv.ParseFloat(strings.TrimSuffix(strings.TrimSpace(kv[1]), "x"), 64)
+		default:
+			continue
+		}
+		if time.Since(lastNotify) > 900*time.Millisecond {
+			lastNotify = time.Now()
+			onProgress(p)
+		}
+	}
+	if err := cmd.Wait(); err != nil {
+		return fmt.Errorf("ffmpeg clip: %v %s", err, tail(errBuf.String(), 1000))
+	}
+	if _, err := os.Stat(o.Dst); err != nil {
+		return fmt.Errorf("no clip produced: %s", tail(errBuf.String(), 600))
+	}
+	return nil
+}
+
+// BlackClip fills a gap in the timeline that no source clip covers, with the
+// same stream layout as RenderClip so it can sit between two rendered cuts.
+func BlackClip(ctx context.Context, dst string, dur float64, width, height int, fps float64) error {
+	if fps <= 0 {
+		fps = 30
+	}
+	if width <= 0 {
+		width = 1920
+	}
+	if height <= 0 {
+		height = 1080
+	}
+	width, height = width&^1, height&^1
+	args := []string{"-hide_banner", "-loglevel", "error", "-y",
+		"-f", "lavfi", "-i", fmt.Sprintf("color=c=black:s=%dx%d:r=%s", width, height, secStr(fps)),
+		"-f", "lavfi", "-t", secStr(dur), "-i", "anullsrc=r=48000:cl=stereo",
+		"-t", secStr(dur), "-map", "0:v:0", "-map", "1:a:0",
+		"-c:v", "libx264", "-preset", "veryfast", "-crf", "20",
+		"-pix_fmt", "yuv420p", "-g", strconv.Itoa(int(fps + 0.5)), "-keyint_min", strconv.Itoa(int(fps + 0.5)),
+		"-sc_threshold", "0", "-c:a", "aac", "-b:a", "128k", "-ar", "48000", "-ac", "2",
+		"-movflags", "+faststart", dst}
+	var errBuf strings.Builder
+	cmd := exec.CommandContext(ctx, Ffmpeg, args...)
+	cmd.Stderr = &errBuf
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("black clip: %v %s", err, tail(errBuf.String(), 800))
+	}
+	return nil
+}
+
 func Concat(ctx context.Context, parts []string, dst string) error {
+	return concatArgs(ctx, parts, dst, []string{"-c", "copy"})
+}
+
+// ConcatEncode joins pieces that a copy-concat refused, re-encoding them into a
+// single stream. It is the fallback for slices produced on different machines:
+// the command line was the same, but encoder extradata can still differ.
+func ConcatEncode(ctx context.Context, parts []string, dst string) error {
+	return concatArgs(ctx, parts, dst, []string{"-c:v", "libx264", "-preset", "veryfast",
+		"-crf", "20", "-c:a", "aac", "-b:a", "192k"})
+}
+
+func concatArgs(ctx context.Context, parts []string, dst string, codecArgs []string) error {
 	list := dst + ".concat.txt"
 	var b strings.Builder
 	for _, p := range parts {
@@ -289,12 +441,37 @@ func Concat(ctx context.Context, parts []string, dst string) error {
 		return err
 	}
 	defer os.Remove(list)
-	cmd := exec.CommandContext(ctx, Ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
-		"-f", "concat", "-safe", "0", "-i", list, "-c", "copy", "-movflags", "+faststart", dst)
+	args := []string{"-hide_banner", "-loglevel", "error", "-y",
+		"-f", "concat", "-safe", "0", "-i", list}
+	args = append(args, codecArgs...)
+	args = append(args, "-movflags", "+faststart", dst)
+	cmd := exec.CommandContext(ctx, Ffmpeg, args...)
 	var errBuf strings.Builder
 	cmd.Stderr = &errBuf
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("concat: %v %s", err, tail(errBuf.String(), 800))
+	}
+	return nil
+}
+
+// EncodeFrames turns a directory of PNG frames into a video. first is the lowest
+// frame number present; Blender numbers frames by their scene frame, not by
+// position in the slice.
+func EncodeFrames(ctx context.Context, dir string, first int, fps float64, dst string) error {
+	if fps <= 0 {
+		fps = 24
+	}
+	pattern := filepath.Join(dir, "frame_%04d.png")
+	cmd := exec.CommandContext(ctx, Ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
+		"-framerate", strconv.FormatFloat(fps, 'f', 3, 64),
+		"-start_number", strconv.Itoa(first),
+		"-i", pattern,
+		"-c:v", "libx264", "-preset", "medium", "-crf", "18",
+		"-pix_fmt", "yuv420p", "-movflags", "+faststart", dst)
+	var errBuf strings.Builder
+	cmd.Stderr = &errBuf
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("encode frames: %v %s", err, tail(errBuf.String(), 800))
 	}
 	return nil
 }

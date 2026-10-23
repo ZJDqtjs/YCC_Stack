@@ -17,6 +17,8 @@
 | 分片 | **ffprobe 抽关键帧 → 关键帧对齐切点 → `-ss` 精确 seek** | 任意时间点切割会花屏和音画不同步；对齐到 IDR 帧是这套方案真正的工程难点 |
 | 合并 | **concat demuxer + `-c copy`** | 不二次编码，无损拼接 |
 | 存储 | 本地磁盘 + HTTP 分发源片 | demo 够用，预留 MinIO/NFS |
+| 渲染 | **ffmpeg + Blender 子进程，不自研渲染器** | PR/FCPXML 时间线还原、Blender 帧渲染都复用成熟引擎；平台负责按秒/按帧切片、分发、校验和合成 |
+| 模型推理 | **OpenAI 兼容网关，不自研推理内核** | llama.cpp / vLLM / Ollama 作为上游接入；平台只做按模型的低价路由、token 计量与 90/10 分成。MoE 用 `--n-cpu-moe` 或多机 `rpc-server` 部署 |
 | 前端 | `go:embed` 单页 HTML | 零构建链，二进制里自带仪表盘 |
 | 状态 | **SQLite（`modernc.org/sqlite`，纯 Go 免 CGO）+ 内存态热数据** | 账户/会话/节点/任务/分片/流水要能跨重启存活，否则"租约回收"和"按量结算"都没法验证；纯 Go 驱动才能继续维持"交叉编译一个二进制"这条前提。写路径是 write-through：内存调度照常，落库只做快照 |
 
@@ -68,8 +70,9 @@ bash scripts/smoke.sh        # 自己起 Broker + 2 个节点，跑完打印全�
 python scripts/restart-test.py    # 端口 8798，独占一份 data 目录
 ```
 
-Web 控制台五视图：注册/登录后依次是 提交任务（上传文件后浏览器自己读时长并刷报价）、
-我的任务（分片态、租约、进度、下载）、算力市场（按编码器聚合的可调度算力与价格区间）、
+Web 控制台六视图：注册/登录后依次是 提交任务（转码 / Blender 帧渲染 / PR 时间线，上传文件后浏览器自己读时长并刷报价）、
+我的任务（分片态、租约、进度、下载）、模型 API（创建密钥、登记模型上游、看目录与调用示例）、
+算力市场（按编码器聚合的可调度算力与价格区间）、
 我的节点（待认领列表 + 一键认领 + 改价 + 该机的收益/吞吐/成功率）、账单（账户流水与按节点收益）。
 控制台的档位是自适应的：启动时先取一次匿名 `/api/state` 读 `policy`，公网档会自动收掉充值框、
 Broker 本地路径输入、待认领列表和基线对比，Agent 命令行也换成带 `--token` 的版本——
@@ -156,6 +159,75 @@ OEM 代码页读 `.cmd`，UTF-8 中文在 GBK 机器上会变成解析错误（�
 开关告诉控制台这台 Broker 的 `--node-bin-dir` 里到底有没有对应平台的程序，没有就
 不显示按钮，而不是发一个下不动的脚本。
 
+## 渲染作业：Blender 与 PR/FCPXML
+
+渲染和转码共用同一套「切片 → 派发 → 校验 → 合并 → 结算」骨架，区别只在切片单位和执行命令：
+
+| 类型 | `kind` | 切片单位 | 节点产物 | Broker 合并 |
+|---|---|---|---|---|
+| 视频转码 | 空 / `transcode` | 视频秒 | `segXXX.mkv` | concat 无损拼接 |
+| Blender | `blender` | **帧** | `segXXX.zip`（`frame_####.png`） | 解压全部帧 → `ffmpeg -framerate` 编码成 mp4 |
+| PR / FCP 时间线 | `pr` | 视频秒 | `segXXX.mkv` | 本地 concat；编码参数不一致时自动转码兜底 |
+
+**Blender**：把 `.blend` 连同贴图、缓存打成 zip（也可只传 `.blend`）。任务表单里可以覆盖
+引擎、采样数、分辨率百分比和帧范围；节点执行
+
+```bash
+blender -b scene.blend -noaudio -o <tmp>/frame_#### -F PNG \
+  -s <start> -e <end> -E <engine> --python-expr "<覆盖采样/分辨率>" -a
+```
+
+Worker 通过 `Fra:` 行解析真实进度，打包该片段负责的 PNG 回传；Broker 校验 SHA 后解压、
+按帧号排序并用 `ffx.EncodeFrames` 合成视频。节点必须装 Blender，并在 PATH 中或用
+`--blender` 指定。帧范围上限 20000 帧。
+
+**PR / FCP**：Premiere 不能直接渲染 `.prproj`（它是工程文件，不是可交换的像素描述），
+请在 Premiere 里「文件 → 导出 → Final Cut Pro XML」，把导出的 XML 或 FCPXML 与素材
+按原始文件名一起打成 zip 上传。Broker 解析时间线、按剪辑点切片，每个节点把自己那段
+clip 裁剪、缩放/补边、统一帧率与像素格式后编码，Broker 直接 concat。转场、调色、特效、
+多轨叠加不在交换格式的可还原范围内：多视频轨只渲染第一轨并在任务 note 里写明；检测到
+变速片段时按时间线时长渲染并提示。素材按**不区分大小写的文件名**匹配，因此不同目录下
+同名文件会被视为同一个。
+
+报价与转码同构：Blender 按「帧 × 节点单价」，PR 按「视频秒 × 节点单价」，预扣和差额退还
+沿用交易层。提交入口是 `POST /api/jobs/render`（multipart：`kind=blender|pr` + 文件 +
+参数字段）。
+
+## 模型网关：OpenAI 兼容 API
+
+控制台新增「模型 API」视图，买家与提供方都在这里完成闭环：
+
+- **买家**：创建 `sk-ss-...` 密钥（只显示一次，库中仅存 SHA-256 哈希），用任意 OpenAI SDK
+  指向 `http://BROKER/v1`。支持 `/v1/models`、`/v1/chat/completions`、SSE 流式。
+- **提供方**：登记 llama.cpp / vLLM / Ollama 的 OpenAI 兼容地址、模型名和每千 token 单价。
+  平台按「同一模型的最低报价且健康」路由，失败上游冷却 20 秒并自动切换。
+
+计费复用同一套算力点账本：请求进来按 prompt 估算 + `max_tokens`（默认 1024，上限 8192）
+以候选上游最高价预扣，余额不足 402；结束后优先用上游 `usage`，缺失时按输出文本估算，
+多退少补；提供方拿 90%，平台留 10% 撮合费。上游凭据用数据目录下的 `gateway.key` 做
+AES-GCM 加密后入库；公网档会拒绝把上游指向私网/链路本地/云元数据地址。
+
+MoE 与分布式部署的具体参数、脚本和 systemd 示例见
+[`deploy/models/README.md`](deploy/models/README.md)：
+
+```bash
+# 单机 MoE：专家层放 CPU，注意力层留 GPU
+MODEL=./Qwen3-30B-A3B-Q4_K_M.gguf N_CPU_MOE=24 bash deploy/models/llama-moe.sh
+
+# 多机：每台跑 rpc-server，主节点聚合显存
+bash deploy/models/llama-rpc.sh
+RPC=192.168.1.10:50052,192.168.1.11:50052 bash deploy/models/llama-distributed.sh
+
+# vLLM 双卡张量并行
+MODEL=Qwen/Qwen3-30B-A3B TP=2 bash deploy/models/vllm-tp.sh
+```
+
+```bash
+curl http://BROKER/v1/chat/completions \
+  -H "Authorization: Bearer sk-ss-..." -H "Content-Type: application/json" \
+  -d '{"model":"qwen3-30b-a3b","messages":[{"role":"user","content":"你好"}]}'
+```
+
 ## 代码结构
 
 ```
@@ -163,14 +235,18 @@ internal/ffx/    ffmpeg/ffprobe 封装：探测、关键帧抽取、切分规划
                  + Detect()：把这台机器的软硬件一次测清楚（核数/内存/磁盘/GPU/编码器/运行时）
 internal/hub/    Broker：节点注册、两阶段匹配调度、租约回收、回传校验、合并、基线对比
                  + users.go：账户/会话/口令哈希、节点认领、报价、预扣与结算、账单流水
+                 + render.go：Blender/时间线渲染的登记、切片分发与合并
+                 + gateway.go：OpenAI 兼容模型网关、密钥哈希、上游加密、低成本路由、token 结算、SSE 透传
                  + policy.go：演示/公网两套部署档位、Agent 凭证与签名源地址、登录限流、提交护栏
                  + launch.go：启动码、按平台生成的 .cmd/.sh 启动器、/dl/ 下发节点程序、暂停派活
                  + scheduler_test.go：调度与结算核心逻辑的单元测试（不需要 ffmpeg）
-internal/store/  SQLite 持久化：users / sessions / nodes / jobs / segments / ledger（+ 老库的列迁移）
+internal/render/ Blender 帧范围与 FCP XML/FCPXML 时间线解析、按帧/按秒的纯函数规划
+internal/store/  SQLite 持久化：users / sessions / nodes / jobs / segments / ledger / api_keys / upstreams
 cmd/server/      平台服务端（--public / --agent-token / --cookie-path / --trust-proxy / --base-url）
-cmd/worker/      算力节点 Provider Agent（硬件发现、能力上报、取任务、转码、回传）
-internal/hub/web 前端单页控制台（登录 + 提交任务/我的任务/算力市场/我的节点/账单 五视图）
+cmd/worker/      算力节点 Provider Agent（硬件发现、能力上报、取任务、转码/渲染、回传）
+internal/hub/web 前端单页控制台（登录 + 提交任务/我的任务/模型 API/算力市场/我的节点/账单 六视图）
 deploy/          服务器部署件：systemd 单元、nginx 反代片段、env 模板、deploy.sh / enable-nginx.sh
+deploy/models/   MoE/分布式推理部署：llama.cpp rpc-server、--n-cpu-moe、vLLM TP、Ollama
 scripts/         演示与验收：run-demo.sh / fault-test.sh / smoke.sh / restart-test.py
 ```
 

@@ -276,7 +276,12 @@ func (s *Server) handleEstimate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, jsonErr("缺少 duration"), 400)
 		return
 	}
+	kind := r.URL.Query().Get("kind")
+	if kind == "transcode" {
+		kind = ""
+	}
 	probe := &Job{
+		Kind:     kind,
 		Duration: dur,
 		Profile:  Profile{VCodec: r.URL.Query().Get("vcodec")},
 	}
@@ -300,10 +305,11 @@ func (s *Server) handleEstimate(w http.ResponseWriter, r *http.Request) {
 		GPU   string  `json:"gpu"`
 		Mine  bool    `json:"mine"`
 	}
+	needReq, needVCodec := jobReq(probe)
 	var cands []cand
 	lowest := 0.0
 	for _, wd := range s.workers {
-		if !wd.online() || !wd.meets(probe.Req, probe.Profile.VCodec) {
+		if !wd.online() || !wd.meets(needReq, needVCodec) {
 			continue
 		}
 		gpu := ""
@@ -322,12 +328,16 @@ func (s *Server) handleEstimate(w http.ResponseWriter, r *http.Request) {
 	// the price that will probably be paid instead of only a theoretical floor
 	var pick *Worker
 	if len(cands) > 0 {
-		pick = s.pickWorkerLocked(probe.Req, probe.Profile.VCodec, nil)
+		pick = s.pickWorkerLocked(needReq, needVCodec, nil)
+	}
+	unit := "视频秒"
+	if kind == "blender" {
+		unit = "帧"
 	}
 	out := map[string]any{
 		"duration": dur, "hold": hold, "hold_price": holdPrice, "hold_basis": basis,
 		"cheapest": round4(dur * lowest), "eligible": len(cands), "nodes": cands,
-		"balance": u.Credits, "affordable": u.Credits >= hold,
+		"balance": u.Credits, "affordable": u.Credits >= hold, "unit": unit,
 	}
 	if pick != nil {
 		out["first_pick"] = map[string]any{"id": pick.ID, "name": pick.Name,
@@ -557,7 +567,7 @@ func (s *Server) handleLedger(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, map[string]any{
-		"spend": spend, "earn": earn, "balance": u.Credits, "nodes": len(mine),
+		"spend": spend, "earn": earn, "balance": round4(u.Credits), "nodes": len(mine),
 	})
 }
 
@@ -577,6 +587,7 @@ func (s *Server) estimateHoldLocked(j *Job) (hold, price float64, basis string) 
 
 func (s *Server) holdPriceLocked(j *Job) (float64, string) {
 	eligible, widest := 0.0, 0.0
+	req, vcodec := jobReq(j)
 	for _, wd := range s.workers {
 		if !wd.online() || wd.Price <= 0 {
 			continue
@@ -584,7 +595,7 @@ func (s *Server) holdPriceLocked(j *Job) (float64, string) {
 		if wd.Price > widest {
 			widest = wd.Price
 		}
-		if wd.meets(j.Req, j.Profile.VCodec) && wd.Price > eligible {
+		if wd.meets(req, vcodec) && wd.Price > eligible {
 			eligible = wd.Price
 		}
 	}

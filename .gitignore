@@ -5,6 +5,7 @@ dist/
 # 运行时数据与本地测试产生的目录
 data/
 data-e2e/
+.e2e/
 ft/
 ft-data/
 rt/

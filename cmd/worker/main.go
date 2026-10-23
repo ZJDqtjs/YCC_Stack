@@ -24,6 +24,7 @@ import (
 
 	"starstack/internal/ffx"
 	"starstack/internal/hub"
+	"starstack/internal/render"
 )
 
 func main() {
@@ -36,6 +37,7 @@ func main() {
 	force := flag.String("encoder", "", "restrict to one encoder, e.g. h264_nvenc")
 	ffmpeg := flag.String("ffmpeg", "ffmpeg", "ffmpeg binary")
 	ffprobe := flag.String("ffprobe", "ffprobe", "ffprobe binary")
+	blender := flag.String("blender", "blender", "blender binary (full path when it is not on PATH)")
 	token := flag.String("token", "", "agent token a public broker requires at registration")
 	launch := flag.String("launch", "", "one-use launch code from the web console; "+
 		"the node is bound to the account that generated it and no token is needed")
@@ -43,6 +45,7 @@ func main() {
 	flag.Parse()
 
 	ffx.Ffmpeg, ffx.Ffprobe = *ffmpeg, *ffprobe
+	blenderBin = *blender
 	if *id == "" {
 		hn, _ := os.Hostname()
 		*id = fmt.Sprintf("%s-%d", hn, os.Getpid())
@@ -320,6 +323,17 @@ func (a *agent) idle() {
 }
 
 func (a *agent) run(c *hub.Claim) {
+	switch c.Kind {
+	case render.KindBlender:
+		a.runBlender(c)
+	case render.KindPR:
+		a.runTimeline(c)
+	default:
+		a.runTranscode(c)
+	}
+}
+
+func (a *agent) runTranscode(c *hub.Claim) {
 	log.Printf("seg %s (job %s #%d) %.1f-%.1fs -> %s", c.SegID, c.JobID, c.Index, c.Start, c.Start+c.Dur, c.VCodec)
 	src, err := a.fetchSource(c)
 	if err != nil {
@@ -359,22 +373,7 @@ func (a *agent) run(c *hub.Claim) {
 		speed = c.Dur / wall
 	}
 
-	a.post(a.server+"/api/report", map[string]any{"worker": a.id, "seg": c.SegID, "state": "uploading"}, true)
-	// the push side is the same story as the fetch side: a large slice over a
-	// small uplink outlasts a lease sized by the clip's duration
-	var pushed int64
-	stopBeat := a.beat(c.SegID, "uploading", &pushed, 0)
-	sha, size, err := a.upload(c.SegID, dst)
-	stopBeat()
-	if err != nil {
-		a.fail(c, "upload: "+err.Error())
-		return
-	}
-	a.post(a.server+"/api/report", map[string]any{
-		"worker": a.id, "seg": c.SegID, "state": "done",
-		"speed": speed, "sha": sha, "bytes": size, "wall": wall,
-	}, true)
-	log.Printf("seg %s done in %.1fs (%.1fx realtime, %.1f MiB)", c.SegID, wall, speed, (float64(size) / (1 << 20)))
+	a.finish(c, dst, wall, speed)
 }
 
 func (a *agent) fail(c *hub.Claim, msg string) {
@@ -497,6 +496,19 @@ func (a *agent) janitor(maxGB float64) {
 	t := time.NewTicker(10 * time.Minute)
 	defer t.Stop()
 	for range t.C {
+		// unpacked bundles, frame directories and partially-concatenated parts are
+		// large; a crashed render must not keep them forever
+		for _, pat := range []string{"job-*", "frames-*", "parts-*"} {
+			paths, _ := filepath.Glob(filepath.Join(a.work, pat))
+			for _, p := range paths {
+				st, err := os.Stat(p)
+				if err == nil && time.Since(st.ModTime()) > 24*time.Hour {
+					if os.RemoveAll(p) == nil {
+						log.Printf("cache: dropped stale %s", filepath.Base(p))
+					}
+				}
+			}
+		}
 		files, err := filepath.Glob(filepath.Join(a.work, "src-*.bin"))
 		if err != nil || len(files) == 0 {
 			continue

@@ -67,6 +67,8 @@ CREATE TABLE IF NOT EXISTS jobs(
   duration      REAL,
   profile       TEXT,
   req           TEXT,
+  kind          TEXT NOT NULL DEFAULT 'transcode',
+  plan          TEXT NOT NULL DEFAULT '',
   status        TEXT,
   credits_hold  REAL,
   credits_spent REAL,
@@ -112,10 +114,33 @@ CREATE TABLE IF NOT EXISTS ledger(
   balance   REAL NOT NULL,
   note      TEXT);
 
+CREATE TABLE IF NOT EXISTS api_keys(
+  id         TEXT PRIMARY KEY,
+  user_id    TEXT NOT NULL,
+  name       TEXT NOT NULL,
+  hash       TEXT NOT NULL UNIQUE,
+  prefix     TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  last_used  INTEGER NOT NULL DEFAULT 0,
+  revoked    INTEGER NOT NULL DEFAULT 0);
+
+CREATE TABLE IF NOT EXISTS upstreams(
+  id          TEXT PRIMARY KEY,
+  owner_id    TEXT NOT NULL,
+  name        TEXT NOT NULL,
+  base_url    TEXT NOT NULL,
+  api_key_enc TEXT NOT NULL DEFAULT '',
+  models      TEXT NOT NULL,
+  price       REAL NOT NULL DEFAULT 0,
+  enabled     INTEGER NOT NULL DEFAULT 1,
+  created_at  INTEGER NOT NULL);
+
 CREATE INDEX IF NOT EXISTS idx_seg_job ON segments(job_id);
 CREATE INDEX IF NOT EXISTS idx_led_user ON ledger(user_id, ts);
 CREATE INDEX IF NOT EXISTS idx_led_node ON ledger(node_id, ts);
 CREATE INDEX IF NOT EXISTS idx_sess_user ON sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_key_user ON api_keys(user_id);
+CREATE INDEX IF NOT EXISTS idx_up_owner ON upstreams(owner_id);
 `
 
 // Column additions for databases written by an earlier build. SQLite has no
@@ -124,6 +149,8 @@ const columnMigrations = `
 ALTER TABLE segments ADD COLUMN price REAL NOT NULL DEFAULT 0;
 ALTER TABLE segments ADD COLUMN excluded TEXT NOT NULL DEFAULT '';
 ALTER TABLE nodes ADD COLUMN paused INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE jobs ADD COLUMN kind TEXT NOT NULL DEFAULT 'transcode';
+ALTER TABLE jobs ADD COLUMN plan TEXT NOT NULL DEFAULT '';
 `
 
 func Open(path string) (*Store, error) {
@@ -409,6 +436,7 @@ type JobRow struct {
 	ID, OwnerID, Name, SrcPath  string
 	Duration                    float64
 	Profile, Req                string
+	Kind, Plan                  string
 	Status                      string
 	CreditsHold, CreditsSpent   float64
 	Note, Err                   string
@@ -424,10 +452,10 @@ func (s *Store) InsertJob(j *JobRow, segs []*SegRow) error {
 		return err
 	}
 	defer tx.Rollback()
-	if _, err := tx.Exec(`INSERT INTO jobs(id,owner_id,name,src_path,duration,profile,req,status,
+	if _, err := tx.Exec(`INSERT INTO jobs(id,owner_id,name,src_path,duration,profile,req,kind,plan,status,
 			credits_hold,credits_spent,note,err,created_at,started_at,finished_at,wall,sum_wall,baseline_wall)
-		VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-		j.ID, nullStr(j.OwnerID), j.Name, j.SrcPath, j.Duration, j.Profile, j.Req, j.Status,
+		VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		j.ID, nullStr(j.OwnerID), j.Name, j.SrcPath, j.Duration, j.Profile, j.Req, j.Kind, j.Plan, j.Status,
 		j.CreditsHold, j.CreditsSpent, j.Note, j.Err, j.CreatedAt, j.StartedAt, j.FinishedAt,
 		j.Wall, j.SumWall, j.BaselineWall); err != nil {
 		return err
@@ -471,7 +499,7 @@ func (s *Store) Job(id string) (*JobRow, error) {
 	return rows[0], nil
 }
 
-const jobCols = `id,owner_id,name,src_path,duration,profile,req,status,credits_hold,credits_spent,
+const jobCols = `id,owner_id,name,src_path,duration,profile,req,kind,plan,status,credits_hold,credits_spent,
 	note,err,created_at,started_at,finished_at,wall,sum_wall,baseline_wall`
 
 func (s *Store) queryJobs(q string, args ...any) ([]*JobRow, error) {
@@ -485,8 +513,8 @@ func (s *Store) queryJobs(q string, args ...any) ([]*JobRow, error) {
 		j := &JobRow{}
 		var owner sql.NullString
 		if err := rows.Scan(&j.ID, &owner, &j.Name, &j.SrcPath, &j.Duration, &j.Profile, &j.Req,
-			&j.Status, &j.CreditsHold, &j.CreditsSpent, &j.Note, &j.Err, &j.CreatedAt, &j.StartedAt,
-			&j.FinishedAt, &j.Wall, &j.SumWall, &j.BaselineWall); err != nil {
+			&j.Kind, &j.Plan, &j.Status, &j.CreditsHold, &j.CreditsSpent, &j.Note, &j.Err,
+			&j.CreatedAt, &j.StartedAt, &j.FinishedAt, &j.Wall, &j.SumWall, &j.BaselineWall); err != nil {
 			return nil, err
 		}
 		j.OwnerID = owner.String

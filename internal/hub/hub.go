@@ -21,6 +21,7 @@ import (
 
 	"starstack/internal/auth"
 	"starstack/internal/ffx"
+	"starstack/internal/render"
 	"starstack/internal/store"
 )
 
@@ -86,27 +87,32 @@ type Run struct {
 }
 
 type Job struct {
-	ID        string    `json:"id"`
-	OwnerID   string    `json:"owner_id,omitempty"`
-	Name      string    `json:"name"`
-	Duration  float64   `json:"duration"`
-	HasAudio  bool      `json:"has_audio"`
-	SrcHeight int       `json:"src_height"`
-	Profile   Profile   `json:"profile"`
-	Req       Req       `json:"req"`
-	Status    string    `json:"status"`
-	Segs      []*Seg    `json:"segs"`
-	Speed     float64   `json:"speed"`
-	Wall      float64   `json:"wall"`
-	SumWall   float64   `json:"sum_wall"`
-	Baseline  *Run      `json:"baseline"`
-	Hold      float64   `json:"credits_hold"`
-	Spent     float64   `json:"credits_spent"`
-	Note      string    `json:"note"`
-	Err       string    `json:"err"`
-	CreatedAt time.Time `json:"created_at"`
-	StartedAt time.Time `json:"started_at"`
-	Finished  time.Time `json:"finished_at"`
+	ID      string `json:"id"`
+	OwnerID string `json:"owner_id,omitempty"`
+	Name    string `json:"name"`
+	// Kind is "transcode" (empty means that, for rows written before the field
+	// existed) or one of the render kinds. It decides how a slice is executed,
+	// what its artifact is named and how the pieces are put back together.
+	Kind      string       `json:"kind,omitempty"`
+	Spec      *render.Spec `json:"spec,omitempty"`
+	Duration  float64      `json:"duration"`
+	HasAudio  bool         `json:"has_audio"`
+	SrcHeight int          `json:"src_height"`
+	Profile   Profile      `json:"profile"`
+	Req       Req          `json:"req"`
+	Status    string       `json:"status"`
+	Segs      []*Seg       `json:"segs"`
+	Speed     float64      `json:"speed"`
+	Wall      float64      `json:"wall"`
+	SumWall   float64      `json:"sum_wall"`
+	Baseline  *Run         `json:"baseline"`
+	Hold      float64      `json:"credits_hold"`
+	Spent     float64      `json:"credits_spent"`
+	Note      string       `json:"note"`
+	Err       string       `json:"err"`
+	CreatedAt time.Time    `json:"created_at"`
+	StartedAt time.Time    `json:"started_at"`
+	Finished  time.Time    `json:"finished_at"`
 	// Resumed marks a job that was re-dispatched after a broker restart: its
 	// wall clock contains the downtime, so the speedup derived from it is not a
 	// measurement of the scheduler and must not be presented as one.
@@ -120,8 +126,17 @@ type Job struct {
 }
 
 func (j *Job) Snapshot() map[string]any {
+	kind := j.Kind
+	if kind == "" {
+		kind = "transcode"
+	}
+	unit := "视频秒"
+	if j.Spec != nil {
+		unit = j.Spec.Unit()
+	}
 	return map[string]any{
 		"id": j.ID, "owner_id": j.OwnerID, "name": j.Name, "duration": j.Duration,
+		"kind": kind, "spec": j.Spec, "unit": unit,
 		"has_audio": j.HasAudio, "src_height": j.SrcHeight, "profile": j.Profile,
 		"req": j.Req, "status": j.Status, "speed": j.Speed, "wall": j.Wall,
 		"sum_wall": j.SumWall, "baseline": j.Baseline, "credits_hold": j.Hold,
@@ -231,7 +246,9 @@ func (w *Worker) hasRuntime(name string) bool {
 // demonstrated, otherwise "needs 8 GB of VRAM" silently matches a node that
 // reported nothing at all.
 func (w *Worker) meets(r Req, vcodec string) bool {
-	if !has(w.Encoders, vcodec) {
+	// render jobs have no target codec; their hard requirement is a runtime
+	// (Blender), which the caller puts in Req.Runtime instead
+	if vcodec != "" && !has(w.Encoders, vcodec) {
 		return false
 	}
 	if r.Runtime != "" && !w.hasRuntime(r.Runtime) {
@@ -274,6 +291,14 @@ type Claim struct {
 	Height int     `json:"height"`
 	Audio  bool    `json:"audio"`
 	Lease  float64 `json:"lease"`
+	// Render claims carry the whole spec minus the timeline (an agent only needs
+	// the clips of its own slice) plus those clips, already trimmed and rebased
+	// to the start of the slice.
+	Kind  string        `json:"kind,omitempty"`
+	Spec  *render.Spec  `json:"spec,omitempty"`
+	Clips []render.Clip `json:"clips,omitempty"`
+	// Bundle says the source URL is an archive that must be unpacked first.
+	Bundle bool `json:"bundle,omitempty"`
 }
 
 type Server struct {
@@ -291,6 +316,8 @@ type Server struct {
 	policy     Policy
 	key        *agentKey
 	limiter    *rateLimiter
+	secrets    *secretBox
+	gateway    *gatewayState
 }
 
 func NewServer(dataDir, baseURL string, st *store.Store, pol Policy) *Server {
@@ -300,6 +327,7 @@ func NewServer(dataDir, baseURL string, st *store.Store, pol Policy) *Server {
 		leaseBase: 45 * time.Second, codes: map[string]string{},
 		launches: map[string]*launchTicket{},
 		policy:   pol, key: loadAgentKey(dataDir), limiter: newRateLimiter(),
+		secrets: loadSecretBox(dataDir), gateway: newGatewayState(),
 	}
 	// A broker reached over HTTPS must not send its session cookie in the clear
 	// on the next plaintext request.
@@ -408,9 +436,17 @@ func (s *Server) saveSegLocked(g *Seg) {
 }
 
 func jobRowOf(j *Job) *store.JobRow {
+	kind, plan := j.Kind, ""
+	if kind == "" {
+		kind = "transcode"
+	}
+	if j.Spec != nil {
+		plan = string(mustJSON(j.Spec))
+	}
 	return &store.JobRow{
 		ID: j.ID, OwnerID: j.OwnerID, Name: j.Name, SrcPath: j.path, Duration: j.Duration,
-		Profile: string(mustJSON(j.Profile)), Req: string(mustJSON(j.Req)), Status: j.Status,
+		Profile: string(mustJSON(j.Profile)), Req: string(mustJSON(j.Req)),
+		Kind: kind, Plan: plan, Status: j.Status,
 		CreditsHold: j.Hold, CreditsSpent: j.Spent, Note: j.Note, Err: j.Err,
 		CreatedAt: unixOrZero(j.CreatedAt), StartedAt: unixOrZero(j.StartedAt),
 		FinishedAt: unixOrZero(j.Finished), Wall: j.Wall, SumWall: j.SumWall,
@@ -458,14 +494,23 @@ func timeOrZero(ts int64) time.Time {
 func jobFromRow(row *store.JobRow) *Job {
 	j := &Job{
 		ID: row.ID, OwnerID: row.OwnerID, Name: row.Name, path: row.SrcPath,
-		Duration: row.Duration, Status: row.Status, Hold: row.CreditsHold,
+		Kind: row.Kind, Duration: row.Duration, Status: row.Status, Hold: row.CreditsHold,
 		Spent: row.CreditsSpent, Note: row.Note, Err: row.Err,
 		Wall: row.Wall, SumWall: row.SumWall,
 		CreatedAt: timeOrZero(row.CreatedAt), StartedAt: timeOrZero(row.StartedAt),
 		Finished: timeOrZero(row.FinishedAt),
 	}
+	if j.Kind == "transcode" {
+		j.Kind = ""
+	}
 	json.Unmarshal([]byte(row.Profile), &j.Profile)
 	json.Unmarshal([]byte(row.Req), &j.Req)
+	if row.Plan != "" {
+		var spec render.Spec
+		if err := json.Unmarshal([]byte(row.Plan), &spec); err == nil {
+			j.Spec = &spec
+		}
+	}
 	if j.Profile.Baseline {
 		j.Baseline = &Run{Status: "queued", Wall: row.BaselineWall}
 	}
@@ -496,6 +541,7 @@ func (s *Server) Handlers() http.Handler {
 	mux.HandleFunc("/api/report", s.handleReport)
 	mux.HandleFunc("/api/upload", s.handleUpload)
 	mux.HandleFunc("/api/jobs", s.handleJobs)
+	mux.HandleFunc("/api/jobs/render", s.handleCreateRender)
 	mux.HandleFunc("/api/estimate", s.handleEstimate)
 	mux.HandleFunc("/api/state", s.handleState)
 	mux.HandleFunc("/api/jobs/", s.handleJobFile)
@@ -515,6 +561,15 @@ func (s *Server) Handlers() http.Handler {
 	mux.HandleFunc("/api/market", s.handleMarket)
 	mux.HandleFunc("/api/ledger", s.handleLedger)
 
+	// Model gateway: console management on /api, buyer API on /v1.
+	mux.HandleFunc("/api/keys", s.handleAPIKeys)
+	mux.HandleFunc("/api/keys/", s.handleAPIKeyOp)
+	mux.HandleFunc("/api/models/upstreams", s.handleUpstreams)
+	mux.HandleFunc("/api/models/upstreams/", s.handleUpstreamOp)
+	mux.HandleFunc("/api/models/catalog", s.handleModelCatalog)
+	mux.HandleFunc("/v1/models", s.handleV1Models)
+	mux.HandleFunc("/v1/chat/completions", s.handleV1Chat)
+
 	mux.HandleFunc("/", handleIndex)
 	return logWrap(mux)
 }
@@ -526,7 +581,8 @@ var chatter = map[string]bool{"/api/state": true, "/api/worker/hello": true, "/a
 
 func logWrap(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/" && !strings.HasPrefix(r.URL.Path, "/api/") {
+		if r.URL.Path != "/" && !strings.HasPrefix(r.URL.Path, "/api/") &&
+			!strings.HasPrefix(r.URL.Path, "/v1/") {
 			h.ServeHTTP(w, r)
 			return
 		}
@@ -789,6 +845,17 @@ func (s *Server) dispatchLocked(seg *Seg, wd *Worker) bool {
 		Height: j.Profile.Height, Audio: j.Profile.Audio && j.HasAudio,
 		Lease: lease.Seconds(),
 	}
+	if j.Kind != "" && j.Kind != "transcode" && j.Spec != nil {
+		spec := *j.Spec
+		// the full timeline stays on the broker: shipping it to every agent would
+		// hand out the whole edit (asset names, cut structure) for one slice, and
+		// the agent only ever renders its own range
+		spec.Timeline = nil
+		claim.Kind, claim.Spec, claim.Bundle = j.Kind, &spec, j.Spec.Bundle
+		if j.Kind == render.KindPR {
+			claim.Clips = render.SliceClips(j.Spec.Timeline, seg.Start, seg.Dur)
+		}
+	}
 	select {
 	case wd.inbox <- claim:
 		return true
@@ -918,7 +985,8 @@ func (s *Server) tick() {
 			if i >= budget {
 				break
 			}
-			wd := s.pickWorkerLocked(q.job.Req, q.job.Profile.VCodec, seg)
+			req, vc := jobReq(q.job)
+			wd := s.pickWorkerLocked(req, vc, seg)
 			if wd == nil {
 				break
 			}
@@ -995,6 +1063,26 @@ func (s *Server) punishLocked(wd *Worker) {
 // their trial period. Price enters as a ratio against the average quote of the
 // eligible pool, so the preference for cheaper compute is scale-free: it does
 // not matter whether the market trades at 0.1 or 10 points per second.
+// jobReq is the hard filter a job imposes on the market. A render job's
+// capability is a tool (Blender) or an encoder (ffmpeg), not the buyer's target
+// codec, so the mapping lives here instead of in every caller.
+func jobReq(j *Job) (Req, string) {
+	r, v := j.Req, j.Profile.VCodec
+	switch j.Kind {
+	case render.KindBlender:
+		if r.Runtime == "" {
+			r.Runtime = "blender"
+		}
+		v = ""
+	case render.KindPR:
+		if r.Runtime == "" {
+			r.Runtime = "ffmpeg"
+		}
+		v = "libx264"
+	}
+	return r, v
+}
+
 func (s *Server) pickWorkerLocked(req Req, vcodec string, seg *Seg) *Worker {
 	var cands []*Worker
 	for _, wd := range s.workers {
@@ -1109,24 +1197,31 @@ func (s *Server) jobsOrdered() []*Job {
 }
 
 func (s *Server) merge(j *Job) {
-	parts := make([]string, len(j.Segs))
-	for i, seg := range j.Segs {
-		parts[i] = seg.path
+	var err error
+	if j.Kind == render.KindBlender || j.Kind == render.KindPR {
+		err = s.mergeRender(j)
+	} else {
+		parts := make([]string, len(j.Segs))
+		for i, seg := range j.Segs {
+			parts[i] = seg.path
+		}
+		dst := filepath.Join(s.dataDir, "jobs", j.ID, "out.mp4")
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+		defer cancel()
+		if err = ffx.Concat(ctx, parts, dst); err == nil {
+			j.out = dst
+		}
 	}
-	dst := filepath.Join(s.dataDir, "jobs", j.ID, "out.mp4")
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
-	defer cancel()
-	if err := ffx.Concat(ctx, parts, dst); err != nil {
+	if err != nil {
 		s.mu.Lock()
-		j.Status, j.Err = "failed", "concat: "+err.Error()
+		j.Status, j.Err = "failed", "merge: "+err.Error()
 		s.releaseHold(j, "合并失败，未使用的预扣已退还")
 		s.saveJobLocked(j)
 		s.mu.Unlock()
-		log.Printf("job %s concat failed: %v", j.ID, err)
+		log.Printf("job %s merge failed: %v", j.ID, err)
 		return
 	}
 	s.mu.Lock()
-	j.out = dst
 	j.Status = "done"
 	j.Finished = time.Now()
 	j.Wall = j.Finished.Sub(j.StartedAt).Seconds()
@@ -1268,7 +1363,11 @@ func (s *Server) handleReport(w http.ResponseWriter, r *http.Request) {
 	case "done":
 		j := s.jobs[seg.JobID]
 		if seg.path == "" {
-			seg.path = filepath.Join(s.dataDir, "jobs", seg.JobID, fmt.Sprintf("seg%03d.mkv", seg.Index))
+			kind := ""
+			if j != nil {
+				kind = j.Kind
+			}
+			seg.path = s.artifactPath(seg.JobID, kind, seg.Index)
 		}
 		seg.Status, seg.Pct, seg.Worker = "done", 100, rep.Worker
 		seg.Err = ""
@@ -1354,6 +1453,12 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 	// the bytes of a slice the platform already accepted (or already handed to
 	// someone else) must not land on the same path and overwrite that result
 	stale := seg != nil && !holdsLease(seg, worker)
+	kind := ""
+	if seg != nil {
+		if j := s.jobs[seg.JobID]; j != nil {
+			kind = j.Kind
+		}
+	}
 	s.mu.Unlock()
 	if seg == nil {
 		http.Error(w, "no such segment", 404)
@@ -1377,7 +1482,7 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer f.Close()
-	dst := filepath.Join(s.dataDir, "jobs", seg.JobID, fmt.Sprintf("seg%03d.mkv", seg.Index))
+	dst := s.artifactPath(seg.JobID, kind, seg.Index)
 	os.MkdirAll(filepath.Dir(dst), 0o755)
 	out, err := os.Create(dst + ".tmp")
 	if err != nil {
@@ -1685,9 +1790,12 @@ func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request) {
 		if out == "" {
 			// a job finished before the last broker restart lives only in
 			// SQLite, but its merged file is still on disk under a known name
-			p := filepath.Join(s.dataDir, "jobs", id, "out.mp4")
-			if _, err := os.Stat(p); err == nil {
-				out = p
+			for _, name := range []string{"out.mp4", "out.zip"} {
+				p := filepath.Join(s.dataDir, "jobs", id, name)
+				if _, err := os.Stat(p); err == nil {
+					out = p
+					break
+				}
 			}
 		}
 	}
@@ -1765,7 +1873,7 @@ func meView(u *store.User) map[string]any {
 	if u == nil {
 		return map[string]any{"signed_in": false}
 	}
-	return map[string]any{"signed_in": true, "id": u.ID, "name": u.Name, "credits": u.Credits}
+	return map[string]any{"signed_in": true, "id": u.ID, "name": u.Name, "credits": round4(u.Credits)}
 }
 
 func writeJSON(w http.ResponseWriter, v any) {

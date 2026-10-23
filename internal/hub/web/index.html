@@ -282,6 +282,7 @@ td .tag{margin:2px 4px 2px 0}
     <div class="nav-label">控制台</div>
     <button data-v="submit" class="on"><svg viewBox="0 0 24 24"><path d="M12 16V4m0 0L8 8m4-4 4 4"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>提交任务</button>
     <button data-v="jobs"><svg viewBox="0 0 24 24"><path d="M4 6h10M4 12h16M4 18h7"/><circle cx="19" cy="6" r="2"/><circle cx="8" cy="18" r="2"/></svg>我的任务</button>
+    <button data-v="api"><svg viewBox="0 0 24 24"><path d="M12 3v18M5 8l7-5 7 5M5 16l7 5 7-5"/><circle cx="12" cy="12" r="2.5"/></svg>模型 API</button>
     <button data-v="market"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c2.5 3 2.5 13 0 16M12 4c-2.5 3-2.5 13 0 16"/></svg>算力市场</button>
     <button data-v="nodes"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg>我的节点</button>
     <button data-v="bill"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2Z"/><path d="M9 8h6M9 12h6"/></svg>账单</button>
@@ -329,16 +330,56 @@ td .tag{margin:2px 4px 2px 0}
 <section class="view" id="v-submit">
   <div class="grid">
     <div class="card">
-      <h2 class="plain">转码任务</h2>
+      <h2 class="plain">提交任务</h2>
       <form id="f">
-        <label>上传视频文件</label>
-        <input type="file" name="file" accept="video/*,audio/*">
+        <div class="row">
+          <div><label>任务类型</label><select name="jobkind" id="jobkind">
+            <option value="transcode" selected>视频转码（按秒切片）</option>
+            <option value="blender">Blender 工程渲染（按帧切片）</option>
+            <option value="pr">PR / FCP 时间线渲染（按秒切片）</option>
+          </select></div>
+          <div><label>切分片数</label><input name="segs" value="4" inputmode="numeric"></div>
+        </div>
+
+        <label>上传文件</label>
+        <input type="file" name="file" id="fileinput" accept="video/*,audio/*">
         <div id="pathbox">
         <label>…或使用服务端本机路径（同机演示更快）</label>
         <input name="path" placeholder="D:/videos/input.mp4">
         </div>
 
-        <fieldset class="fieldset">
+        <div id="render-blender" style="display:none">
+          <fieldset class="fieldset">
+            <legend>Blender 场景与输出</legend>
+            <div class="row3">
+              <div><label>场景文件（zip 内可省略）</label><input name="scene" placeholder="scene.blend"></div>
+              <div><label>渲染引擎</label><select name="engine">
+                <option value="" selected>沿用场景设置</option>
+                <option value="CYCLES">CYCLES</option>
+                <option value="BLENDER_EEVEE_NEXT">BLENDER_EEVEE_NEXT</option>
+                <option value="BLENDER_EEVEE">BLENDER_EEVEE</option>
+                <option value="BLENDER_WORKBENCH">BLENDER_WORKBENCH</option>
+              </select></div>
+              <div><label>采样数（0=场景设置）</label><input name="samples" value="0" inputmode="numeric"></div>
+            </div>
+            <div class="row3">
+              <div><label>起始帧</label><input name="from" value="1" inputmode="numeric"></div>
+              <div><label>结束帧</label><input name="to" value="120" inputmode="numeric"></div>
+              <div><label>输出帧率（合成视频用）</label><input name="fps" value="24" inputmode="decimal"></div>
+            </div>
+            <div class="row">
+              <div><label>分辨率百分比（0=场景设置）</label><input name="percent" value="0" inputmode="numeric"></div>
+              <div class="hint">把 .blend 连同贴图、缓存打成 zip 最稳；也可直接传 .blend。节点需安装 Blender，并在 PATH 中或用 --blender 指定。</div>
+            </div>
+          </fieldset>
+        </div>
+
+        <div id="render-pr" style="display:none" class="hint">
+          上传 zip：Premiere「文件 → 导出 → Final Cut Pro XML」得到的 XML（或 FCPXML）＋所有素材，素材按文件名匹配。
+          .prproj 不能直接渲染；效果、转场、多轨合成不在交换格式里，分发渲染会按剪辑点与入出点原样还原时间线。
+        </div>
+
+        <fieldset class="fieldset" id="transcode-fields">
           <legend>编码参数</legend>
           <div class="row3">
             <div><label>目标编码器</label><select name="vcodec">
@@ -351,10 +392,9 @@ td .tag{margin:2px 4px 2px 0}
               <option>ultrafast</option><option>veryfast</option><option selected>fast</option>
               <option>medium</option><option>slow</option>
             </select></div>
-            <div><label>切分片数</label><input name="segs" value="4" inputmode="numeric"></div>
-          </div>
-          <div class="row3">
             <div><label>质量 QP/CRF</label><input name="q" value="26" inputmode="numeric"></div>
+          </div>
+          <div class="row">
             <div><label>目标高度 (0=原始)</label><input name="height" value="0" inputmode="numeric"></div>
             <div><label>音轨</label><select name="audio"><option value="1" selected>保留</option><option value="0">丢弃</option></select></div>
           </div>
@@ -381,8 +421,8 @@ td .tag{margin:2px 4px 2px 0}
             </select></div>
           </div>
           <div class="row">
-            <div><label>单价上限 点/视频秒</label><input name="max_price" value="0" inputmode="decimal" placeholder="0=不限"></div>
-            <div><label>视频时长（估费用用，秒）</label><input name="duration" value="0" inputmode="decimal"></div>
+            <div><label>单价上限 点/单位</label><input name="max_price" value="0" inputmode="decimal" placeholder="0=不限"></div>
+            <div id="durbox"><label>视频时长（估费用用，秒）</label><input name="duration" value="0" inputmode="decimal"></div>
           </div>
         </fieldset>
 
@@ -409,6 +449,96 @@ td .tag{margin:2px 4px 2px 0}
           到更贵机器时平台倒贴。实际按每个分片「视频秒数 × 派发时锁定的单价」结算，差额在完成或失败时退还。
         </div>
         <div id="deadlinenote" class="hint"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ---------- 模型 API ---------- -->
+<section class="view" id="v-api">
+  <div class="grid">
+    <div>
+      <div class="card">
+        <h2 class="plain">我的 API Key</h2>
+        <div class="hint" style="margin-top:0">
+          用 <code>Authorization: Bearer sk-ss-…</code> 调用本 Broker 的 OpenAI 兼容接口。
+          密钥只在创建时显示一次，服务端只保存 SHA-256 哈希；每次调用按 token 从余额结算。
+        </div>
+        <div class="row">
+          <div><label>密钥名称</label><input id="keyname" placeholder="例如 论文实验"></div>
+          <div style="display:flex;align-items:flex-end">
+            <button class="btn" id="newkeybtn" style="margin-top:0">创建密钥</button>
+          </div>
+        </div>
+        <div id="newkey"></div>
+        <div class="tablewrap" style="margin-top:16px"><table id="keys"><thead><tr>
+          <th>名称</th><th>密钥前缀</th><th>创建时间</th><th>最近使用</th><th></th>
+        </tr></thead><tbody><tr><td colspan="5" class="empty">加载中…</td></tr></tbody></table></div>
+      </div>
+
+      <div class="card">
+        <h2 class="plain">接入模型上游</h2>
+        <div class="hint" style="margin-top:0">
+          llama.cpp / vLLM / Ollama 的 OpenAI 兼容端点都能接入。单机直接填地址；MoE 模型可用多台机器的
+          <code>llama.cpp/rpc-server</code> 聚合成一个端点，平台只感知这个端点。上游密钥会用本地
+          <code>gateway.key</code> 加密后入库，控制台不再显示明文。
+        </div>
+        <label>上游名称</label>
+        <input id="upname" placeholder="例如 宿舍 4090 · Qwen3-30B-A3B">
+        <label>Base URL</label>
+        <input id="upurl" placeholder="http://192.168.1.20:8080 或 https://xxx.trycloudflare.com">
+        <div class="row">
+          <div><label>上游 API Key（可选）</label>
+            <input id="upkey" type="password" placeholder="llama.cpp 未设密钥时留空"></div>
+          <div><label>单价（算力点 / 千 token）</label>
+            <input id="upprice" type="number" min="0.0001" step="0.1" value="0.5"></div>
+        </div>
+        <label>提供的模型名（逗号分隔）</label>
+        <div style="display:flex;gap:8px">
+          <input id="upmodels" placeholder="qwen3-30b-a3b, qwen2.5-7b">
+          <button class="ghost tiny" id="probeup" style="margin:0;height:35px">探测</button>
+        </div>
+        <div id="upmsg" class="hint"></div>
+        <button class="btn" id="addup">登记上游</button>
+      </div>
+
+      <div class="card">
+        <h2 class="plain">我登记的上游</h2>
+        <div id="ups"><div class="empty">加载中…</div></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h2 class="plain">可用模型</h2>
+        <div class="tablewrap"><table id="cat"><thead><tr>
+          <th>模型</th><th>上游数</th><th>最低单价</th>
+        </tr></thead><tbody><tr><td colspan="3" class="empty">加载中…</td></tr></tbody></table></div>
+        <div class="hint">按最低价且健康的上游路由；买家实付 = 模型单价 × token 数，
+          提供方获得 90%，平台留 10% 撮合费。连续失败的上游冷却 20 秒并自动切到下一家。
+          余额不足会返回 402，不会产生欠费。</div>
+      </div>
+
+      <div class="card">
+        <h2 class="plain">调用示例</h2>
+        <label>模型</label>
+        <select id="apimodel"><option value="">（先登记一个模型）</option></select>
+        <pre id="curlsnippet"></pre>
+        <div class="hint">任何 OpenAI SDK 都能把 <code>base_url</code> 指到
+          <code id="apibase"></code>；流式请求加 <code>"stream": true</code>，
+          Broker 会透传 SSE，并按上游 usage 或实际输出估算 token 结算。</div>
+      </div>
+
+      <div class="card">
+        <h2 class="plain">分布式 / MoE 部署</h2>
+        <div class="hint" style="margin-top:0">
+          MoE 的专家权重远大于单卡显存，常见做法是把专家放在 CPU 内存、注意力层留在 GPU：
+          llama.cpp 的 <code>--n-cpu-moe N</code> 控制放进 CPU 的专家层数。多机则每台跑
+          <code>rpc-server</code>，主节点用 <code>--rpc</code> 聚合显存，对平台仍是一个标准端点。
+          vLLM 多卡用 <code>--tensor-parallel-size</code>；Ollama 监听 <code>0.0.0.0</code> 后直接填地址。
+        </div>
+        <pre id="moesnippet"></pre>
+        <div class="hint">完整脚本、systemd 单元和参数说明见仓库 <code>deploy/models/</code>。</div>
       </div>
     </div>
   </div>
@@ -564,6 +694,8 @@ $('#logout').onclick=async()=>{await post('/api/auth/logout',{});location.reload
 function enter(){
   $('#v-auth').classList.remove('on');
   $('#app').classList.add('signed');
+  // a new session must not inherit another account's in-memory key or cache
+  API_LAST=0; APIKEY='';
   // the auth card owns the only .view.on in the markup; without activating a
   // section here, login leaves the page blank until you click a tab
   $('#v-'+activeView()).classList.add('on');
@@ -588,8 +720,9 @@ function applyPolicy(){
       + (POL.recharge ? '。' : '；本部署关闭了自助充值，额度用完请联系管理员。')
     : '本注册不赠送算力点。';
   $('#recharge').style.display = POL.recharge ? 'flex' : 'none';
-  $('#pathbox').style.display = POL.local_path ? 'block' : 'none';
-  $('#baselinebox').style.display = POL.public ? 'none' : 'flex';
+  const render=$('#jobkind').value!=='transcode';
+  $('#pathbox').style.display = (POL.local_path&&!render) ? 'block' : 'none';
+  $('#baselinebox').style.display = (POL.public||render) ? 'none' : 'flex';
   $('#pendingbox').style.display = POL.pending ? 'block' : 'none';
   const tok = POL.public ? ' \\\n  --token <运维分配的接入令牌>' : '';
   $('#agentcmd').textContent =
@@ -639,8 +772,172 @@ function paint(){
   if(v==='nodes') paintNodes();
   if(v==='jobs') paintJobs();
   if(v==='bill') paintBill();
+  if(v==='api') paintApi();
   if(v==='submit') quote();
 }
+
+/* ---------------- 模型 API ---------------- */
+// The gateway view loads on demand and refreshes at most every five seconds, so
+// the periodic /api/state poll does not wipe a half-typed upstream form.
+let API_LAST=0, APIKEY='', CATALOG=[];
+const apiTS=t=>new Date(t*1000).toLocaleString('zh-CN',{hour12:false});
+function paintApi(force){
+  const now=Date.now();
+  if(!force && now-API_LAST<5000) return;
+  API_LAST=now;
+  loadApi();
+}
+async function loadApi(){
+  try{
+    const [k,u,c]=await Promise.all([api('/api/keys'),api('/api/models/upstreams'),api('/api/models/catalog')]);
+    renderKeys(k.keys||[]);
+    renderUps(u.upstreams||[]);
+    CATALOG=c.models||[];
+    $('#apibase').textContent=location.origin+BASE+'/v1';
+    renderCatalog();
+  }catch(e){
+    $('#keys tbody').innerHTML=`<tr><td colspan="5" class="empty">读取失败：${esc(e)}</td></tr>`;
+  }
+}
+function renderKeys(list){
+  $('#keys tbody').innerHTML=list.length?list.map(k=>`<tr>
+    <td>${esc(k.name)}</td>
+    <td class="num">${esc(k.prefix)}</td>
+    <td class="num">${apiTS(k.created_at)}</td>
+    <td class="num">${k.last_used?apiTS(k.last_used):'—'}</td>
+    <td>${k.revoked?'<span class="tag off">已撤销</span>':
+      `<button class="ghost tiny" onclick="revokeKey('${esc(k.id)}')">撤销</button>`}</td>
+  </tr>`).join(''):'<tr><td colspan="5" class="empty">还没有 API Key</td></tr>';
+}
+async function revokeKey(id){
+  if(!confirm('撤销后使用该密钥的调用会立即失效，确定？'))return;
+  try{await api('/api/keys/'+encodeURIComponent(id),{method:'DELETE'});loadApi()}
+  catch(e){alert('撤销失败：'+e)}
+}
+function renderUps(list){
+  $('#ups').innerHTML=list.length?list.map(u=>{
+    const h=u.health||{};
+    const state=u.enabled?(h.cooling_sec?`<span class="tag off">冷却 ${h.cooling_sec}s</span>`:
+      '<span class="tag on">路由中</span>'):'<span class="tag off">已停用</span>';
+    return `<div class="card" style="margin-bottom:10px;padding:16px 18px">
+      <h2 class="plain">${esc(u.name)} ${state}</h2>
+      <div class="hint">${esc(u.base_url)} · ${esc((u.models||[]).join(' / '))}</div>
+      <div class="stats">
+        <div class="stat"><b>${f2(u.price)}</b><span>点 / 千 token</span></div>
+        <div class="stat"><b>${(u.models||[]).length}</b><span>模型数</span></div>
+        <div class="stat"><b>${h.last_ok?apiTS(h.last_ok).slice(-8):'—'}</b><span>最近成功</span></div>
+      </div>
+      ${u.key_state==='error'?'<div class="hint warn">上游密钥无法解密：gateway.key 可能被更换，请删除后重新登记。</div>':''}
+      ${h.last_error?`<div class="hint warn">最近错误：${esc(h.last_error)}</div>`:''}
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="ghost tiny" onclick="toggleUp('${esc(u.id)}',${!u.enabled})">${u.enabled?'停用':'启用'}</button>
+        <button class="ghost tiny" onclick="delUp('${esc(u.id)}')">删除</button>
+      </div>
+    </div>`;
+  }).join(''):'<div class="empty">还没有登记上游。先在上面填一个可访问的 OpenAI 兼容地址。</div>';
+}
+async function toggleUp(id,enabled){
+  try{await api('/api/models/upstreams/'+encodeURIComponent(id),
+    {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled})});
+    loadApi()}catch(e){alert('操作失败：'+e)}
+}
+async function delUp(id){
+  if(!confirm('删除后这个上游立即退出路由，确定？'))return;
+  try{await api('/api/models/upstreams/'+encodeURIComponent(id),{method:'DELETE'});loadApi()}
+  catch(e){alert('删除失败：'+e)}
+}
+function renderCatalog(){
+  const sel=$('#apimodel'), cur=sel.value;
+  sel.innerHTML=CATALOG.length?CATALOG.map(m=>
+    `<option value="${esc(m.id)}">${esc(m.id)} · ${f2(m.price_per_1k)} 点/千 token</option>`).join('')
+    :'<option value="">（先登记一个模型）</option>';
+  if(cur && CATALOG.some(m=>m.id===cur)) sel.value=cur;
+  $('#cat tbody').innerHTML=CATALOG.length?CATALOG.map(m=>`<tr>
+    <td class="num">${esc(m.id)}</td><td>${m.providers}</td>
+    <td class="num">${f2(m.price_per_1k)} 点/千 token</td></tr>`).join('')
+    :'<tr><td colspan="3" class="empty">还没有可用模型</td></tr>';
+  snippet();
+}
+function snippet(){
+  const model=$('#apimodel').value||'your-model';
+  const key=APIKEY||'sk-ss-...';
+  $('#curlsnippet').textContent=`curl ${location.origin+BASE}/v1/chat/completions \\
+  -H "Authorization: Bearer ${key}" \\
+  -H "Content-Type: application/json" \\
+  -d '{"model":"${model}","messages":[{"role":"user","content":"你好"}]}'`;
+}
+$('#apimodel').addEventListener('change',snippet);
+$('#moesnippet').textContent=`# 每台出显存的机器：llama.cpp 构建目录下
+rpc-server -H 0.0.0.0 -p 50052
+
+# 主节点：聚合多机显存，把一部分专家层放到 CPU 内存
+llama-server -m Qwen3-30B-A3B-Q4_K_M.gguf \\
+  --rpc 192.168.1.10:50052,192.168.1.11:50052 \\
+  -ngl 99 --n-cpu-moe 24 --host 0.0.0.0 --port 8080
+
+# vLLM 单机多卡张量并行
+vllm serve Qwen/Qwen3-30B-A3B --tensor-parallel-size 2 --port 8000`;
+$('#newkeybtn').onclick=async()=>{
+  const btn=$('#newkeybtn'); btn.disabled=true;
+  try{
+    const d=await post('/api/keys',{name:$('#keyname').value.trim()||'默认密钥'});
+    APIKEY=d.key;
+    $('#newkey').innerHTML=`<div class="hint warn" style="margin-top:12px">新密钥只显示这一次，请立即复制保存：</div>
+      <pre id="newkeyval">${esc(d.key)}</pre>
+      <button class="ghost tiny" id="copykey">复制密钥</button>`;
+    $('#copykey').onclick=async()=>{
+      try{await navigator.clipboard.writeText(d.key);$('#copykey').textContent='已复制'}
+      catch(e){
+        const r=document.createRange();r.selectNodeContents($('#newkeyval'));
+        const sel=getSelection();sel.removeAllRanges();sel.addRange(r);
+        $('#copykey').textContent='已选中，请按 Ctrl+C';
+      }
+    };
+    $('#keyname').value='';
+    snippet(); loadApi();
+  }catch(e){$('#newkey').innerHTML=`<div class="err">创建失败：${esc(e)}</div>`}
+  finally{btn.disabled=false}
+};
+$('#probeup').onclick=async()=>{
+  const msg=$('#upmsg'); msg.textContent='正在请求上游 /v1/models…';
+  try{
+    const d=await post('/api/models/upstreams/probe',
+      {base_url:$('#upurl').value.trim(),api_key:$('#upkey').value});
+    msg.innerHTML=`探测成功（${d.latency_ms} ms）：${(d.models||[]).map(esc).join('、')}`;
+    if(!$('#upmodels').value.trim()) $('#upmodels').value=d.models.slice(0,8).join(', ');
+  }catch(e){msg.textContent='探测失败：'+e}
+};
+$('#addup').onclick=async()=>{
+  const msg=$('#upmsg'), btn=$('#addup');
+  const body={name:$('#upname').value.trim(),base_url:$('#upurl').value.trim(),
+    api_key:$('#upkey').value,models:$('#upmodels').value.trim(),price:+$('#upprice').value};
+  if(!body.base_url){msg.textContent='请填写 Base URL';return}
+  if(!body.models){msg.textContent='请填写至少一个模型名';return}
+  if(!(body.price>0)){msg.textContent='单价必须大于 0';return}
+  btn.disabled=true; msg.textContent='正在登记…';
+  try{
+    await post('/api/models/upstreams',body);
+    msg.textContent='已登记，模型已进入可用目录';
+    $('#upname').value='';$('#upurl').value='';$('#upkey').value='';$('#upmodels').value='';
+    loadApi();
+  }catch(e){msg.textContent='登记失败：'+e}
+  finally{btn.disabled=false}
+};
+
+/* ---------------- 任务类型 ---------------- */
+const jobkind=$('#jobkind');
+function syncKind(){
+  const k=jobkind.value;
+  $('#transcode-fields').style.display=k==='transcode'?'':'none';
+  $('#pathbox').style.display=k==='transcode'?'':'none';
+  $('#render-blender').style.display=k==='blender'?'':'none';
+  $('#render-pr').style.display=k==='pr'?'':'none';
+  $('#baselinebox').style.display=k==='transcode'?'':'none';
+  $('#durbox').style.display=k==='transcode'?'':'none';
+  $('#fileinput').accept=k==='blender'?'.blend,.zip':k==='pr'?'.zip':'video/*,audio/*';
+  quote();
+}
+jobkind.addEventListener('change',syncKind);
 
 /* ---------------- 硬件要求 → 预估 ---------------- */
 function reqFromForm(){
@@ -656,7 +953,7 @@ function reqFromForm(){
   return r;
 }
 $('#f').addEventListener('change',e=>{
-  if(e.target.name==='file'){
+  if(e.target.name==='file'&&jobkind.value==='transcode'){
     const f=e.target.files[0];if(!f)return;
     const v=document.createElement('video');v.preload='metadata';
     v.onloadedmetadata=()=>{if(isFinite(v.duration)&&v.duration>0){DUR=v.duration;
@@ -669,6 +966,33 @@ $('#f').addEventListener('change',e=>{
 let quoteTimer=null;
 function quote(){
   clearTimeout(quoteTimer);quoteTimer=setTimeout(async()=>{
+    const kind=jobkind.value;
+    if(kind!=='transcode'){
+      let units=1,head='';
+      if(kind==='blender'){
+        const a=+($('#f [name=from]').value||0), b=+($('#f [name=to]').value||0);
+        units=b-a+1;
+        if(!(units>0)){$('#quote').innerHTML='填写起止帧后按帧数估算';return}
+        head=`第 ${a}~${b} 帧，共 <b>${units}</b> 帧`;
+      }else{
+        head='时间线时长由工程决定，下面按每秒报价';
+      }
+      const q=encodeURIComponent(JSON.stringify(reqFromForm()));
+      try{
+        const e=await api(`/api/estimate?duration=${units}&kind=${kind}&vcodec=libx264&req=${q}`);
+        const ok=e.affordable&&e.eligible>0;
+        $('#quote').innerHTML=`
+          <div>${head} · 满足硬约束的在线节点 <b>${e.eligible}</b> 台</div>
+          <div style="margin:10px 0 6px" class="${ok?'':'no'}">${kind==='blender'?'预扣':'每秒预扣'}
+            <span class="big">${f2(e.hold)}</span> 点（${esc(e.hold_basis)} ${f2(e.hold_price)} 点/${esc(e.unit)}）</div>
+          <div>余额 ${f2(e.balance)} 点 ${e.affordable?'· 足够':'· <span class="no">不足，请到账单页充值</span>'}</div>
+          ${e.eligible>0?`<div class="hint">可派发到：${e.nodes.map(n=>
+            `${esc(n.name)}（${f2(n.price)} 点/${esc(e.unit)}${n.mine?' · 我的机器':''}）`).join('、')}</div>`
+            :`<div class="hint no">没有在线节点满足要求，任务会排队等待。Blender 任务需要节点安装了 blender 并上报该运行时。</div>`}
+          ${kind==='pr'?'<div class="hint">实际预扣 = 时间线时长 × 单价，提交后显示在任务卡上。</div>':''}`;
+      }catch(err){$('#quote').textContent='估算失败：'+err}
+      return;
+    }
     const dur=+($('#f [name=duration]').value||DUR||0);
     if(!(dur>0)){$('#quote').innerHTML='填视频时长或选择文件后自动估算';return}
     const q=encodeURIComponent(JSON.stringify(reqFromForm()));
@@ -693,18 +1017,30 @@ function quote(){
 
 $('#f').addEventListener('submit',async e=>{
   e.preventDefault();
+  const kind=jobkind.value;
   const fd=new FormData(e.target);
-  if(!fd.get('baseline')) fd.set('baseline','0');
   if(!fd.get('file')||!fd.get('file').size) fd.delete('file');
   fd.set('req',JSON.stringify(reqFromForm()));
   ['need_gpu','min_gpu_mem','min_cpus','min_mem','max_price','runtime','arch','duration']
     .forEach(n=>fd.delete(n));
+  let url='/api/jobs';
+  if(kind==='transcode'){
+    if(!fd.get('baseline')) fd.set('baseline','0');
+    ['jobkind','scene','engine','samples','from','to','percent','fps'].forEach(n=>fd.delete(n));
+  }else{
+    url='/api/jobs/render';
+    fd.set('kind',kind);
+    ['baseline','path','vcodec','preset','q','height','audio','jobkind'].forEach(n=>fd.delete(n));
+    if(kind!=='blender')
+      ['scene','engine','samples','from','to','percent','fps'].forEach(n=>fd.delete(n));
+  }
   $('#submitbtn').disabled=true;$('#msg').textContent='上传并登记任务中…';
   try{
-    const r=await fetch('/api/jobs',{method:'POST',body:fd});
+    const r=await fetch(url,{method:'POST',body:fd});
     const t=await r.text();let d=null;try{d=JSON.parse(t)}catch(x){}
     if(!r.ok) throw (d&&d.error)||t;
-    $('#msg').textContent=`已入队 ${d.id}，预扣 ${f2(d.hold)} 点`;
+    $('#msg').textContent=kind==='transcode'?`已入队 ${d.id}，预扣 ${f2(d.hold)} 点`
+      :`已入队 ${d.id}（${d.pieces} 段 / ${f1(d.units)} ${d.unit}），预扣 ${f2(d.hold)} 点`;
     $$('#nav button[data-v]').find(b=>b.dataset.v==='jobs').click();
   }catch(err){$('#msg').textContent='失败：'+err}
   finally{$('#submitbtn').disabled=false}
@@ -713,13 +1049,17 @@ $('#f').addEventListener('submit',async e=>{
 /* ---------------- 我的任务 ---------------- */
 const ST={pending:'待调度',leased:'已派发',fetching:'取源中',running:'转码中',uploading:'回传中',done:'完成',failed:'失败'};
 const INFLIGHT=['fetching','leased','running','uploading'];
-function pieceHTML(s){
+function pieceHTML(s,j){
   const cls=s.status==='done'?'done':s.status==='failed'?'failed':
     INFLIGHT.includes(s.status)?'running':'pending';
   const h=Math.max(2,Math.min(100,(s.status==='done'?100:s.pct)));
   const who=s.worker? s.worker.slice(0,10):'—';
-  return `<div class="pc ${cls}" title="#${s.index} ${f1(s.start)}→${f1(s.start+s.dur)}s · ${who}
-      · ${ST[s.status]||s.status} · 成本 ${f2(s.cost||0)} 点">
+  const blender=j.kind==='blender';
+  const range=blender?`#${s.index} 第 ${Math.round(s.start)}~${Math.round(s.start+s.dur-1)} 帧`
+    :`#${s.index} ${f1(s.start)}→${f1(s.start+s.dur)}s`;
+  const state=s.status==='running'&&j.kind!=='transcode'?'渲染中':ST[s.status]||s.status;
+  return `<div class="pc ${cls}" title="${range} · ${who}
+      · ${state} · 成本 ${f2(s.cost||0)} 点">
     <div class="fill" style="height:${h}%"></div><div class="lbl">#${s.index}<br>${esc(who)}</div></div>`;
 }
 function jobHTML(j){
@@ -750,11 +1090,20 @@ function jobHTML(j){
   if(j.req.runtime) rq.push('需 '+j.req.runtime);
   if(j.req.arch) rq.push(j.req.arch);
   if(j.req.max_price) rq.push('≤'+f2(j.req.max_price)+' 点/秒');
+  const blender=j.kind==='blender';
+  const kindTag=blender?'Blender 渲染':j.kind==='pr'?'时间线渲染':'';
+  const specTag=blender
+    ? `<span class="tag">${kindTag}${j.spec&&j.spec.engine?' · '+esc(j.spec.engine):''}${j.spec&&j.spec.samples?' · '+j.spec.samples+' spp':''}</span>
+       <span class="tag">${Math.round(j.duration)} 帧 · ${j.segs.length} 段</span>`
+    : j.kind==='pr'
+    ? `<span class="tag">${kindTag}</span>
+       <span class="tag">${f1(j.duration)}s · ${j.segs.length} 片</span>`
+    : `<span class="tag">${esc(j.profile.vcodec)} · Q${j.profile.q} · ${esc(j.profile.preset)}</span>
+       <span class="tag">${j.profile.height?j.profile.height+'p':'原始分辨率'}</span>
+       <span class="tag">${f1(j.duration)}s · ${j.segs.length} 片</span>`;
   return `<div class="job">
     <h3>${esc(j.name)} <span class="st ${j.status}">${ST[j.status]||j.status}</span>
-      <span class="tag">${esc(j.profile.vcodec)} · Q${j.profile.q} · ${esc(j.profile.preset)}</span>
-      <span class="tag">${j.profile.height?j.profile.height+'p':'原始分辨率'}</span>
-      <span class="tag">${f1(j.duration)}s · ${j.segs.length} 片</span>
+      ${specTag}
       <span class="tag">预扣 ${f2(j.credits_hold||0)} 点</span>
       ${j.resumed?'<span class="tag gpu">跨 Broker 重启恢复</span>':''}
       ${rq.length?`<span class="tag gpu">硬约束：${rq.join(' / ')}</span>`:''}
@@ -764,7 +1113,7 @@ function jobHTML(j){
     <div class="note">${esc(j.note)}</div>
     <div class="prog"><div class="bar" style="flex:1"><i style="width:${pct}%"></i></div>
       <span class="sub-line">${done}/${j.segs.length}</span></div>
-    <div class="pieces">${j.segs.map(pieceHTML).join('')}</div>
+    <div class="pieces">${j.segs.map(s=>pieceHTML(s,j)).join('')}</div>
     <div class="stats">${st}</div>
     ${j.err?`<div class="err">错误：${esc(j.err)}</div>`:''}
   </div>`;
