@@ -13,6 +13,8 @@ rt-b/
 rt-data/
 run/
 smoke/
+uipreview-data/
+uipreview-logs/
 worker-cache/
 samples/
 
