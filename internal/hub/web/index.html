@@ -4,117 +4,311 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>星栈算力 · 闲置算力共享平台</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%235e6ad2'/%3E%3Ctext x='16' y='22' font-family='sans-serif' font-size='16' font-weight='600' fill='%23fff' text-anchor='middle'%3E%E6%98%9F%3C/text%3E%3C/svg%3E">
 <style>
+/* Linear-derived design tokens: near-black canvas, four-step surface ladder,
+   hairline borders for depth, one scarce lavender accent. */
 :root{
-  --bg:#0b0f14; --panel:#131a22; --panel2:#182230; --line:#243244;
-  --fg:#dce6f2; --dim:#8296ad; --acc:#48c9b0; --warn:#e0a458;
-  --bad:#e05c5c; --ok:#57c98a; --pend:#3a4a5e;
+  --canvas:#010102; --s1:#0f1011; --s2:#141516; --s3:#18191a; --s4:#1c1d1f;
+  --hair:#23252a; --hair-2:#2b2e33; --hair-3:#3e3e44;
+  --ink:#f7f8f8; --ink-2:#d0d6e0; --ink-3:#8a8f98; --ink-4:#62666d;
+  --acc:#5e6ad2; --acc-hi:#828fff; --acc-focus:#5e69d1;
+  --acc-ink:#ffffff; --acc-soft:rgba(130,143,255,.13);
+  --ok:#4bc96b; --ok-soft:rgba(43,166,76,.13);
+  --bad:#e5606a; --bad-soft:rgba(229,96,106,.13);
+  --warn:#d9a05b; --warn-soft:rgba(217,160,91,.13);
+  --vio:#a5aef2; --vio-soft:rgba(165,174,242,.13);
+  --sans:'Inter','SF Pro Display',-apple-system,'Segoe UI','Microsoft YaHei',system-ui,sans-serif;
+  --mono:'JetBrains Mono','Cascadia Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  --r-sm:6px; --r-md:8px; --r-lg:12px; --r-xl:16px;
+  --lift:inset 0 1px 0 rgba(255,255,255,.045);
 }
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--fg);
-  font:14px/1.5 ui-sans-serif,system-ui,"Segoe UI","Microsoft YaHei",sans-serif}
-header{padding:14px 24px;border-bottom:1px solid var(--line);
-  display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-header h1{margin:0;font-size:17px;font-weight:600;letter-spacing:.3px}
-header .sub{color:var(--dim);font-size:12px}
+html,body{margin:0;height:100%}
+body{background:var(--canvas);color:var(--ink);font:14px/1.5 var(--sans);
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+::selection{background:rgba(94,106,210,.4);color:var(--ink)}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--hair-2);border:3px solid var(--canvas);border-radius:99px}
+::-webkit-scrollbar-thumb:hover{background:var(--hair-3)}
+a{color:var(--acc-hi);text-decoration:none}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:.94em;white-space:nowrap}
+
+/* ---------- shell ---------- */
+.app{display:flex;min-height:100%}
+/* signed out there is nothing to navigate, so the console chrome stays hidden
+   and the login card owns the whole canvas */
+#app:not(.signed) .sidebar,#app:not(.signed) .topbar{display:none}
+#app:not(.signed) main{max-width:440px;padding:clamp(32px,11vh,110px) 20px 40px}
+.sidebar{flex:0 0 240px;width:240px;border-right:1px solid var(--hair);
+  padding:18px 12px 16px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.brand{display:flex;align-items:center;gap:10px;padding:2px 8px 0}
+.mark{width:30px;height:30px;flex:0 0 30px;border-radius:var(--r-md);background:var(--acc);
+  color:#fff;display:grid;place-items:center;font-size:15px;font-weight:600;
+  box-shadow:var(--lift),0 0 0 1px rgba(255,255,255,.06)}
+.brand-name{font-size:14.5px;font-weight:600;letter-spacing:-.2px;line-height:1.2}
+.brand-sub{font-size:10.5px;color:var(--ink-4);letter-spacing:.06em;text-transform:uppercase;margin-top:1px}
+.nav-label{font-size:11px;font-weight:500;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ink-4);padding:0 10px;margin:22px 0 6px}
+nav{display:flex;flex-direction:column;gap:2px}
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{position:sticky;top:0;z-index:20;height:60px;flex:0 0 60px;display:flex;align-items:center;
+  gap:14px;padding:0 28px;border-bottom:1px solid var(--hair);
+  background:rgba(1,1,2,.75);backdrop-filter:blur(14px) saturate(150%)}
+.page-title{font-size:15.5px;font-weight:600;letter-spacing:-.2px}
+.page-sub{font-size:12px;color:var(--ink-4);margin-top:1px;letter-spacing:0}
 .spacer{flex:1}
-.wallet{font-size:13px;color:var(--dim)}
-.wallet b{color:var(--acc);font-size:16px;font-weight:600}
-nav{display:flex;gap:6px;padding:10px 24px;border-bottom:1px solid var(--line);
-  flex-wrap:wrap;background:#0d131b;position:sticky;top:0;z-index:5}
-nav button{width:auto;margin:0;padding:6px 14px;font-size:13px;background:transparent;
-  color:var(--dim);border:1px solid transparent;border-radius:7px;font-weight:500}
-nav button.on{background:var(--panel2);color:var(--fg);border-color:var(--line)}
-main{padding:20px 24px 60px;max-width:1280px;margin:0 auto}
-.view{display:none}.view.on{display:block}
-.grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:16px}
-@media(max-width:900px){.grid{grid-template-columns:1fr}}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:16px}
-.card h2{margin:0 0 10px;font-size:13px;font-weight:600;color:var(--dim);
-  text-transform:uppercase;letter-spacing:.8px}
-table{width:100%;border-collapse:collapse;font-size:12.5px}
-th{text-align:left;color:var(--dim);font-weight:500;padding:4px 6px;border-bottom:1px solid var(--line)}
-td{padding:6px;border-bottom:1px solid #1c2634;vertical-align:top}
-.tag{display:inline-block;padding:1px 7px;border-radius:99px;font-size:11px;
-  background:#1e2b3a;color:#9fb4cc;margin:1px 3px 1px 0;white-space:nowrap}
-.tag.on{background:#153028;color:var(--ok)}
-.tag.off{background:#30191b;color:var(--bad)}
-.tag.mine{background:#1b2b3f;color:#7fb2e0}
-.tag.gpu{background:#2a2338;color:#c8b3e8}
-.bar{height:8px;background:#1a2634;border-radius:4px;overflow:hidden}
-.bar>i{display:block;height:100%;background:var(--acc);transition:width .3s}
-.pieces{display:flex;gap:4px;flex-wrap:wrap;margin-top:8px}
-.pc{width:64px;height:44px;border-radius:6px;background:var(--panel2);border:1px solid var(--line);
-  padding:4px 5px;font-size:10px;color:var(--dim);position:relative;overflow:hidden}
-.pc .fill{position:absolute;left:0;bottom:0;width:100%;background:#1f5f52;opacity:.75}
-.pc .lbl{position:relative;z-index:1;font-weight:600;color:var(--fg)}
-.pc.done{border-color:#2c6b4f}.pc.running{border-color:var(--acc)}
-.pc.failed{border-color:var(--bad)}.pc.pending{border-style:dashed}
-label{display:block;font-size:11px;color:var(--dim);margin:10px 0 3px}
-input,select,button{width:100%;padding:7px 9px;border-radius:6px;border:1px solid var(--line);
-  background:#0e1520;color:var(--fg);font:inherit;font-size:13px}
-input[type=checkbox]{width:auto}
-button{background:var(--acc);color:#06231c;font-weight:600;border:0;cursor:pointer;margin-top:14px}
-button:disabled{opacity:.45;cursor:default}
-button.ghost{background:transparent;color:var(--acc);border:1px solid var(--acc);font-weight:500;
-  width:auto;padding:5px 12px;margin:0;font-size:12px}
-button.tiny{width:auto;padding:3px 10px;margin:0;font-size:11.5px;font-weight:500}
-.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
-.job{border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px;background:var(--panel)}
-.job h3{margin:0 0 4px;font-size:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.st{font-size:11px;padding:2px 8px;border-radius:99px;background:var(--pend);color:#cfe0f0}
-.st.done{background:#153028;color:var(--ok)}.st.running{background:#12303a;color:var(--acc)}
-.st.failed{background:#30191b;color:var(--bad)}.st.queued,.st.merging{background:#2a2338;color:#b9a8d8}
-.note{color:var(--dim);font-size:11.5px;margin:2px 0 8px;word-break:break-all}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-top:10px}
-.stat{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:7px 9px}
-.stat b{display:block;font-size:16px;font-weight:600}
-.stat span{font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
-.stat.hl b{color:var(--acc)}
+.wallet{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-3);
+  background:var(--s1);border:1px solid var(--hair);border-radius:99px;padding:5px 12px 5px 10px;box-shadow:var(--lift)}
+.wallet b{color:var(--acc-hi);font-weight:600;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.avatar{width:20px;height:20px;border-radius:99px;background:var(--s3);border:1px solid var(--hair-2);
+  display:grid;place-items:center;font-size:10.5px;font-weight:600;color:var(--ink-2)}
+main{flex:1;padding:24px 28px 72px;max-width:1320px;width:100%;margin:0 auto}
+.view{display:none}.view.on{display:block;animation:fade .18s ease-out}
+@keyframes fade{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+
+/* ---------- nav buttons ---------- */
+nav button{display:flex;align-items:center;gap:10px;width:100%;margin:0;padding:7px 10px;
+  font:500 13.5px/1.3 var(--sans);letter-spacing:-.1px;color:var(--ink-3);
+  background:transparent;border:0;border-radius:var(--r-md);text-align:left;position:relative}
+nav button svg{width:16px;height:16px;flex:0 0 16px;stroke:currentColor;fill:none;
+  stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;opacity:.75}
+nav button:hover{background:var(--s1);color:var(--ink-2)}
+nav button.on{background:var(--s2);color:var(--ink);box-shadow:var(--lift),inset 0 0 0 1px var(--hair)}
+nav button.on svg{color:var(--acc-hi);opacity:1}
+nav button.on::before{content:"";position:absolute;left:-12px;top:9px;bottom:9px;width:2px;
+  border-radius:0 2px 2px 0;background:var(--acc)}
+.nav-foot{margin-top:auto;padding-top:16px;border-top:1px solid var(--hair)}
+.nav-foot .who{display:flex;align-items:center;gap:9px;padding:8px 10px 6px;font-size:12.5px;color:var(--ink-3)}
+
+/* ---------- surfaces ---------- */
+.card{background:var(--s1);border:1px solid var(--hair);border-radius:var(--r-lg);
+  padding:18px 20px;margin-bottom:16px;box-shadow:var(--lift)}
+.card h2{margin:0 0 14px;font-size:11.5px;font-weight:500;color:var(--ink-3);
+  text-transform:uppercase;letter-spacing:.08em}
+.card h2.plain{text-transform:none;letter-spacing:-.2px;font-size:14.5px;font-weight:600;color:var(--ink)}
+.grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px;align-items:start}
+.split{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:16px;align-items:start}
+.sticky{position:sticky;top:76px}
+@media(max-width:1080px){.grid,.split{grid-template-columns:1fr}.sticky{position:static}}
+
+/* ---------- type helpers ---------- */
+.hint{color:var(--ink-3);font-size:12px;line-height:1.65;margin-top:10px}
+.hint.warn,.warn{color:var(--warn)}
 .err{color:var(--bad);font-size:12px;margin-top:8px}
-.empty{color:var(--dim);font-size:12.5px;padding:16px 0;text-align:center}
-.hint{color:var(--dim);font-size:11.5px;margin-top:10px;line-height:1.6}
-code{background:#0e1520;padding:1px 5px;border-radius:4px;font-size:11.5px;color:#a8c7e0}
-.prog{display:flex;align-items:center;gap:10px;margin-top:10px}
-.prog .bar{flex:1}
-.quote{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-top:12px;font-size:12.5px}
-.quote .big{font-size:20px;font-weight:600;color:var(--acc)}
-.quote .no{color:var(--warn)}
-.split{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:16px;align-items:start}
-@media(max-width:900px){.split{grid-template-columns:1fr}}
-.auth{max-width:360px;margin:40px auto}
-.tabs{display:flex;gap:6px;margin-bottom:12px}
-.tabs button{margin:0;flex:1;background:var(--panel2);color:var(--fg);font-weight:500;border:1px solid var(--line)}
-.tabs button.on{background:var(--acc);color:#06231c;font-weight:600}
-.kind{font-size:11px;padding:1px 7px;border-radius:99px;background:#1e2b3a;color:#9fb4cc}
-.kind.hold{background:#2a2338;color:#c8b3e8}.kind.settle{background:#153028;color:var(--ok)}
-.kind.refund{background:#12303a;color:var(--acc)}.kind.earn{background:#153028;color:var(--ok)}
-.kind.recharge{background:#1b2b3f;color:#7fb2e0}
+.note{color:var(--ink-3);font-size:12px;margin:2px 0 10px;word-break:break-all}
+.sub-line{display:block;color:var(--ink-4);font-size:11px;font-family:var(--mono)}
+code{background:var(--s2);border:1px solid var(--hair);padding:1px 6px;border-radius:var(--r-sm);
+  font:12px/1.4 var(--mono);color:var(--acc-hi)}
+pre{background:var(--canvas);border:1px solid var(--hair);border-radius:var(--r-md);padding:12px;
+  font:11.5px/1.6 var(--mono);overflow:auto;color:var(--ink-2);margin:10px 0}
+.empty{color:var(--ink-4);font-size:12.5px;padding:26px 0;text-align:center;
+  border:1px dashed var(--hair);border-radius:var(--r-md);background:rgba(255,255,255,.012)}
+
+/* ---------- buttons ---------- */
+button{font:inherit;border:0;padding:0;background:transparent;color:inherit;cursor:pointer;
+  -webkit-appearance:none;appearance:none}
+.btn{display:block;width:100%;background:var(--acc);color:var(--acc-ink);
+  font:500 13.5px/1.2 var(--sans);padding:10px 16px;border-radius:var(--r-md);
+  border:1px solid transparent;margin-top:14px;letter-spacing:-.1px;white-space:nowrap;
+  box-shadow:var(--lift),0 0 0 1px rgba(255,255,255,.04);
+  transition:background .14s ease-out,transform .14s ease-out,opacity .14s}
+.btn:hover:not(:disabled){background:var(--acc-hi)}
+.btn:active:not(:disabled){transform:translateY(.5px)}
+.btn:focus-visible{outline:2px solid rgba(94,105,209,.55);outline-offset:1px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.auto{width:auto;display:inline-flex;align-items:center;justify-content:center;margin-top:0;padding:10px 20px}
+.formfoot{display:flex;align-items:center;gap:16px;margin-top:18px}
+.formfoot .hint{margin-top:0}
+button.ghost{background:var(--s2);color:var(--ink-2);border:1px solid var(--hair-2);
+  font-weight:500;padding:6px 12px;border-radius:var(--r-sm);font-size:12.5px;white-space:nowrap;
+  box-shadow:var(--lift);transition:background .14s,color .14s,border-color .14s}
+button.ghost:hover:not(:disabled){background:var(--s3);color:var(--ink);border-color:var(--hair-3)}
+button.ghost:focus-visible{outline:2px solid rgba(94,105,209,.55);outline-offset:1px}
+button.tiny{padding:3px 9px;font-size:11.5px}
+
+/* ---------- forms ---------- */
+label{display:block;font-size:11.5px;font-weight:500;color:var(--ink-3);margin:14px 0 5px;letter-spacing:.01em}
+input,select{width:100%;padding:8px 11px;border-radius:var(--r-md);border:1px solid var(--hair-2);
+  background:var(--canvas);color:var(--ink);font:inherit;font-size:13px;
+  transition:border-color .14s,box-shadow .14s}
+input::placeholder{color:var(--ink-4)}
+input:focus-visible,select:focus-visible,summary:focus-visible{
+  outline:2px solid rgba(94,105,209,.55);outline-offset:1px}
+input:hover,select:hover{border-color:var(--hair-3)}
+select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a8f98' stroke-width='2' stroke-linecap='round'><path d='M6 9l6 6 6-6'/></svg>");
+  background-repeat:no-repeat;background-position:right 9px center;padding-right:28px}
+input[type=file]{padding:7px 9px;font-size:12px;color:var(--ink-3)}
+input[type=file]::file-selector-button{background:var(--s2);color:var(--ink-2);border:1px solid var(--hair-2);
+  border-radius:var(--r-sm);padding:5px 10px;margin-right:10px;font:500 12px var(--sans);cursor:pointer}
+input[type=checkbox]{width:auto;accent-color:var(--acc)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.fieldset{border:0;padding:0;margin:22px 0 0;border-top:1px solid var(--hair)}
+.fieldset legend{padding:0;font-size:11.5px;font-weight:500;color:var(--ink-3);
+  text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.fieldset .row,.fieldset .row3{margin-top:8px}
+.check{display:flex;align-items:flex-start;gap:10px;margin-top:16px;padding:11px 12px;
+  background:var(--s2);border:1px solid var(--hair);border-radius:var(--r-md);
+  font-size:12.5px;color:var(--ink-2);cursor:pointer;line-height:1.55}
+.check input{margin-top:2px}
+.tabs{display:flex;gap:3px;padding:3px;background:var(--canvas);border:1px solid var(--hair);
+  border-radius:99px;margin-bottom:18px}
+.tabs button{margin:0;flex:1;background:transparent;color:var(--ink-3);border:0;border-radius:99px;
+  padding:7px 12px;font-size:13px;font-weight:500}
+.tabs button:hover{background:var(--s1);color:var(--ink-2)}
+.tabs button.on{background:var(--s2);color:var(--ink);box-shadow:var(--lift),inset 0 0 0 1px var(--hair-2)}
+.tabs button.on:hover{background:var(--s2);color:var(--ink)}
+
+/* ---------- tables ---------- */
+.tablewrap{overflow-x:auto;margin:0 -4px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;color:var(--ink-4);font-weight:500;font-size:11px;letter-spacing:.06em;
+  text-transform:uppercase;padding:0 10px 9px;border-bottom:1px solid var(--hair);white-space:nowrap}
+td{padding:11px 10px;border-bottom:1px solid var(--hair);vertical-align:top;color:var(--ink-2)}
+tbody tr{transition:background .12s}
+tbody tr:hover{background:var(--s2)}
+tbody tr:last-child td{border-bottom:0}
+td .tag{margin:2px 4px 2px 0}
+.enc-col{max-width:190px}
+
+/* ---------- chips / pills ---------- */
+.tag{display:inline-block;padding:2px 8px;border-radius:var(--r-sm);font-size:11px;font-weight:500;
+  background:var(--s3);color:var(--ink-3);border:1px solid var(--hair);white-space:nowrap;
+  font-variant-numeric:tabular-nums}
+.tag.on{background:var(--ok-soft);color:var(--ok);border-color:rgba(75,201,107,.22)}
+.tag.off{background:var(--bad-soft);color:var(--bad);border-color:rgba(229,96,106,.22)}
+.tag.mine{background:var(--acc-soft);color:var(--acc-hi);border-color:rgba(130,143,255,.26)}
+.tag.gpu{background:var(--vio-soft);color:var(--vio);border-color:rgba(165,174,242,.22)}
+.st{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:500;white-space:nowrap;
+  padding:3px 9px;border-radius:99px;background:var(--s3);color:var(--ink-3);border:1px solid var(--hair)}
+.st::before{content:"";width:5px;height:5px;border-radius:99px;background:currentColor}
+.st.done{background:var(--ok-soft);color:var(--ok);border-color:rgba(75,201,107,.2)}
+.st.running,.st.leased,.st.fetching,.st.uploading{background:var(--acc-soft);color:var(--acc-hi);
+  border-color:rgba(130,143,255,.24)}
+.st.failed{background:var(--bad-soft);color:var(--bad);border-color:rgba(229,96,106,.2)}
+.st.queued,.st.pending,.st.merging{background:var(--vio-soft);color:var(--vio);border-color:rgba(165,174,242,.2)}
+.st.running::before{animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+.kind{display:inline-block;font-size:11px;font-weight:500;padding:2px 8px;border-radius:var(--r-sm);
+  white-space:nowrap;background:var(--s3);color:var(--ink-3);border:1px solid var(--hair)}
+.kind.hold{background:var(--vio-soft);color:var(--vio);border-color:rgba(165,174,242,.2)}
+.kind.settle,.kind.earn{background:var(--ok-soft);color:var(--ok);border-color:rgba(75,201,107,.2)}
+.kind.refund{background:var(--acc-soft);color:var(--acc-hi);border-color:rgba(130,143,255,.22)}
+.kind.recharge{background:var(--acc-soft);color:var(--acc-hi);border-color:rgba(130,143,255,.22)}
 .pos{color:var(--ok)}.neg{color:var(--warn)}
+.pos,.neg{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* ---------- stats ---------- */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(138px,1fr));gap:8px;margin-top:14px}
+.stat{background:var(--s2);border:1px solid var(--hair);border-radius:var(--r-md);padding:10px 12px;
+  transition:background .12s,border-color .12s}
+.stat:hover{background:var(--s3);border-color:var(--hair-2)}
+.stat b{display:block;font:600 17px/1.25 var(--sans);font-variant-numeric:tabular-nums;letter-spacing:-.4px}
+.stat span{display:block;font-size:10px;color:var(--ink-4);text-transform:uppercase;letter-spacing:.06em;margin-top:3px}
+.stat.hl{background:rgba(94,106,210,.12);border-color:rgba(130,143,255,.28)}
+.stat.hl b{color:var(--acc-hi)}
+
+/* ---------- jobs ---------- */
+.job{background:var(--s1);border:1px solid var(--hair);border-radius:var(--r-lg);
+  padding:18px 20px;margin-bottom:14px;box-shadow:var(--lift)}
+.job h3{margin:0 0 8px;font-size:15px;font-weight:600;letter-spacing:-.3px;
+  display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.job h3 .tag,.job h3 .st{font-weight:500}
+.prog{display:flex;align-items:center;gap:12px;margin-top:14px}
+.prog .bar{flex:1}
+.bar{height:6px;background:var(--s3);border-radius:99px;overflow:hidden;box-shadow:inset 0 0 0 1px var(--hair)}
+.bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--acc),var(--acc-hi));
+  border-radius:99px;transition:width .4s cubic-bezier(.22,1,.36,1)}
+.pieces{display:flex;gap:5px;flex-wrap:wrap;margin-top:12px}
+.pc{width:62px;height:46px;border-radius:var(--r-sm);background:var(--canvas);border:1px solid var(--hair);
+  padding:5px 6px;font-size:10px;color:var(--ink-4);position:relative;overflow:hidden;
+  transition:border-color .14s,transform .14s}
+.pc:hover{border-color:var(--hair-3);transform:translateY(-1px)}
+.pc .fill{position:absolute;left:0;bottom:0;width:100%;background:var(--acc-soft);transition:height .4s}
+.pc .lbl{position:relative;z-index:1;font-weight:600;color:var(--ink-2);font-size:9.5px;line-height:1.35;
+  font-family:var(--mono)}
+.pc.done{border-color:rgba(75,201,107,.3)}.pc.done .fill{background:var(--ok-soft)}
+.pc.running{border-color:rgba(130,143,255,.42)}.pc.running .fill{background:var(--acc-soft)}
+.pc.failed{border-color:rgba(229,96,106,.4)}.pc.failed .fill{background:var(--bad-soft)}
+.pc.pending{border-style:dashed;background:transparent}
+
+/* ---------- quote ---------- */
+.quote{background:var(--canvas);border:1px solid var(--hair);border-radius:var(--r-md);
+  padding:14px 15px;margin-top:0;font-size:12.5px;color:var(--ink-2);line-height:1.7}
+.quote b{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;color:var(--ink)}
+.quote .big{display:inline-block;font:600 26px/1.15 var(--sans);letter-spacing:-.8px;
+  color:var(--acc-hi);font-variant-numeric:tabular-nums;margin:0 2px}
+.quote .no{color:var(--warn)}
+.quote .no .big{color:var(--warn)}
+.quote .hint{margin-top:8px;padding-top:8px;border-top:1px solid var(--hair)}
+
+/* ---------- auth ---------- */
+.auth{max-width:392px;margin:clamp(24px,7vh,72px) auto}
+.auth .mark{width:40px;height:40px;flex:0 0 40px;font-size:19px;margin:0 auto 14px}
+.auth h1{margin:0 0 6px;font-size:22px;font-weight:600;letter-spacing:-.6px;text-align:center}
+.auth .lead{margin:0 0 22px;font-size:12.5px;color:var(--ink-3);text-align:center;line-height:1.6}
+.security{margin-top:16px;padding-top:14px;border-top:1px solid var(--hair);
+  font-size:11.5px;color:var(--ink-4);line-height:1.7}
+#authmsg:not(:empty){color:var(--bad);font-size:12.5px;margin-top:12px}
+
+/* ---------- responsive ---------- */
+@media(max-width:860px){
+  .app{flex-direction:column}
+  .sidebar{width:100%;flex:0 0 auto;height:auto;position:static;border-right:0;border-bottom:1px solid var(--hair);padding:14px 16px}
+  nav{flex-direction:row;overflow-x:auto;gap:6px}
+  nav button{width:auto;flex:0 0 auto;padding:7px 12px}
+  nav button.on::before{left:8px;right:8px;top:auto;bottom:-6px;width:auto;height:2px;border-radius:2px 2px 0 0}
+  .nav-label,.nav-foot{display:none}
+  .topbar{padding:0 16px;height:56px}
+  main{padding:18px 16px 56px}
+  .row,.row3{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
-<header>
-  <h1>星栈算力</h1>
-  <div class="sub">闲置算力共享：Provider Agent 上报软硬件清单 → Broker 两阶段匹配 → 分片并行执行 → 校验后按用量结算</div>
-  <div class="spacer"></div>
-  <div class="wallet" id="wallet"></div>
-</header>
+<div class="app" id="app">
+<aside class="sidebar">
+  <div class="brand">
+    <div class="mark">星</div>
+    <div>
+      <div class="brand-name">星栈算力</div>
+      <div class="brand-sub">Compute Share</div>
+    </div>
+  </div>
 
-<nav id="nav" style="display:none">
-  <button data-v="submit" class="on">提交任务</button>
-  <button data-v="jobs">我的任务</button>
-  <button data-v="market">算力市场</button>
-  <button data-v="nodes">我的节点</button>
-  <button data-v="bill">账单</button>
-  <button class="ghost" id="logout" style="margin:0 0 0 auto">退出</button>
-</nav>
+  <nav id="nav" style="display:none">
+    <div class="nav-label">控制台</div>
+    <button data-v="submit" class="on"><svg viewBox="0 0 24 24"><path d="M12 16V4m0 0L8 8m4-4 4 4"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>提交任务</button>
+    <button data-v="jobs"><svg viewBox="0 0 24 24"><path d="M4 6h10M4 12h16M4 18h7"/><circle cx="19" cy="6" r="2"/><circle cx="8" cy="18" r="2"/></svg>我的任务</button>
+    <button data-v="market"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c2.5 3 2.5 13 0 16M12 4c-2.5 3-2.5 13 0 16"/></svg>算力市场</button>
+    <button data-v="nodes"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg>我的节点</button>
+    <button data-v="bill"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2Z"/><path d="M9 8h6M9 12h6"/></svg>账单</button>
+    <div class="nav-foot">
+      <div class="who" id="who"></div>
+      <button class="ghost" id="logout" style="width:100%">退出登录</button>
+    </div>
+  </nav>
+</aside>
+
+<div class="main">
+<header class="topbar">
+  <div>
+    <div class="page-title" id="ptitle">星栈算力</div>
+    <div class="page-sub">闲置算力共享 · 上报 → 匹配 → 分片执行 → 校验结算</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="wallet" id="wallet" style="display:none"></div>
+</header>
 
 <main>
 <!-- ---------- 未登录 ---------- -->
 <section class="view on" id="v-auth">
   <div class="card auth">
+    <div class="mark">星</div>
+    <h1>星栈算力</h1>
+    <p class="lead">把闲置的机器接进来，按视频秒计价；用别人的机器转码，按实测用量结算。</p>
     <div class="tabs">
       <button id="t-login" class="on">登录</button>
       <button id="t-reg">注册</button>
@@ -124,9 +318,9 @@ code{background:#0e1520;padding:1px 5px;border-radius:4px;font-size:11.5px;color
     <div id="reg2" style="display:none">
       <label>确认密码</label><input id="pass2" type="password" autocomplete="new-password">
     </div>
-    <button id="go">登录</button>
+    <button class="btn" id="go">登录</button>
     <div id="authmsg" class="hint"></div>
-    <div class="hint">口令以 PBKDF2-HMAC-SHA256（20 万次迭代 + 随机盐）存储，服务端不保存明文；
+    <div class="security">口令以 PBKDF2-HMAC-SHA256（20 万次迭代 + 随机盐）存储，服务端不保存明文；
       会话为 HttpOnly Cookie，有效期 30 天。<span id="signupnote"></span></div>
   </div>
 </section>
@@ -135,7 +329,7 @@ code{background:#0e1520;padding:1px 5px;border-radius:4px;font-size:11.5px;color
 <section class="view" id="v-submit">
   <div class="grid">
     <div class="card">
-      <h2>转码任务（Consumer 侧）</h2>
+      <h2 class="plain">转码任务</h2>
       <form id="f">
         <label>上传视频文件</label>
         <input type="file" name="file" accept="video/*,audio/*">
@@ -143,66 +337,79 @@ code{background:#0e1520;padding:1px 5px;border-radius:4px;font-size:11.5px;color
         <label>…或使用服务端本机路径（同机演示更快）</label>
         <input name="path" placeholder="D:/videos/input.mp4">
         </div>
-        <div class="row3">
-          <div><label>目标编码器</label><select name="vcodec">
-            <option value="h264_nvenc">h264_nvenc (GPU)</option>
-            <option value="hevc_nvenc">hevc_nvenc (GPU)</option>
-            <option value="libx264" selected>libx264 (CPU)</option>
-            <option value="libx265">libx265 (CPU)</option>
-          </select></div>
-          <div><label>preset</label><select name="preset">
-            <option>ultrafast</option><option>veryfast</option><option selected>fast</option>
-            <option>medium</option><option>slow</option>
-          </select></div>
-          <div><label>切分片数</label><input name="segs" value="4" inputmode="numeric"></div>
-        </div>
-        <div class="row3">
-          <div><label>质量 QP/CRF</label><input name="q" value="26" inputmode="numeric"></div>
-          <div><label>目标高度 (0=原始)</label><input name="height" value="0" inputmode="numeric"></div>
-          <div><label>音轨</label><select name="audio"><option value="1" selected>保留</option><option value="0">丢弃</option></select></div>
-        </div>
 
-        <h2 style="margin-top:18px">硬件与运行时要求（硬约束过滤）</h2>
-        <div class="row">
-          <div><label>需要独显</label><select name="need_gpu"><option value="0">不限</option><option value="1">必须有 GPU</option></select></div>
-          <div><label>最小显存 MB</label><input name="min_gpu_mem" value="0" inputmode="numeric" placeholder="0=不限"></div>
-        </div>
-        <div class="row">
-          <div><label>最少 CPU 核</label><input name="min_cpus" value="0" inputmode="numeric"></div>
-          <div><label>最小内存 MB</label><input name="min_mem" value="0" inputmode="numeric"></div>
-        </div>
-        <div class="row">
-          <div><label>要求运行时</label><select name="runtime">
-            <option value="">不限</option><option value="ffmpeg">ffmpeg</option>
-            <option value="blender">blender</option><option value="cuda">cuda (nvcc)</option>
-            <option value="docker">docker</option><option value="python">python</option>
-          </select></div>
-          <div><label>限定系统架构</label><select name="arch">
-            <option value="">不限</option><option value="amd64">amd64</option><option value="arm64">arm64</option>
-          </select></div>
-        </div>
-        <div class="row">
-          <div><label>单价上限 点/视频秒</label><input name="max_price" value="0" inputmode="decimal" placeholder="0=不限"></div>
-          <div><label>视频时长（估费用用，秒）</label><input name="duration" value="0" inputmode="decimal"></div>
-        </div>
+        <fieldset class="fieldset">
+          <legend>编码参数</legend>
+          <div class="row3">
+            <div><label>目标编码器</label><select name="vcodec">
+              <option value="h264_nvenc">h264_nvenc (GPU)</option>
+              <option value="hevc_nvenc">hevc_nvenc (GPU)</option>
+              <option value="libx264" selected>libx264 (CPU)</option>
+              <option value="libx265">libx265 (CPU)</option>
+            </select></div>
+            <div><label>preset</label><select name="preset">
+              <option>ultrafast</option><option>veryfast</option><option selected>fast</option>
+              <option>medium</option><option>slow</option>
+            </select></div>
+            <div><label>切分片数</label><input name="segs" value="4" inputmode="numeric"></div>
+          </div>
+          <div class="row3">
+            <div><label>质量 QP/CRF</label><input name="q" value="26" inputmode="numeric"></div>
+            <div><label>目标高度 (0=原始)</label><input name="height" value="0" inputmode="numeric"></div>
+            <div><label>音轨</label><select name="audio"><option value="1" selected>保留</option><option value="0">丢弃</option></select></div>
+          </div>
+        </fieldset>
 
-        <label id="baselinebox" style="display:flex;align-items:center;gap:8px;margin-top:12px;color:var(--fg);font-size:12.5px">
+        <fieldset class="fieldset">
+          <legend>硬件与运行时要求（硬约束过滤）</legend>
+          <div class="row">
+            <div><label>需要独显</label><select name="need_gpu"><option value="0">不限</option><option value="1">必须有 GPU</option></select></div>
+            <div><label>最小显存 MB</label><input name="min_gpu_mem" value="0" inputmode="numeric" placeholder="0=不限"></div>
+          </div>
+          <div class="row">
+            <div><label>最少 CPU 核</label><input name="min_cpus" value="0" inputmode="numeric"></div>
+            <div><label>最小内存 MB</label><input name="min_mem" value="0" inputmode="numeric"></div>
+          </div>
+          <div class="row">
+            <div><label>要求运行时</label><select name="runtime">
+              <option value="">不限</option><option value="ffmpeg">ffmpeg</option>
+              <option value="blender">blender</option><option value="cuda">cuda (nvcc)</option>
+              <option value="docker">docker</option><option value="python">python</option>
+            </select></div>
+            <div><label>限定系统架构</label><select name="arch">
+              <option value="">不限</option><option value="amd64">amd64</option><option value="arm64">arm64</option>
+            </select></div>
+          </div>
+          <div class="row">
+            <div><label>单价上限 点/视频秒</label><input name="max_price" value="0" inputmode="decimal" placeholder="0=不限"></div>
+            <div><label>视频时长（估费用用，秒）</label><input name="duration" value="0" inputmode="decimal"></div>
+          </div>
+        </fieldset>
+
+        <label class="check" id="baselinebox">
           <input type="checkbox" name="baseline" value="1" checked style="width:auto">
           同时跑单机基线（真实加速比的可测量依据；基线用 broker 本机算力，不结算给任何节点）
         </label>
-        <button type="submit" id="submitbtn">提交任务</button>
-        <div id="msg" class="hint"></div>
+        <div class="formfoot">
+          <button type="submit" class="btn auto" id="submitbtn">提交任务</button>
+          <div id="msg" class="hint"></div>
+        </div>
       </form>
     </div>
 
-    <div class="card">
-      <h2>报价与可调度算力</h2>
-      <div id="quote" class="quote">选择文件后自动估算</div>
-      <div class="hint">
-        预扣 = 视频总时长 ×「满足全部硬约束的最贵在线节点」单价：宁可多扣，也不让任务中途故障转移
-        到更贵机器时平台倒贴。实际按每个分片「视频秒数 × 派发时锁定的单价」结算，差额在完成或失败时退还。
+    <div class="sticky">
+      <div class="card">
+        <h2>报价与可调度算力</h2>
+        <div id="quote" class="quote">选择文件后自动估算</div>
       </div>
-      <div id="deadlinenote" class="hint"></div>
+      <div class="card">
+        <h2>计价规则</h2>
+        <div class="hint" style="margin-top:0">
+          预扣 = 视频总时长 ×「满足全部硬约束的最贵在线节点」单价：宁可多扣，也不让任务中途故障转移
+          到更贵机器时平台倒贴。实际按每个分片「视频秒数 × 派发时锁定的单价」结算，差额在完成或失败时退还。
+        </div>
+        <div id="deadlinenote" class="hint"></div>
+      </div>
     </div>
   </div>
 </section>
@@ -213,18 +420,18 @@ code{background:#0e1520;padding:1px 5px;border-radius:4px;font-size:11.5px;color
 <!-- ---------- 算力市场 ---------- -->
 <section class="view" id="v-market">
   <div class="card">
-    <h2>按能力聚合的可调度切片</h2>
-    <table id="market"><thead><tr>
+    <h2 class="plain">按能力聚合的可调度切片</h2>
+    <div class="tablewrap"><table id="market"><thead><tr>
       <th>编码能力</th><th>在线节点</th><th>空闲槽位</th><th>单价区间</th><th>实测吞吐</th><th>最强独显</th>
-    </tr></thead><tbody><tr><td colspan="6" class="empty">尚无在线算力</td></tr></tbody></table>
+    </tr></thead><tbody><tr><td colspan="6" class="empty">尚无在线算力</td></tr></tbody></table></div>
     <div class="hint">同一台机器可同时提供多种编码能力，因此按能力分桶后节点数会重复计数；
       真实可用并行度看「空闲槽位」。他人机器只展示规格与价格，不展示主机名与地址。</div>
   </div>
   <div class="card">
-    <h2>全部在线节点</h2>
-    <table id="pool"><thead><tr>
+    <h2 class="plain">全部在线节点</h2>
+    <div class="tablewrap"><table id="pool"><thead><tr>
       <th>节点</th><th>硬件</th><th>运行时</th><th>编码能力</th><th>占用</th><th>吞吐</th><th>信誉</th><th>单价</th>
-    </tr></thead><tbody><tr><td colspan="8" class="empty">尚无节点注册</td></tr></tbody></table>
+    </tr></thead><tbody><tr><td colspan="8" class="empty">尚无节点注册</td></tr></tbody></table></div>
   </div>
 </section>
 
@@ -232,49 +439,48 @@ code{background:#0e1520;padding:1px 5px;border-radius:4px;font-size:11.5px;color
 <section class="view" id="v-nodes">
   <div class="split">
     <div class="card">
-      <h2>一键提供算力</h2>
-      <div class="hint" style="margin-top:0">
+      <h2 class="plain">一键提供算力</h2>
+      <div class="hint" style="margin-top:6px">
         不用装环境、不用复制令牌：填好下面的参数，下载一个启动脚本，在要贡献的那台机器上双击运行，
         这台机器就会以你的账户身份加入算力池并开始计收益。关掉窗口即停止。
       </div>
       <label>机器名称</label>
       <input id="lname" placeholder="例如 宿舍的台式机">
-      <div style="display:flex;gap:8px">
-        <div style="flex:1"><label>单价（算力点 / 视频秒）</label>
+      <div class="row">
+        <div><label>单价（算力点 / 视频秒）</label>
           <input id="lprice" type="number" min="0.05" max="1000" step="0.05" value="0.80"></div>
-        <div style="flex:1"><label>并发槽</label>
+        <div><label>并发槽</label>
           <input id="lslots" type="number" min="1" value="2"></div>
       </div>
-      <div style="display:flex;gap:8px">
-        <div style="flex:1"><label>那台机器的系统</label>
+      <div class="row">
+        <div><label>那台机器的系统</label>
           <select id="los"><option value="windows">Windows</option>
             <option value="linux">Linux</option><option value="darwin">macOS</option></select></div>
-        <div style="flex:1"><label>芯片</label>
+        <div><label>芯片</label>
           <select id="larch"><option value="amd64">x86_64 / Intel·AMD</option>
             <option value="arm64">arm64 / 苹果 M 系·麒麟</option></select></div>
       </div>
-      <button id="launchbtn" style="margin-top:14px">下载启动脚本</button>
+      <button class="btn" id="launchbtn">下载启动脚本</button>
       <div id="launchmsg" class="hint"></div>
-      <div id="launchwarn" class="hint" style="color:#e8a33d"></div>
-      <details style="margin-top:14px">
+      <div id="launchwarn" class="hint warn"></div>
+      <details style="margin-top:16px">
         <summary class="hint">高级用法：手动运行 Provider Agent</summary>
-        <pre id="agentcmd" style="background:#0e1520;border:1px solid var(--line);border-radius:8px;padding:10px;
-      font-size:11.5px;overflow:auto;margin:10px 0;color:#a8c7e0"></pre>
+        <pre id="agentcmd"></pre>
         <div class="hint">启动后 Agent 会打印一个一次性配对码，输入后即可把这机器挂到你的账户下并开始获得收益。</div>
         <label>配对码</label>
         <div style="display:flex;gap:8px">
           <input id="code" placeholder="例如 A1B2C3" style="text-transform:uppercase">
-          <button class="ghost tiny" id="pair" style="margin:14px 0 0">认领</button>
+          <button class="ghost tiny" id="pair" style="margin:0;height:35px">认领</button>
         </div>
         <div id="pairmsg" class="hint"></div>
       </details>
       <div id="pendingbox">
-      <div class="hint" style="margin-top:14px">本机已上报、等待认领的 Agent：</div>
+      <div class="hint" style="margin-top:16px">本机已上报、等待认领的 Agent：</div>
       <div id="pending"><div class="empty">加载中…</div></div>
       </div>
     </div>
     <div class="card">
-      <h2>我的机器</h2>
+      <h2 class="plain">我的机器</h2>
       <div id="mynodes"><div class="empty">还没有属于你的节点</div></div>
     </div>
   </div>
@@ -284,24 +490,26 @@ code{background:#0e1520;padding:1px 5px;border-radius:4px;font-size:11.5px;color
 <section class="view" id="v-bill">
   <div class="grid">
     <div class="card">
-      <h2>账户流水</h2>
-      <div id="recharge" style="display:flex;gap:8px;margin-bottom:10px">
+      <h2 class="plain">账户流水</h2>
+      <div id="recharge" style="display:flex;gap:8px;margin-bottom:14px">
         <input id="ramount" type="number" min="1" value="100" placeholder="充值算力点">
-        <button class="ghost tiny" id="dochARGE" style="margin:0">充值</button>
+        <button class="ghost tiny" id="dochARGE" style="margin:0;height:35px">充值</button>
       </div>
-      <table id="spend"><thead><tr><th>时间</th><th>类型</th><th>变动</th><th>余额</th><th>说明</th></tr></thead>
-      <tbody><tr><td colspan="5" class="empty">暂无记录</td></tr></tbody></table>
+      <div class="tablewrap"><table id="spend"><thead><tr><th>时间</th><th>类型</th><th>变动</th><th>余额</th><th>说明</th></tr></thead>
+      <tbody><tr><td colspan="5" class="empty">暂无记录</td></tr></tbody></table></div>
     </div>
     <div class="card">
-      <h2>我的节点收益</h2>
-      <table id="earn"><thead><tr><th>时间</th><th>节点</th><th>算力点</th><th>说明</th></tr></thead>
-      <tbody><tr><td colspan="4" class="empty">暂无收益</td></tr></tbody></table>
+      <h2 class="plain">我的节点收益</h2>
+      <div class="tablewrap"><table id="earn"><thead><tr><th>时间</th><th>节点</th><th>算力点</th><th>说明</th></tr></thead>
+      <tbody><tr><td colspan="4" class="empty">暂无收益</td></tr></tbody></table></div>
       <div class="hint">收益只在「节点自报哈希 == broker 重算哈希」的分片上发放：校验不通过不结算，
         这是半可信平台敢于付钱的前提。</div>
     </div>
   </div>
 </section>
 </main>
+</div>
+</div>
 
 <script>
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -328,6 +536,7 @@ $$('#nav button[data-v]').forEach(b=>b.onclick=()=>{
   b.classList.add('on');
   $$('.view').forEach(v=>v.classList.remove('on'));
   $('#v-'+b.dataset.v).classList.add('on');
+  $('#ptitle').textContent=b.textContent.trim();
   paint();
 });
 
@@ -354,11 +563,16 @@ $('#logout').onclick=async()=>{await post('/api/auth/logout',{});location.reload
 
 function enter(){
   $('#v-auth').classList.remove('on');
+  $('#app').classList.add('signed');
   // the auth card owns the only .view.on in the markup; without activating a
   // section here, login leaves the page blank until you click a tab
   $('#v-'+activeView()).classList.add('on');
   $('#nav').style.display='flex';
-  $('#wallet').innerHTML=`${esc(ME.name)} · 余额 <b>${f2(ME.credits)}</b> 算力点`;
+  $('#wallet').style.display='flex';
+  $('#wallet').innerHTML=`<span class="avatar">${esc(ME.name.slice(0,1).toUpperCase())}</span>`+
+    `${esc(ME.name)} · 余额 <b>${f2(ME.credits)}</b> 算力点`;
+  $('#who').innerHTML=`<span class="avatar">${esc(ME.name.slice(0,1).toUpperCase())}</span>${esc(ME.name)}`;
+  $('#ptitle').textContent=($$('#nav button[data-v]').find(b=>b.classList.contains('on'))||{textContent:'星栈算力'}).textContent.trim();
   refresh();
 }
 
@@ -410,7 +624,8 @@ async function refresh(){
     if(st.policy) POL=st.policy;
     applyPolicy();
     LIVE={};(st.jobs||[]).forEach(j=>LIVE[j.id]=j);
-    $('#wallet').innerHTML=`${esc(ME.name)} · 余额 <b>${f2(ME.credits)}</b> 算力点`;
+    $('#wallet').innerHTML=`<span class="avatar">${esc(ME.name.slice(0,1).toUpperCase())}</span>`+
+      `${esc(ME.name)} · 余额 <b>${f2(ME.credits)}</b> 算力点`;
     paint();
   }catch(e){/* broker 正在重启 */}
   TIMER=setTimeout(refresh,1000);
@@ -464,7 +679,7 @@ function quote(){
       const pick=e.first_pick?` · 首片预计派给 <b>${esc(e.first_pick.name)}</b>（${f2(e.first_pick.price)} 点/秒）`:'';
       $('#quote').innerHTML=`
         <div>时长 <b>${f1(dur)}</b> 秒 · 满足硬约束的在线节点 <b>${e.eligible}</b> 台</div>
-        <div style="margin:6px 0" class="${ok?'':'no'}">预扣 <span class="big">${f2(e.hold)}</span> 点
+        <div style="margin:10px 0 6px" class="${ok?'':'no'}">预扣 <span class="big">${f2(e.hold)}</span> 点
           （${esc(e.hold_basis)} ${f2(e.hold_price)} 点/秒） · 最省 <b>${f2(e.cheapest)}</b> 点${pick}</div>
         <div>余额 ${f2(e.balance)} 点 ${e.affordable?'· 足够':'· <span class="no">不足，请到账单页充值</span>'}</div>
         ${e.eligible>0?`<div class="hint">可派发到：${e.nodes.map(n=>
@@ -501,11 +716,11 @@ const INFLIGHT=['fetching','leased','running','uploading'];
 function pieceHTML(s){
   const cls=s.status==='done'?'done':s.status==='failed'?'failed':
     INFLIGHT.includes(s.status)?'running':'pending';
-  const h=Math.max(2,Math.min(100,(s.status==='done'?100:s.pct)))/100*36;
+  const h=Math.max(2,Math.min(100,(s.status==='done'?100:s.pct)));
   const who=s.worker? s.worker.slice(0,10):'—';
   return `<div class="pc ${cls}" title="#${s.index} ${f1(s.start)}→${f1(s.start+s.dur)}s · ${who}
-      · ${s.status} · 成本 ${f2(s.cost||0)} 点">
-    <div class="fill" style="height:${h}px"></div><div class="lbl">#${s.index}<br>${esc(who)}</div></div>`;
+      · ${ST[s.status]||s.status} · 成本 ${f2(s.cost||0)} 点">
+    <div class="fill" style="height:${h}%"></div><div class="lbl">#${s.index}<br>${esc(who)}</div></div>`;
 }
 function jobHTML(j){
   const done=j.segs.filter(s=>s.status==='done').length;
@@ -536,7 +751,7 @@ function jobHTML(j){
   if(j.req.arch) rq.push(j.req.arch);
   if(j.req.max_price) rq.push('≤'+f2(j.req.max_price)+' 点/秒');
   return `<div class="job">
-    <h3>${esc(j.name)} <span class="st ${j.status}">${j.status}</span>
+    <h3>${esc(j.name)} <span class="st ${j.status}">${ST[j.status]||j.status}</span>
       <span class="tag">${esc(j.profile.vcodec)} · Q${j.profile.q} · ${esc(j.profile.preset)}</span>
       <span class="tag">${j.profile.height?j.profile.height+'p':'原始分辨率'}</span>
       <span class="tag">${f1(j.duration)}s · ${j.segs.length} 片</span>
@@ -548,7 +763,7 @@ function jobHTML(j){
     </h3>
     <div class="note">${esc(j.note)}</div>
     <div class="prog"><div class="bar" style="flex:1"><i style="width:${pct}%"></i></div>
-      <span style="font-size:11.5px;color:var(--dim)">${done}/${j.segs.length}</span></div>
+      <span class="sub-line">${done}/${j.segs.length}</span></div>
     <div class="pieces">${j.segs.map(pieceHTML).join('')}</div>
     <div class="stats">${st}</div>
     ${j.err?`<div class="err">错误：${esc(j.err)}</div>`:''}
@@ -571,17 +786,17 @@ function poolRow(w){
   const rel=w.ok+w.bad>0? Math.round(100*w.ok/(w.ok+w.bad))+'%':'—';
   const who=w.mine?`<span class="tag mine">我的机器</span>`:'';
   return `<tr>
-    <td><b>${esc(w.name||w.id)}</b><br><span style="color:var(--dim);font-size:11px">${esc(w.os)}</span>
+    <td><b>${esc(w.name||w.id)}</b><span class="sub-line">${esc(w.os)}</span>
       ${who}<br><span class="tag ${w.online?'on':'off'}">${w.online?'在线':'离线 '+f1(w.since)+'s'}</span></td>
     <td>${spec(w)}</td>
     <td>${(w.runtimes||[]).map(r=>`<span class="tag">${esc(r.name)}</span>`).join('')||'<span class="tag off">无</span>'}</td>
-    <td style="max-width:170px">${(w.encoders||[]).map(e=>`<span class="tag">${esc(e)}</span>`).join('')}</td>
-    <td>${w.active}/${w.slots}</td>
-    <td>${w.speed>0?f2(w.speed)+'×':'—'}</td>
-    <td>${rel}<br><span style="color:var(--dim);font-size:11px">✓${w.ok} ✗${w.bad}</span>
+    <td class="enc-col">${(w.encoders||[]).map(e=>`<span class="tag">${esc(e)}</span>`).join('')}</td>
+    <td class="num">${w.active}/${w.slots}</td>
+    <td class="num">${w.speed>0?f2(w.speed)+'×':'—'}</td>
+    <td>${rel}<span class="sub-line">✓${w.ok} ✗${w.bad}</span>
       ${w.parked_sec?`<br><span class="tag off">连续失败，停派 ${w.parked_sec}s</span>`:''}
       ${w.paused&&w.mine?`<br><span class="tag off">你已停止派活</span>`:''}</td>
-    <td>${f2(w.price)} 点/秒${w.mine?`<br><button class="ghost tiny" onclick="reprice('${esc(w.id)}',${w.price})">改价</button>`:''}</td>
+    <td class="num">${f2(w.price)} 点/秒${w.mine?`<br><button class="ghost tiny" onclick="reprice('${esc(w.id)}',${w.price})">改价</button>`:''}</td>
   </tr>`;
 }
 function paintMarket(){
@@ -603,9 +818,9 @@ function paintMarket(){
   const rows=Object.values(buckets);
   $('#market tbody').innerHTML=rows.length? rows.map(b=>`<tr>
     <td><b>${esc(b.enc)}</b>${/nvenc|qsv|amf/.test(b.enc)?' <span class="tag gpu">GPU/ASIC</span>':''}</td>
-    <td>${b.nodes}</td><td>${b.free}</td>
-    <td>${b.min===b.max?f2(b.min)+' 点/秒':f2(b.min)+' ~ '+f2(b.max)+' 点/秒'}</td>
-    <td>${(b.speed/b.nodes)>0?f2(b.speed/b.nodes)+'×':'—'}</td>
+    <td class="num">${b.nodes}</td><td class="num">${b.free}</td>
+    <td class="num">${b.min===b.max?f2(b.min)+' 点/秒':f2(b.min)+' ~ '+f2(b.max)+' 点/秒'}</td>
+    <td class="num">${(b.speed/b.nodes)>0?f2(b.speed/b.nodes)+'×':'—'}</td>
     <td>${b.gpu?esc(b.gpu.name)+' '+b.gpu.mem_mb+'MB':'—'}</td></tr>`).join('')
     : '<tr><td colspan="6" class="empty">尚无在线算力</td></tr>';
 }
@@ -641,8 +856,8 @@ $('#launchbtn').onclick=async()=>{
     msg.innerHTML=`脚本正在下载：拷到要提供算力的那台机器上双击运行即可（${esc(d.node_id)}，`+
       `${mins} 分钟内有效，只能用一次）。它会自动挂到你的账户下，不需要配对码；`+
       `关掉那个窗口就是停止提供算力，下次重新双击还会是这台机器。`+
-      (d.ready?'':`<br><b style="color:#e8a33d">注意：这台 Broker 上还没有 ${esc(d.worker)}，`+
-        `脚本会在下载节点程序那一步失败，需要运维先把对应平台的二进制放到 --node-bin-dir。</b>`);
+      (d.ready?'':`<br><span class="warn">注意：这台 Broker 上还没有 ${esc(d.worker)}，`+
+        `脚本会在下载节点程序那一步失败，需要运维先把对应平台的二进制放到 --node-bin-dir。</span>`);
     refresh();
   }catch(e){msg.textContent='生成失败：'+e}
   finally{btn.disabled=false}
@@ -664,9 +879,9 @@ async function paintPending(){
     const d=await api('/api/pending');
     const p=d.pending||[];
     const taken=POOL.filter(w=>w.online&&!w.mine&&w.claimed);
-    $('#pending').innerHTML=(p.length?p.map(x=>`<div class="hint" style="display:flex;gap:8px;
-      justify-content:space-between;align-items:center;margin:6px 0">
-      <span>${esc(x.name||x.id)}（${esc(x.id)}） · ${esc(x.os)} · ${x.cpus} 核 · ${f2(x.price)} 点/秒
+    $('#pending').innerHTML=(p.length?p.map(x=>`<div class="check" style="justify-content:space-between;gap:10px;align-items:center">
+      <span>${esc(x.name||x.id)}（<span class="num">${esc(x.id)}</span>） · ${esc(x.os)} · ${x.cpus} 核 ·
+        ${f2(x.price)} 点/秒
         <span class="tag ${x.online?'on':'off'}">${x.online?'在线':'离线'}</span>
         <span class="tag">${esc(x.code)}</span></span>
       <button class="ghost tiny" onclick="claim('${esc(x.code)}')">认领</button>
@@ -686,8 +901,8 @@ function paintNodes(){
   const mine=POOL.filter(w=>w.mine);
   if(!POL||POL.pending) paintPending();
   if(!mine.length){$('#mynodes').innerHTML='<div class="empty">还没有属于你的节点</div>';return}
-  $('#mynodes').innerHTML=mine.map(w=>`<div class="card" style="margin-bottom:10px">
-    <h2 style="text-transform:none;font-size:14px;color:var(--fg)">
+  $('#mynodes').innerHTML=mine.map(w=>`<div class="card" style="margin-bottom:10px;padding:16px 18px">
+    <h2 class="plain">
       ${esc(w.name||w.id)} <span class="tag ${w.online?'on':'off'}">${w.online?'在线':'离线'}</span></h2>
     <div class="stats">
       <div class="stat"><b>${f2(w.earned||0)}</b><span>累计收益点</span></div>
@@ -697,12 +912,14 @@ function paintNodes(){
       <div class="stat"><b>${w.speed>0?f2(w.speed)+'×':'—'}</b><span>实测吞吐</span></div>
       <div class="stat"><b>${w.ok}/${w.ok+w.bad}</b><span>成功/总数</span></div>
     </div>
-    <div class="hint">编号 ${esc(w.id)} · ${esc(w.hostname||'')} · ${esc(w.os)} · ${w.cpus} 核 ·
+    <div class="hint">编号 <span class="num">${esc(w.id)}</span> · ${esc(w.hostname||'')} · ${esc(w.os)} · ${w.cpus} 核 ·
       ${w.mem_mb?Math.round(w.mem_mb/1024)+'GB':''} · 空闲磁盘 ${w.disk_free_mb?Math.round(w.disk_free_mb/1024)+'GB':'未知'}</div>
-    ${w.paused?'<div class="hint" style="color:#e8a33d;margin-top:8px">已停止派活：正在跑的分片会做完，但不再接新的。</div>':''}
-    <button class="ghost tiny" style="margin-top:8px" onclick="reprice('${esc(w.id)}',${w.price})">调整单价</button>
-    <button class="ghost tiny" style="margin-top:8px"
-      onclick="togglePause('${esc(w.id)}',${!w.paused})">${w.paused?'恢复派活':'暂停派活'}</button>
+    ${w.paused?'<div class="hint warn">已停止派活：正在跑的分片会做完，但不再接新的。</div>':''}
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="ghost tiny" onclick="reprice('${esc(w.id)}',${w.price})">调整单价</button>
+      <button class="ghost tiny"
+        onclick="togglePause('${esc(w.id)}',${!w.paused})">${w.paused?'恢复派活':'暂停派活'}</button>
+    </div>
   </div>`).join('');
 }
 
@@ -713,12 +930,12 @@ async function paintBill(){
     const d=await api('/api/ledger');
     const ts=t=>new Date(t*1000).toLocaleString('zh-CN',{hour12:false});
     $('#spend tbody').innerHTML=(d.spend||[]).length? d.spend.map(e=>`<tr>
-      <td>${ts(e.ts)}</td><td><span class="kind ${e.kind}">${KIND[e.kind]||e.kind}</span></td>
+      <td class="num">${ts(e.ts)}</td><td><span class="kind ${e.kind}">${KIND[e.kind]||e.kind}</span></td>
       <td class="${e.amount>=0?'pos':'neg'}">${e.amount>=0?'+':''}${f2(e.amount)}</td>
-      <td>${f2(e.balance)}</td><td>${esc(e.note||'')}${e.job_id?` <span class="tag">${e.job_id.slice(0,10)}</span>`:''}</td>
+      <td class="num">${f2(e.balance)}</td><td>${esc(e.note||'')}${e.job_id?` <span class="tag">${e.job_id.slice(0,10)}</span>`:''}</td>
       </tr>`).join(''):'<tr><td colspan="5" class="empty">暂无记录</td></tr>';
     $('#earn tbody').innerHTML=(d.earn||[]).length? d.earn.map(e=>`<tr>
-      <td>${ts(e.ts)}</td><td>${esc(e.node_id||'').slice(0,14)}</td>
+      <td class="num">${ts(e.ts)}</td><td class="num">${esc(e.node_id||'').slice(0,14)}</td>
       <td class="pos">+${f2(e.amount)}</td><td>${esc(e.note||'')}</td></tr>`).join('')
       :'<tr><td colspan="4" class="empty">暂无收益</td></tr>';
   }catch(e){/* ignore */}
