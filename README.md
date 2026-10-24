@@ -102,6 +102,10 @@ bash deploy/enable-nginx.sh --yes   # 在已有站点上加 /starstack/ 反代�
 要脚本代做就 `FORCE_FFMPEG=1`。接入令牌首次部署时 `openssl rand -hex 16` 生成在
 `/etc/starstack/env`（`root:starstack 0640`），之后每次部署保持不变，脚本结尾把它打出来给
 Provider Agent 当 `--token`。令牌走环境变量而不是命令行参数，`ps` 里就看不到它。
+公网档还要求注册邀请码：`STARSTACK_SIGNUP_INVITE` 也放在 `/etc/starstack/env`，
+`deploy.sh` 首次部署时生成、老部署缺这条时补生成，已有值不动，重启不会让已发出的邀请码失效；
+新用户在注册页必须填写。确实要开放注册时加 `--open-signup` 显式说明，否则 `--public`
+没有邀请码会直接拒绝启动。
 
 单元文件里的运行约束是照着这台 891 MB 内存、上面还跑着别的服务的机器写的：
 `MemoryMax=512M` / `MemoryHigh=384M` / `TasksMax=128`，越界时先杀 Broker 而不是让内核挑受害者；
@@ -280,7 +284,8 @@ scripts/         演示与验收：run-demo.sh / fault-test.sh / smoke.sh / rest
 控制台「我的节点」的待认领列表也能看到），登录用户在网页输入后才把这台机器挂到自己名下——
 没有这一步，任何账户都能把别人的算力吞进自己账上。认领之后：非本人看不到这台机器的主机名、
 内网地址、磁盘与收益（`/api/state` 按账户脱敏），非本人改价一律 401。
-公网档再收紧三层：Agent 首次注册必须带 `--token`（共享密钥走环境变量 `STARSTACK_AGENT_TOKEN`，
+公网档再收紧四层：新用户注册必须带邀请码（`STARSTACK_SIGNUP_INVITE`，控制台注册页会多出输入框）；
+Agent 首次注册必须带 `--token`（共享密钥走环境变量 `STARSTACK_AGENT_TOKEN`，
 不进命令行也不进 `ps`），注册成功后 Broker 用 HMAC 给它派生一个**按节点 id 的**凭证
 `X-Node-Secret`，此后回报和回传里的 `worker=xxx` 才是一个被验证过的事实而不是自称；
 任务源文件下发的是**带签名的过期 URL**（`?exp=&sig=`，签名把到期时间算进去），泄露的地址会自己失效；

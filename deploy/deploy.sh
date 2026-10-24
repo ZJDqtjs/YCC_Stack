@@ -74,8 +74,12 @@ sudo_run 'install -d -m 0750 -o root -g starstack /etc/starstack
     chown root:starstack /etc/starstack/env
     echo "已生成 /etc/starstack/env"
   else
-    echo "/etc/starstack/env 已存在，保持不变"
+    echo "/etc/starstack/env 已存在，既有值保持不变"
   fi
+  # 公网档没有邀请码会拒绝启动。老部署的环境文件里只有 agent token，所以缺了就补；
+  # 已有值不动，重启不会让已经发出去的邀请码失效。
+  grep -q "^STARSTACK_SIGNUP_INVITE=" /etc/starstack/env ||
+    printf "STARSTACK_SIGNUP_INVITE=%s\n" "$(openssl rand -hex 8)" >> /etc/starstack/env
   install -m 0644 -o root -g root /tmp/starstack.service /etc/systemd/system/starstack.service
   rm -f /tmp/starstack.service
   systemctl daemon-reload' || exit 1
@@ -90,6 +94,9 @@ curl -s -m 20 -o /dev/null -w "公网 8787  -> %{http_code}（000 = NSG 还没�
 echo
 echo "接入令牌（Provider Agent 的 --token，只有手动方式才需要）："
 sudo_run 'sed -n "s/^STARSTACK_AGENT_TOKEN=//p" /etc/starstack/env'
+echo
+echo "注册邀请码（新用户注册时填写；不打算开放注册就不用外发）："
+sudo_run 'sed -n "s/^STARSTACK_SIGNUP_INVITE=//p" /etc/starstack/env'
 echo
 echo "网页里的「一键提供算力」不需要这个令牌：登录后点下载启动脚本即可。"
 echo "节点程序目录（/dl/ 提供的就是这些）："
