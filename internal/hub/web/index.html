@@ -359,6 +359,9 @@ td .tag{margin:2px 4px 2px 0}
     <label>密码</label><input id="pass" type="password" autocomplete="current-password" placeholder="至少 8 位">
     <div id="reg2" style="display:none">
       <label>确认密码</label><input id="pass2" type="password" autocomplete="new-password">
+      <div id="invitebox" style="display:none">
+        <label>邀请码</label><input id="invite" autocomplete="off" placeholder="向部署者索取">
+      </div>
     </div>
     <button class="btn" id="go">登录</button>
     <div id="authmsg" class="hint"></div>
@@ -775,7 +778,9 @@ $('#go').onclick=async()=>{
   if(mode==='reg' && pass!==$('#pass2').value){$('#authmsg').textContent='两次密码不一致';return}
   $('#go').disabled=true;$('#authmsg').textContent='正在计算口令哈希…';
   try{
-    ME=await post('/api/auth/'+(mode==='reg'?'register':'login'),{name,password:pass});
+    const payload={name,password:pass};
+    if(mode==='reg') payload.invite=$('#invite').value.trim();
+    ME=await post('/api/auth/'+(mode==='reg'?'register':'login'),payload);
     $('#authmsg').textContent='';$('#pass').value='';$('#pass2').value='';
     enter();
   }catch(e){$('#authmsg').textContent='失败：'+e}
@@ -821,10 +826,14 @@ function enter(){
 // the UI lies, so the page asks the broker what it is allowed to show.
 function applyPolicy(){
   if(!POL) return;
-  $('#signupnote').innerHTML = POL.signup_credit > 0
-    ? `新用户注册赠送 <code>${f2(POL.signup_credit)}</code> 算力点用于体验完整链路`
-      + (POL.recharge ? '。' : '；本部署关闭了自助充值，额度用完请联系管理员。')
-    : '本注册不赠送算力点。';
+  const inviteRequired=!!POL.signup_invite_required;
+  $('#invitebox').style.display=inviteRequired?'block':'none';
+  $('#invite').required=inviteRequired;
+  $('#signupnote').innerHTML = (inviteRequired?'本部署注册需要邀请码。':'')
+    + (POL.signup_credit > 0
+      ? `新用户注册赠送 <code>${f2(POL.signup_credit)}</code> 算力点用于体验完整链路`
+        + (POL.recharge ? '。' : '；本部署关闭了自助充值，额度用完请联系管理员。')
+      : '本注册不赠送算力点。');
   $('#recharge').style.display = POL.recharge ? 'flex' : 'none';
   const render=$('#jobkind').value!=='transcode';
   $('#pathbox').style.display = (POL.local_path&&!render) ? 'block' : 'none';

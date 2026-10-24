@@ -510,7 +510,15 @@ func unzipInto(src, dst string) error {
 		return err
 	}
 	defer zr.Close()
-	var total int64
+	const (
+		maxEntry   = 64 << 20
+		maxTotal   = 2 << 30
+		maxEntries = 200000
+	)
+	if len(zr.File) > maxEntries {
+		return fmt.Errorf("帧包条目过多")
+	}
+	var total, written int64
 	for _, f := range zr.File {
 		if f.FileInfo().IsDir() {
 			continue
@@ -520,7 +528,7 @@ func unzipInto(src, dst string) error {
 		if !strings.HasPrefix(filepath.Clean(target), filepath.Clean(dst)+string(os.PathSeparator)) {
 			return fmt.Errorf("压缩包里的路径不安全: %s", f.Name)
 		}
-		if f.UncompressedSize64 > 64<<20 || total > 2<<30 {
+		if f.UncompressedSize64 > maxEntry || total+int64(f.UncompressedSize64) > maxTotal {
 			return fmt.Errorf("帧包过大")
 		}
 		total += int64(f.UncompressedSize64)
@@ -533,11 +541,16 @@ func unzipInto(src, dst string) error {
 			rc.Close()
 			return err
 		}
-		_, err = io.Copy(w, io.LimitReader(rc, 64<<20))
+		n, err := io.Copy(w, io.LimitReader(rc, maxEntry))
 		rc.Close()
 		w.Close()
 		if err != nil {
 			return err
+		}
+		// count the bytes that actually landed, not the header's claim
+		written += n
+		if n >= maxEntry || written > maxTotal {
+			return fmt.Errorf("帧包过大")
 		}
 	}
 	return nil

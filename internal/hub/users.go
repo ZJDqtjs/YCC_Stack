@@ -90,9 +90,18 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 	if !s.authAllowed(w, r) {
 		return
 	}
-	var req struct{ Name, Password string }
+	var req struct {
+		Name     string `json:"name"`
+		Password string `json:"password"`
+		Invite   string `json:"invite"`
+	}
 	if err := decodeJSON(r, &req); err != nil {
 		http.Error(w, `{"error":"请求格式错误"}`, 400)
+		return
+	}
+	if s.policy.SignupInvite != "" &&
+		!constantEqual(strings.TrimSpace(req.Invite), s.policy.SignupInvite) {
+		http.Error(w, jsonErr("邀请码无效"), http.StatusForbidden)
 		return
 	}
 	name := strings.TrimSpace(req.Name)

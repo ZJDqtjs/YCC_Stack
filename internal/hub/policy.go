@@ -32,6 +32,9 @@ type Policy struct {
 	// X-Agent-Token when it first registers a node. Empty means "any machine
 	// may join", which is only acceptable on a laptop demo.
 	AgentToken string
+	// SignupInvite, when non-empty, is required for new registrations. Empty
+	// means open signup, which is only appropriate for a laptop demo.
+	SignupInvite string
 
 	AllowLocalPath bool    // accept a broker-local path as the job source
 	ShowPending    bool    // list unclaimed agents with their pairing codes
@@ -96,7 +99,8 @@ func (s *Server) policyView() map[string]any {
 	return map[string]any{
 		"public": s.policy.Public, "recharge": s.policy.Recharge,
 		"local_path": s.policy.AllowLocalPath, "pending": s.policy.ShowPending,
-		"signup_credit": s.policy.SignupCredit, "max_segs": s.policy.MaxSegs,
+		"signup_credit": s.policy.SignupCredit, "signup_invite_required": s.policy.SignupInvite != "",
+		"max_segs":        s.policy.MaxSegs,
 		"max_active_jobs": s.policy.MaxActiveJobs, "cost_weight": s.policy.CostWeight,
 		"min_job_deadline_sec": int(s.policy.MinJobDeadline / time.Second),
 		"job_slow_factor":      s.policy.JobSlowFactor,

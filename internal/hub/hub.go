@@ -1068,17 +1068,21 @@ func (s *Server) punishLocked(wd *Worker) {
 // codec, so the mapping lives here instead of in every caller.
 func jobReq(j *Job) (Req, string) {
 	r, v := j.Req, j.Profile.VCodec
+	// Render jobs have a fixed executor. For transcode the codec is the real
+	// constraint, but a buyer-supplied runtime still must not point at a
+	// different tool: an explicit value becomes ffmpeg, while an empty one stays
+	// empty so nodes that predate runtime reporting keep working.
 	switch j.Kind {
 	case render.KindBlender:
-		if r.Runtime == "" {
-			r.Runtime = "blender"
-		}
+		r.Runtime = "blender"
 		v = ""
 	case render.KindPR:
-		if r.Runtime == "" {
+		r.Runtime = "ffmpeg"
+		v = "libx264"
+	default:
+		if r.Runtime != "" {
 			r.Runtime = "ffmpeg"
 		}
-		v = "libx264"
 	}
 	return r, v
 }
@@ -1686,7 +1690,8 @@ func (s *Server) handleCreateJob(w http.ResponseWriter, r *http.Request) {
 	}
 	hold, holdPrice, basis := s.estimateHoldLocked(job)
 	job.OwnerID, job.Hold = u.ID, hold
-	if n := s.eligibleLocked(job.Req, job.Profile.VCodec); n == 0 {
+	needReq, needVCodec := jobReq(job)
+	if n := s.eligibleLocked(needReq, needVCodec); n == 0 {
 		job.Note += "; 当前没有满足硬件要求的在线节点，任务将排队等待匹配算力上线"
 	} else {
 		job.Note += fmt.Sprintf("; 预扣依据：%s × %.2f 点/秒", basis, holdPrice)

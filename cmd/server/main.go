@@ -27,6 +27,10 @@ func main() {
 		"no pairing-code list, no self-service recharge, agents must present --agent-token")
 	agentToken := flag.String("agent-token", "", "shared secret agents present in X-Agent-Token (required with --public); "+
 		"prefer STARSTACK_AGENT_TOKEN in the service environment so the secret does not show up in the process list")
+	signupInvite := flag.String("signup-invite", "", "invite code required for new registrations; "+
+		"prefer STARSTACK_SIGNUP_INVITE in the service environment")
+	openSignup := flag.Bool("open-signup", false, "deliberately allow open registration with --public "+
+		"(not recommended; --public otherwise requires an invite code)")
 	maxUpload := flag.Int64("max-upload-mb", 0, "request body cap for a job, MiB (0 = profile default)")
 	cookiePath := flag.String("cookie-path", "", "Path the session cookie is scoped to, e.g. /starstack/ "+
 		"(set this when a reverse proxy mounts the broker under a prefix)")
@@ -40,6 +44,9 @@ func main() {
 	if *agentToken == "" {
 		*agentToken = os.Getenv("STARSTACK_AGENT_TOKEN")
 	}
+	if *signupInvite == "" {
+		*signupInvite = os.Getenv("STARSTACK_SIGNUP_INVITE")
+	}
 	*data, _ = filepath.Abs(*data)
 	os.MkdirAll(*data, 0o700)
 
@@ -52,6 +59,11 @@ func main() {
 		}
 	}
 	pol.AgentToken = *agentToken
+	pol.SignupInvite = strings.TrimSpace(*signupInvite)
+	if pol.Public && pol.SignupInvite == "" && !*openSignup {
+		log.Fatal("--public requires --signup-invite (or STARSTACK_SIGNUP_INVITE); " +
+			"pass --open-signup only when deliberately running an open demo")
+	}
 	pol.TrustProxy = *trustProxy
 	if *cookiePath != "" {
 		if !strings.HasPrefix(*cookiePath, "/") {

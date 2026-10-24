@@ -79,7 +79,11 @@ func unzipBundle(src, dst string) error {
 	defer zr.Close()
 	const maxEntry = 4 << 30
 	const maxTotal = 8 << 30
-	var total int64
+	const maxEntries = 200000
+	if len(zr.File) > maxEntries {
+		return fmt.Errorf("压缩包条目过多")
+	}
+	var total, written int64
 	root := filepath.Clean(dst)
 	for _, f := range zr.File {
 		if f.FileInfo().IsDir() {
@@ -114,11 +118,17 @@ func unzipBundle(src, dst string) error {
 			rc.Close()
 			return err
 		}
-		_, cerr := io.Copy(w, io.LimitReader(rc, maxEntry))
+		n, cerr := io.Copy(w, io.LimitReader(rc, maxEntry))
 		rc.Close()
 		w.Close()
 		if cerr != nil {
 			return cerr
+		}
+		// The zip header is attacker-controlled; count what actually reached the
+		// disk so a forged small size cannot turn one entry into a 4 GiB write.
+		written += n
+		if n >= maxEntry || written > maxTotal {
+			return fmt.Errorf("工程解压后超过上限")
 		}
 	}
 	return nil
@@ -202,7 +212,10 @@ func (a *agent) runBlender(c *hub.Claim) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	args := []string{"-b", scene, "-noaudio",
+	// -Y/--disable-autoexec: a .blend is tenant-supplied and may embed Python.
+	// Loading it must not execute those scripts just because the provider turned
+	// on Blender's auto-run preference for their own scenes.
+	args := []string{"-b", "-Y", scene, "-noaudio",
 		"-o", filepath.Join(outDir, "frame_####"), "-F", "PNG",
 		"-s", strconv.Itoa(from), "-e", strconv.Itoa(from + total - 1)}
 	if spec.Engine != "" {

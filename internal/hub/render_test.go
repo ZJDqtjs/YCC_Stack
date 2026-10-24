@@ -133,6 +133,14 @@ func TestRenderJobRequirements(t *testing.T) {
 	if req.Runtime != "ffmpeg" || vc != "libx264" {
 		t.Fatalf("timeline jobs must ask for ffmpeg/libx264, got %+v %q", req, vc)
 	}
+	req, _ = jobReq(&Job{Req: Req{Runtime: "python"}, Profile: Profile{VCodec: "libx264"}})
+	if req.Runtime != "ffmpeg" {
+		t.Fatalf("a transcode must not let the buyer pick the runtime, got %q", req.Runtime)
+	}
+	req, _ = jobReq(&Job{Profile: Profile{VCodec: "libx264"}})
+	if req.Runtime != "" {
+		t.Fatalf("an unset runtime must stay compatible with older nodes, got %q", req.Runtime)
+	}
 	if got := artifactName(render.KindBlender, 7); got != "seg007.zip" {
 		t.Fatalf("blender artifacts are frame zips, got %s", got)
 	}

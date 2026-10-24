@@ -1,9 +1,13 @@
 package hub
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -102,6 +106,9 @@ func TestLaunchTicketBindsOnArrival(t *testing.T) {
 	if !strings.Contains(script, "LAUNCH="+mint.Code) || !strings.Contains(script, mint.NodeID) {
 		t.Fatalf("launcher does not carry the ticket:\n%s", script)
 	}
+	if !strings.Contains(script, ".sha256") || !strings.Contains(script, "Get-FileHash") {
+		t.Fatalf("launcher must verify the downloaded binary:\n%s", script)
+	}
 
 	hello := helloReq(t, mint.NodeID)
 	hello.Header.Set("X-Launch-Code", mint.Code)
@@ -155,6 +162,26 @@ func TestLaunchTicketBindsOnArrival(t *testing.T) {
 		if rec.Code != http.StatusForbidden {
 			t.Fatalf("anonymous hello as %s: %d, want 403", id, rec.Code)
 		}
+	}
+}
+
+func TestNodeBinChecksum(t *testing.T) {
+	s := newTestServer(t, DefaultPolicy())
+	dir := t.TempDir()
+	s.SetNodeBinDir(dir)
+	name := "starstack-worker-windows-amd64.exe"
+	data := []byte("worker bytes")
+	if err := os.WriteFile(filepath.Join(dir, name), data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	rec := httptest.NewRecorder()
+	s.handleNodeBin(rec, httptest.NewRequest("GET", "/dl/"+name+".sha256", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("checksum: %d %s", rec.Code, rec.Body.String())
+	}
+	want := sha256.Sum256(data)
+	if got := strings.TrimSpace(rec.Body.String()); got != hex.EncodeToString(want[:]) {
+		t.Fatalf("checksum = %q, want %x", got, want)
 	}
 }
 

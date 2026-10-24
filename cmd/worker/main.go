@@ -393,6 +393,8 @@ func lockFor(key string) *sync.Mutex {
 	return v.(*sync.Mutex)
 }
 
+const maxSourceBytes = 2 << 30
+
 func (a *agent) fetchSource(c *hub.Claim) (string, error) {
 	dst := filepath.Join(a.work, "src-"+c.JobID+".bin")
 	if _, err := os.Stat(dst); err == nil {
@@ -416,6 +418,9 @@ func (a *agent) fetchSource(c *hub.Claim) (string, error) {
 	if resp.StatusCode != 200 {
 		return "", fmt.Errorf("GET source: %d（签名链接可能已过期，下一轮派发会重来）", resp.StatusCode)
 	}
+	if resp.ContentLength > maxSourceBytes {
+		return "", fmt.Errorf("源文件超过 2 GiB 上限")
+	}
 	// A slow broker uplink is not a hung node: on the deployed broker an 11 MiB
 	// source took 5m55s to arrive, three times past the duration-shaped lease, and
 	// the broker correctly reclaimed slices from machines that were only fetching.
@@ -428,12 +433,16 @@ func (a *agent) fetchSource(c *hub.Claim) (string, error) {
 	h := sha256.New()
 	var got int64
 	stop := a.beat(c.SegID, "fetching", &got, resp.ContentLength)
-	_, err = io.Copy(io.MultiWriter(f, h), counting{resp.Body, &got})
+	_, err = io.Copy(io.MultiWriter(f, h), io.LimitReader(counting{resp.Body, &got}, maxSourceBytes+1))
 	stop()
 	f.Close()
 	if err != nil {
 		os.Remove(tmp)
 		return "", err
+	}
+	if got > maxSourceBytes {
+		os.Remove(tmp)
+		return "", fmt.Errorf("源文件超过 2 GiB 上限")
 	}
 	// Windows refuses to rename over an existing file.
 	os.Remove(dst)
@@ -561,42 +570,46 @@ func (a *agent) upload(segID, path string) (string, int64, error) {
 		return "", 0, err
 	}
 	defer f.Close()
-	h := sha256.New()
-	if _, err := io.Copy(h, f); err != nil {
-		return "", 0, err
-	}
-	sha := hex.EncodeToString(h.Sum(nil))
 	size := fileSize(path)
+	h := sha256.New()
 
-	var body bytes.Buffer
-	mw := multipart.NewWriter(&body)
-	part, err := mw.CreateFormFile("file", filepath.Base(path))
-	if err != nil {
-		return "", 0, err
-	}
-	f.Seek(0, 0)
-	if _, err := io.Copy(part, f); err != nil {
-		return "", 0, err
-	}
-	mw.Close()
+	// Stream the multipart body instead of building it in a bytes.Buffer: a
+	// node with eight slots must not need eight copies of a multi-gigabyte
+	// output in RAM just to upload them.
+	pr, pw := io.Pipe()
+	mw := multipart.NewWriter(pw)
+	ctype := mw.FormDataContentType()
+	go func() {
+		var err error
+		part, err := mw.CreateFormFile("file", filepath.Base(path))
+		if err == nil {
+			_, err = io.Copy(part, io.TeeReader(f, h))
+		}
+		if cerr := mw.Close(); err == nil {
+			err = cerr
+		}
+		pw.CloseWithError(err)
+	}()
+	defer pr.Close()
 
 	u := a.server + "/api/upload?seg=" + url.QueryEscape(segID) + "&worker=" + url.QueryEscape(a.id)
-	req, err := http.NewRequest("POST", u, &body)
+	req, err := http.NewRequest("POST", u, pr)
 	if err != nil {
+		pr.CloseWithError(err)
 		return "", 0, err
 	}
-	req.Header.Set("Content-Type", mw.FormDataContentType())
+	req.Header.Set("Content-Type", ctype)
 	a.decorate(req, true)
 	resp, err := a.hc.Do(req)
 	if err != nil {
 		return "", 0, err
 	}
 	defer resp.Body.Close()
-	b, _ := io.ReadAll(resp.Body)
+	b, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if resp.StatusCode != 200 {
 		return "", 0, fmt.Errorf("%d %s", resp.StatusCode, strings.TrimSpace(string(b)))
 	}
-	return sha, size, nil
+	return hex.EncodeToString(h.Sum(nil)), size, nil
 }
 
 func (a *agent) post(url string, v any, asNode bool) {

@@ -22,6 +22,24 @@ var (
 	Ffprobe = "ffprobe"
 )
 
+// A submitted file is not allowed to name another resource. Playlists and
+// concat-style demuxers (hls, dash, concat, ffconcat, image2 patterns) turn a
+// single upload into reads of arbitrary local files or HTTP requests, so only
+// the containers that carry their own media stay on this list.
+const (
+	safeInputProtocols = "file,pipe"
+	safeInputFormats   = "mov,matroska,webm,avi,flv,mpegts,mpeg,mxf,mp3,aac,wav,flac,ogg,asf,gif"
+	encoderProbeSize   = "256x256"
+)
+
+func inputGuard(extraFormats string) []string {
+	formats := safeInputFormats
+	if extraFormats != "" {
+		formats += "," + extraFormats
+	}
+	return []string{"-protocol_whitelist", safeInputProtocols, "-format_whitelist", formats}
+}
+
 type stream struct {
 	CodecType string `json:"codec_type"`
 	CodecName string `json:"codec_name"`
@@ -45,8 +63,10 @@ type Media struct {
 }
 
 func Probe(ctx context.Context, path string) (*Media, error) {
-	cmd := exec.CommandContext(ctx, Ffprobe, "-v", "error", "-print_format", "json",
-		"-show_format", "-show_streams", path)
+	args := []string{"-v", "error"}
+	args = append(args, inputGuard("")...)
+	args = append(args, "-print_format", "json", "-show_format", "-show_streams", path)
+	cmd := exec.CommandContext(ctx, Ffprobe, args...)
 	var buf, errBuf strings.Builder
 	cmd.Stdout = &buf
 	cmd.Stderr = &errBuf
@@ -78,9 +98,12 @@ func Probe(ctx context.Context, path string) (*Media, error) {
 // Keyframes returns pts_time of every video keyframe. -skip_frame nokey makes
 // ffmpeg drop non-key frames before decode, so this stays cheap on long files.
 func Keyframes(ctx context.Context, path string) ([]float64, error) {
-	cmd := exec.CommandContext(ctx, Ffprobe, "-v", "error", "-select_streams", "v:0",
+	args := []string{"-v", "error"}
+	args = append(args, inputGuard("")...)
+	args = append(args, "-select_streams", "v:0",
 		"-skip_frame", "nokey", "-show_entries", "frame=best_effort_timestamp_time",
 		"-of", "csv=p=0", path)
+	cmd := exec.CommandContext(ctx, Ffprobe, args...)
 	out, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("ffprobe keyframes: %w", err)
@@ -169,6 +192,7 @@ var nvencPreset = map[string]string{
 
 func (o EncOpts) args() []string {
 	a := []string{"-hide_banner", "-nostdin", "-loglevel", "error", "-nostats", "-progress", "pipe:1", "-y"}
+	a = append(a, inputGuard("")...)
 	if o.Start > 0 {
 		a = append(a, "-ss", secStr(o.Start))
 	}
@@ -306,6 +330,8 @@ func (o ClipOpts) args() []string {
 	w, h = w&^1, h&^1
 	a := []string{"-hide_banner", "-nostdin", "-loglevel", "error", "-nostats",
 		"-progress", "pipe:1", "-y"}
+	// the second input is an internal lavfi silence generator, not caller data
+	a = append(a, inputGuard("lavfi")...)
 	if o.In > 0 {
 		a = append(a, "-ss", secStr(o.In))
 	}
@@ -462,12 +488,15 @@ func EncodeFrames(ctx context.Context, dir string, first int, fps float64, dst s
 		fps = 24
 	}
 	pattern := filepath.Join(dir, "frame_%04d.png")
-	cmd := exec.CommandContext(ctx, Ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
+	args := []string{"-hide_banner", "-loglevel", "error", "-y"}
+	args = append(args, inputGuard("image2")...)
+	args = append(args,
 		"-framerate", strconv.FormatFloat(fps, 'f', 3, 64),
 		"-start_number", strconv.Itoa(first),
 		"-i", pattern,
 		"-c:v", "libx264", "-preset", "medium", "-crf", "18",
 		"-pix_fmt", "yuv420p", "-movflags", "+faststart", dst)
+	cmd := exec.CommandContext(ctx, Ffmpeg, args...)
 	var errBuf strings.Builder
 	cmd.Stderr = &errBuf
 	if err := cmd.Run(); err != nil {
@@ -494,6 +523,55 @@ func Encoders(ctx context.Context) ([]string, error) {
 		}
 	}
 	return list, nil
+}
+
+// A build supporting NVENC/QSV/AMF says nothing about the machine having the
+// corresponding GPU or driver. Advertising those encoders anyway sends a buyer's
+// job to a node that can only fail it, so each family is exercised once with a
+// one-frame null encode before it is reported.
+func hardwareEncoderFamily(name string) string {
+	switch {
+	case strings.HasSuffix(name, "_nvenc"):
+		return "nvenc"
+	case strings.HasSuffix(name, "_amf"):
+		return "amf"
+	case strings.HasSuffix(name, "_qsv"):
+		return "qsv"
+	case strings.HasSuffix(name, "_vaapi"):
+		return "vaapi"
+	}
+	return ""
+}
+
+func probeEncoder(ctx context.Context, name string) bool {
+	c, cancel := context.WithTimeout(ctx, 8*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(c, Ffmpeg,
+		"-hide_banner", "-loglevel", "error",
+		"-f", "lavfi", "-i", "color=c=black:s="+encoderProbeSize+":r=1",
+		"-frames:v", "1", "-pix_fmt", "yuv420p", "-c:v", name, "-f", "null", "-")
+	return cmd.Run() == nil
+}
+
+func filterHardwareEncoders(ctx context.Context, encs []string) []string {
+	probed := map[string]bool{}
+	out := make([]string, 0, len(encs))
+	for _, enc := range encs {
+		family := hardwareEncoderFamily(enc)
+		if family == "" {
+			out = append(out, enc)
+			continue
+		}
+		ok, done := probed[family]
+		if !done {
+			ok = probeEncoder(ctx, enc)
+			probed[family] = ok
+		}
+		if ok {
+			out = append(out, enc)
+		}
+	}
+	return out
 }
 
 // Inventory is the hardware/software picture a provider agent reports at
@@ -532,6 +610,8 @@ func Detect(ctx context.Context, workDir string) Inventory {
 	encs, err := Encoders(ctx)
 	if err != nil {
 		log.Printf("encoder probe failed: %v", err)
+	} else {
+		encs = filterHardwareEncoders(ctx, encs)
 	}
 	rt := DetectRuntimes(ctx)
 	ver := ""
