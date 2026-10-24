@@ -529,6 +529,7 @@ td .tag{margin:2px 4px 2px 0}
           llama.cpp / vLLM / Ollama 的 OpenAI 兼容端点都能接入。单机直接填地址；MoE 模型可用多台机器的
           <code>llama.cpp/rpc-server</code> 聚合成一个端点，平台只感知这个端点。上游密钥会用本地
           <code>gateway.key</code> 加密后入库，控制台不再显示明文。
+          声明的上下文与能力会参与路由：放不下长提示词、缺少工具/结构化输出能力的上游不会被派活。
         </div>
         <label>上游名称</label>
         <input id="upname" placeholder="例如 宿舍 4090 · Qwen3-30B-A3B">
@@ -537,8 +538,30 @@ td .tag{margin:2px 4px 2px 0}
         <div class="row">
           <div><label>上游 API Key（可选）</label>
             <input id="upkey" type="password" placeholder="llama.cpp 未设密钥时留空"></div>
-          <div><label>单价（算力点 / 千 token）</label>
+          <div><label>输入单价（算力点 / 千 token）</label>
             <input id="upprice" type="number" min="0.0001" step="0.1" value="0.5"></div>
+        </div>
+        <div class="row">
+          <div><label>输出单价（0 = 同输入）</label>
+            <input id="uppriceout" type="number" min="0" step="0.1" value="0"></div>
+          <div><label>缓存命中单价（0 = 同输入）</label>
+            <input id="uppricecached" type="number" min="0" step="0.1" value="0"></div>
+        </div>
+        <div class="row">
+          <div><label>最大上下文（tokens）</label>
+            <input id="upctx" type="number" min="1024" max="1048576" step="1024" value="32768"></div>
+          <div><label>声明能力</label>
+            <div id="upcaps" style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:9px;font-size:12.5px;color:var(--body)">
+              <label style="margin:0;display:flex;align-items:center;gap:5px;font-weight:400"><input type="checkbox" value="tools">工具调用</label>
+              <label style="margin:0;display:flex;align-items:center;gap:5px;font-weight:400"><input type="checkbox" value="json_object">JSON 输出</label>
+              <label style="margin:0;display:flex;align-items:center;gap:5px;font-weight:400"><input type="checkbox" value="json_schema">JSON Schema</label>
+              <label style="margin:0;display:flex;align-items:center;gap:5px;font-weight:400"><input type="checkbox" value="regex">正则约束</label>
+              <label style="margin:0;display:flex;align-items:center;gap:5px;font-weight:400"><input type="checkbox" value="vision">图像输入</label>
+              <label style="margin:0;display:flex;align-items:center;gap:5px;font-weight:400"><input type="checkbox" value="reasoning">推理模型</label>
+              <label style="margin:0;display:flex;align-items:center;gap:5px;font-weight:400"><input type="checkbox" value="deterministic">确定性采样</label>
+              <label style="margin:0;display:flex;align-items:center;gap:5px;font-weight:400"><input type="checkbox" value="prefix_cache">前缀缓存</label>
+            </div>
+          </div>
         </div>
         <label>提供的模型名（逗号分隔）</label>
         <div style="display:flex;gap:8px">
@@ -559,9 +582,11 @@ td .tag{margin:2px 4px 2px 0}
       <div class="card">
         <h2><span class="kicker">Catalog</span>可用模型</h2>
         <div class="tablewrap"><table id="cat"><thead><tr>
-          <th>模型</th><th>上游数</th><th>最低单价</th>
-        </tr></thead><tbody><tr><td colspan="3" class="empty">加载中…</td></tr></tbody></table></div>
-        <div class="hint">按最低价且健康的上游路由；买家实付 = 模型单价 × token 数，
+          <th>模型</th><th>上游数</th><th>最低输入单价</th><th>上下文</th><th>能力</th>
+        </tr></thead><tbody><tr><td colspan="5" class="empty">加载中…</td></tr></tbody></table></div>
+        <div class="hint">路由先按请求需要的上下文与能力过滤，再挑最便宜且健康的上游；
+          同一会话（<code>X-Starstack-Session</code> 或 <code>prompt_cache_key</code>）在 30 分钟内粘回原上游，
+          命中前缀缓存时按缓存价结算。买家实付 = 未缓存输入 / 缓存输入 / 输出三段之和，
           提供方获得 90%，平台留 10% 撮合费。连续失败的上游冷却 20 秒并自动切到下一家。
           余额不足会返回 402，不会产生欠费。</div>
       </div>
@@ -573,7 +598,11 @@ td .tag{margin:2px 4px 2px 0}
         <pre id="curlsnippet"></pre>
         <div class="hint">任何 OpenAI SDK 都能把 <code>base_url</code> 指到
           <code id="apibase"></code>；流式请求加 <code>"stream": true</code>，
-          Broker 会透传 SSE，并按上游 usage 或实际输出估算 token 结算。</div>
+          Broker 会透传 SSE，并按上游 usage 或实际输出估算 token 结算。
+          需要多轮复用缓存时带上 <code>X-Starstack-Session</code>；
+          需要可复现输出时传 <code>"starstack_deterministic": true</code>，
+          平台会把请求固定到声明了确定性采样的上游并返回
+          <code>X-Starstack-Output-SHA256</code>。</div>
       </div>
 
       <div class="card">
@@ -894,17 +923,26 @@ async function revokeKey(id){
   try{await api('/api/keys/'+encodeURIComponent(id),{method:'DELETE'});loadApi()}
   catch(e){alert('撤销失败：'+e)}
 }
+const capNames={tools:'工具调用',json_object:'JSON 输出',json_schema:'JSON Schema',
+  regex:'正则约束',vision:'图像输入',reasoning:'推理',deterministic:'确定性',
+  prefix_cache:'前缀缓存'};
+const ctxLabel=n=>!n?'32K':n>=1048576?(n/1048576).toFixed(n%1048576?2:0)+'M':
+  n>=1024?Math.round(n/1024)+'K':String(n);
 function renderUps(list){
   $('#ups').innerHTML=list.length?list.map(u=>{
     const h=u.health||{};
+    const caps=(u.caps||[]).filter(c=>c!=='chat');
     const state=u.enabled?(h.cooling_sec?`<span class="tag off">冷却 ${h.cooling_sec}s</span>`:
       '<span class="tag on">路由中</span>'):'<span class="tag off">已停用</span>';
     return `<div class="card" style="margin-bottom:10px;padding:16px 18px">
       <h2 class="plain">${esc(u.name)} ${state}</h2>
       <div class="hint">${esc(u.base_url)} · ${esc((u.models||[]).join(' / '))}</div>
+      <div class="hint" style="margin-top:4px">上下文 ${ctxLabel(u.max_context)} ·
+        ${caps.length?caps.map(c=>esc(capNames[c]||c)).join(' / '):'仅对话'}</div>
       <div class="stats">
-        <div class="stat"><b>${f2(u.price)}</b><span>点 / 千 token</span></div>
-        <div class="stat"><b>${(u.models||[]).length}</b><span>模型数</span></div>
+        <div class="stat"><b>${f2(u.price)}</b><span>输入 / 千 token</span></div>
+        <div class="stat"><b>${f2(u.price_out||u.price)}</b><span>输出 / 千 token</span></div>
+        <div class="stat"><b>${f2(u.price_cached||u.price)}</b><span>缓存 / 千 token</span></div>
         <div class="stat"><b>${h.last_ok?apiTS(h.last_ok).slice(-8):'—'}</b><span>最近成功</span></div>
       </div>
       ${u.key_state==='error'?'<div class="hint warn">上游密钥无法解密：gateway.key 可能被更换，请删除后重新登记。</div>':''}
@@ -932,10 +970,16 @@ function renderCatalog(){
     `<option value="${esc(m.id)}">${esc(m.id)} · ${f2(m.price_per_1k)} 点/千 token</option>`).join('')
     :'<option value="">（先登记一个模型）</option>';
   if(cur && CATALOG.some(m=>m.id===cur)) sel.value=cur;
-  $('#cat tbody').innerHTML=CATALOG.length?CATALOG.map(m=>`<tr>
-    <td class="num">${esc(m.id)}</td><td>${m.providers}</td>
-    <td class="num">${f2(m.price_per_1k)} 点/千 token</td></tr>`).join('')
-    :'<tr><td colspan="3" class="empty">还没有可用模型</td></tr>';
+  $('#cat tbody').innerHTML=CATALOG.length?CATALOG.map(m=>{
+    const caps=(m.capabilities||[]).filter(c=>c!=='chat');
+    return `<tr>
+      <td class="num">${esc(m.id)}</td><td>${m.providers}</td>
+      <td class="num">${f2(m.price_per_1k)} 点/千 token</td>
+      <td class="num">${ctxLabel(m.max_context)}</td>
+      <td>${caps.length?caps.map(c=>`<span class="tag">${esc(capNames[c]||c)}</span>`).join(''):
+        '<span class="hint" style="margin:0">对话</span>'}</td></tr>`;
+  }).join('')
+    :'<tr><td colspan="5" class="empty">还没有可用模型</td></tr>';
   snippet();
 }
 function snippet(){
@@ -989,16 +1033,22 @@ $('#probeup').onclick=async()=>{
 };
 $('#addup').onclick=async()=>{
   const msg=$('#upmsg'), btn=$('#addup');
+  const caps=[...document.querySelectorAll('#upcaps input:checked')].map(x=>x.value).join(',');
   const body={name:$('#upname').value.trim(),base_url:$('#upurl').value.trim(),
-    api_key:$('#upkey').value,models:$('#upmodels').value.trim(),price:+$('#upprice').value};
+    api_key:$('#upkey').value,models:$('#upmodels').value.trim(),price:+$('#upprice').value,
+    price_out:+$('#uppriceout').value||0,price_cached:+$('#uppricecached').value||0,
+    max_context:+$('#upctx').value||32768,caps};
   if(!body.base_url){msg.textContent='请填写 Base URL';return}
   if(!body.models){msg.textContent='请填写至少一个模型名';return}
-  if(!(body.price>0)){msg.textContent='单价必须大于 0';return}
+  if(!(body.price>0)){msg.textContent='输入单价必须大于 0';return}
+  if(body.max_context<1024){msg.textContent='最大上下文至少 1024 tokens';return}
   btn.disabled=true; msg.textContent='正在登记…';
   try{
     await post('/api/models/upstreams',body);
     msg.textContent='已登记，模型已进入可用目录';
     $('#upname').value='';$('#upurl').value='';$('#upkey').value='';$('#upmodels').value='';
+    $('#uppriceout').value='0';$('#uppricecached').value='0';$('#upctx').value='32768';
+    document.querySelectorAll('#upcaps input:checked').forEach(x=>x.checked=false);
     loadApi();
   }catch(e){msg.textContent='登记失败：'+e}
   finally{btn.disabled=false}

@@ -132,6 +132,10 @@ CREATE TABLE IF NOT EXISTS upstreams(
   api_key_enc TEXT NOT NULL DEFAULT '',
   models      TEXT NOT NULL,
   price       REAL NOT NULL DEFAULT 0,
+  max_context INTEGER NOT NULL DEFAULT 32768,
+  caps        TEXT NOT NULL DEFAULT '["chat"]',
+  price_out   REAL NOT NULL DEFAULT 0,
+  price_cached REAL NOT NULL DEFAULT 0,
   enabled     INTEGER NOT NULL DEFAULT 1,
   created_at  INTEGER NOT NULL);
 
@@ -151,6 +155,10 @@ ALTER TABLE segments ADD COLUMN excluded TEXT NOT NULL DEFAULT '';
 ALTER TABLE nodes ADD COLUMN paused INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE jobs ADD COLUMN kind TEXT NOT NULL DEFAULT 'transcode';
 ALTER TABLE jobs ADD COLUMN plan TEXT NOT NULL DEFAULT '';
+ALTER TABLE upstreams ADD COLUMN max_context INTEGER NOT NULL DEFAULT 32768;
+ALTER TABLE upstreams ADD COLUMN caps TEXT NOT NULL DEFAULT '["chat"]';
+ALTER TABLE upstreams ADD COLUMN price_out REAL NOT NULL DEFAULT 0;
+ALTER TABLE upstreams ADD COLUMN price_cached REAL NOT NULL DEFAULT 0;
 `
 
 func Open(path string) (*Store, error) {

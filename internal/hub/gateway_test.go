@@ -74,11 +74,32 @@ func createKey(t *testing.T, base string, cookie *http.Cookie, name string) stri
 func createUpstream(t *testing.T, base string, cookie *http.Cookie, name, upstreamURL, models string, price float64) {
 	t.Helper()
 	body := fmt.Sprintf(`{"name":%q,"base_url":%q,"models":%q,"price":%g}`, name, upstreamURL, models, price)
+	createUpstreamJSON(t, base, cookie, body)
+}
+
+func createUpstreamJSON(t *testing.T, base string, cookie *http.Cookie, body string) map[string]any {
+	t.Helper()
 	req, _ := http.NewRequest(http.MethodPost, base+"/api/models/upstreams", strings.NewReader(body))
 	var out map[string]any
 	if code := postJSON(t, withCookie(req, cookie), nil, &out); code != 200 {
-		t.Fatalf("create upstream %s: HTTP %d %v", name, code, out)
+		t.Fatalf("create upstream: HTTP %d %v", code, out)
 	}
+	return out
+}
+
+func chatWithSession(t *testing.T, base, key, session, body string) (int, string) {
+	t.Helper()
+	req, _ := http.NewRequest(http.MethodPost, base+"/v1/chat/completions", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+key)
+	req.Header.Set("X-Starstack-Session", session)
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("chat: %v", err)
+	}
+	defer res.Body.Close()
+	b, _ := io.ReadAll(res.Body)
+	return res.StatusCode, string(b)
 }
 
 func chat(t *testing.T, base, key, body string) (int, string) {
@@ -362,5 +383,226 @@ func TestGatewayCatalogListsCheapestPrice(t *testing.T) {
 	json.NewDecoder(res.Body).Decode(&listing)
 	if listing.Object != "list" || len(listing.Data) != 2 {
 		t.Fatalf("unexpected /v1/models: %+v", listing)
+	}
+}
+
+// A cheap upstream is skipped when the prompt no longer fits its window or the
+// request needs a capability it never claimed.
+func TestGatewayRoutesByCapabilityAndContext(t *testing.T) {
+	var smallCalls, bigCalls int32
+	okBody := `{"choices":[{"message":{"content":"ok"}}],"usage":{"prompt_tokens":5,"completion_tokens":5}}`
+	small := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&smallCalls, 1)
+		w.Header().Set("Content-Type", "application/json")
+		io.WriteString(w, okBody)
+	}))
+	defer small.Close()
+	big := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&bigCalls, 1)
+		w.Header().Set("Content-Type", "application/json")
+		io.WriteString(w, okBody)
+	}))
+	defer big.Close()
+
+	s := newTestServer(t, DefaultPolicy())
+	broker := httptest.NewServer(s.Handlers())
+	defer broker.Close()
+	providerCookie, _ := registerAndCookie(t, broker.URL, "cap-provider")
+	buyerCookie, _ := registerAndCookie(t, broker.URL, "cap-buyer")
+	createUpstreamJSON(t, broker.URL, providerCookie, fmt.Sprintf(
+		`{"name":"tiny","base_url":%q,"models":"m","price":0.1,"max_context":4096,"caps":"chat"}`, small.URL))
+	createUpstreamJSON(t, broker.URL, providerCookie, fmt.Sprintf(
+		`{"name":"large","base_url":%q,"models":"m","price":1.0,"max_context":32768,"caps":"chat,tools,deterministic"}`, big.URL))
+	key := createKey(t, broker.URL, buyerCookie, "cap")
+
+	if code, resp := chat(t, broker.URL, key,
+		`{"model":"m","messages":[{"role":"user","content":"hi"}],"max_tokens":100}`); code != 200 {
+		t.Fatalf("short chat: HTTP %d %s", code, resp)
+	}
+	if atomic.LoadInt32(&smallCalls) != 1 || atomic.LoadInt32(&bigCalls) != 0 {
+		t.Fatalf("short chat should use the cheap upstream: small=%d big=%d", smallCalls, bigCalls)
+	}
+
+	longPrompt := strings.Repeat("a", 20000)
+	if code, resp := chat(t, broker.URL, key, fmt.Sprintf(
+		`{"model":"m","messages":[{"role":"user","content":%q}],"max_tokens":100}`, longPrompt)); code != 200 {
+		t.Fatalf("long chat: HTTP %d %s", code, resp)
+	}
+	if atomic.LoadInt32(&bigCalls) != 1 {
+		t.Fatalf("long prompt should exceed the small window and fail over: big=%d", bigCalls)
+	}
+
+	tools := `{"model":"m","messages":[{"role":"user","content":"hi"}],"max_tokens":100,
+		"tools":[{"type":"function","function":{"name":"now","description":"当前时间","parameters":{"type":"object"}}}]}`
+	if code, resp := chat(t, broker.URL, key, tools); code != 200 {
+		t.Fatalf("tools chat: HTTP %d %s", code, resp)
+	}
+	if atomic.LoadInt32(&smallCalls) != 1 || atomic.LoadInt32(&bigCalls) != 2 {
+		t.Fatalf("tools request should skip the chat-only upstream: small=%d big=%d", smallCalls, bigCalls)
+	}
+}
+
+// Once a conversation warms one upstream's prefix, later turns must return to
+// it even though routing would otherwise rotate between equal-priced peers.
+func TestGatewaySessionAffinity(t *testing.T) {
+	var aCalls, bCalls int32
+	okBody := `{"choices":[{"message":{"content":"ok"}}],"usage":{"prompt_tokens":5,"completion_tokens":5}}`
+	upA := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&aCalls, 1)
+		io.WriteString(w, okBody)
+	}))
+	defer upA.Close()
+	upB := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&bCalls, 1)
+		io.WriteString(w, okBody)
+	}))
+	defer upB.Close()
+
+	s := newTestServer(t, DefaultPolicy())
+	broker := httptest.NewServer(s.Handlers())
+	defer broker.Close()
+	providerCookie, _ := registerAndCookie(t, broker.URL, "sticky-provider")
+	buyerCookie, _ := registerAndCookie(t, broker.URL, "sticky-buyer")
+	createUpstream(t, broker.URL, providerCookie, "a", upA.URL, "m", 1.0)
+	createUpstream(t, broker.URL, providerCookie, "b", upB.URL, "m", 1.0)
+	key := createKey(t, broker.URL, buyerCookie, "sticky")
+
+	body := `{"model":"m","messages":[{"role":"user","content":"hi"}],"max_tokens":10}`
+	for i := 0; i < 3; i++ {
+		if code, resp := chatWithSession(t, broker.URL, key, "conv-42", body); code != 200 {
+			t.Fatalf("turn %d: HTTP %d %s", i, code, resp)
+		}
+	}
+	a, b := atomic.LoadInt32(&aCalls), atomic.LoadInt32(&bCalls)
+	if !(a == 3 && b == 0) && !(b == 3 && a == 0) {
+		t.Fatalf("session should stick to one upstream, got a=%d b=%d", a, b)
+	}
+}
+
+func TestGatewayChargesCachedAndOutputTokens(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		io.WriteString(w, `{"choices":[{"message":{"content":"ok"}}],
+			"usage":{"prompt_tokens":120,"completion_tokens":10,
+			"prompt_tokens_details":{"cached_tokens":100},
+			"completion_tokens_details":{"reasoning_tokens":2}}}`)
+	}))
+	defer upstream.Close()
+
+	s := newTestServer(t, DefaultPolicy())
+	broker := httptest.NewServer(s.Handlers())
+	defer broker.Close()
+	providerCookie, providerID := registerAndCookie(t, broker.URL, "price-provider")
+	buyerCookie, buyerID := registerAndCookie(t, broker.URL, "price-buyer")
+	createUpstreamJSON(t, broker.URL, providerCookie, fmt.Sprintf(
+		`{"name":"three-rate","base_url":%q,"models":"m","price":1.0,"price_out":2.0,"price_cached":0.25}`, upstream.URL))
+	key := createKey(t, broker.URL, buyerCookie, "price")
+
+	if code, resp := chat(t, broker.URL, key,
+		`{"model":"m","messages":[{"role":"user","content":"hi"}],"max_tokens":100}`); code != 200 {
+		t.Fatalf("chat: HTTP %d %s", code, resp)
+	}
+	buyerBal, _ := s.st.Balance(buyerID)
+	providerBal, _ := s.st.Balance(providerID)
+	// 20 uncached input at 1.0 + 100 cached at 0.25 + 10 output at 2.0 = 0.065
+	if diff := 100 - buyerBal; diff < 0.0649 || diff > 0.0651 {
+		t.Fatalf("buyer charged %.4f, want 0.0650", diff)
+	}
+	if diff := providerBal - 100; diff < 0.0584 || diff > 0.0586 {
+		t.Fatalf("provider earned %.4f, want 0.0585", diff)
+	}
+}
+
+func TestGatewayDeterministicRouting(t *testing.T) {
+	var plainCalls, detCalls int32
+	var gotTemp, gotSeed any
+	plain := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&plainCalls, 1)
+		io.WriteString(w, `{"choices":[{"message":{"content":"plain"}}]}`)
+	}))
+	defer plain.Close()
+	det := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&detCalls, 1)
+		var req map[string]any
+		json.NewDecoder(r.Body).Decode(&req)
+		gotTemp, gotSeed = req["temperature"], req["seed"]
+		w.Header().Set("Content-Type", "application/json")
+		io.WriteString(w, `{"choices":[{"message":{"content":"same"}}],"usage":{"prompt_tokens":4,"completion_tokens":1}}`)
+	}))
+	defer det.Close()
+
+	s := newTestServer(t, DefaultPolicy())
+	broker := httptest.NewServer(s.Handlers())
+	defer broker.Close()
+	providerCookie, _ := registerAndCookie(t, broker.URL, "det-provider")
+	buyerCookie, _ := registerAndCookie(t, broker.URL, "det-buyer")
+	createUpstreamJSON(t, broker.URL, providerCookie, fmt.Sprintf(
+		`{"name":"plain","base_url":%q,"models":"m","price":0.1,"caps":"chat"}`, plain.URL))
+	createUpstreamJSON(t, broker.URL, providerCookie, fmt.Sprintf(
+		`{"name":"det","base_url":%q,"models":"m","price":1.0,"caps":"chat,deterministic"}`, det.URL))
+	key := createKey(t, broker.URL, buyerCookie, "det")
+
+	req, _ := http.NewRequest(http.MethodPost, broker.URL+"/v1/chat/completions", strings.NewReader(
+		`{"model":"m","starstack_deterministic":true,"messages":[{"role":"user","content":"hi"}],"max_tokens":10}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+key)
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	out, _ := io.ReadAll(res.Body)
+	if res.StatusCode != 200 {
+		t.Fatalf("deterministic chat: HTTP %d %s", res.StatusCode, out)
+	}
+	if atomic.LoadInt32(&plainCalls) != 0 || atomic.LoadInt32(&detCalls) != 1 {
+		t.Fatalf("deterministic request must skip plain providers: plain=%d det=%d", plainCalls, detCalls)
+	}
+	if gotTemp != float64(0) || gotSeed != float64(1) {
+		t.Fatalf("upstream did not receive pinned sampling: temperature=%v seed=%v", gotTemp, gotSeed)
+	}
+	if res.Header.Get("X-Starstack-Output-SHA256") == "" {
+		t.Fatal("deterministic response is missing the output hash")
+	}
+}
+
+func TestGatewayRejectsInvalidStructuredOutput(t *testing.T) {
+	var badCalls, goodCalls int32
+	bad := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&badCalls, 1)
+		w.Header().Set("Content-Type", "application/json")
+		io.WriteString(w, `{"choices":[{"message":{"content":"not json"}}],"usage":{"prompt_tokens":5,"completion_tokens":2}}`)
+	}))
+	defer bad.Close()
+	good := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&goodCalls, 1)
+		w.Header().Set("Content-Type", "application/json")
+		io.WriteString(w, `{"choices":[{"message":{"content":"{\"ok\":true}"}}],"usage":{"prompt_tokens":5,"completion_tokens":2}}`)
+	}))
+	defer good.Close()
+
+	s := newTestServer(t, DefaultPolicy())
+	broker := httptest.NewServer(s.Handlers())
+	defer broker.Close()
+	providerCookie, _ := registerAndCookie(t, broker.URL, "json-provider")
+	buyerCookie, _ := registerAndCookie(t, broker.URL, "json-buyer")
+	createUpstreamJSON(t, broker.URL, providerCookie, fmt.Sprintf(
+		`{"name":"broken-json","base_url":%q,"models":"m","price":0.1,"caps":"chat,json_object"}`, bad.URL))
+	createUpstreamJSON(t, broker.URL, providerCookie, fmt.Sprintf(
+		`{"name":"real-json","base_url":%q,"models":"m","price":1.0,"caps":"chat,json_object"}`, good.URL))
+	key := createKey(t, broker.URL, buyerCookie, "json")
+
+	body := `{"model":"m","response_format":{"type":"json_object"},"messages":[{"role":"user","content":"hi"}],"max_tokens":10}`
+	for i := 0; i < 2; i++ {
+		code, resp := chat(t, broker.URL, key, body)
+		if code != 200 || !strings.Contains(resp, `\"ok\":true`) {
+			t.Fatalf("call %d: HTTP %d %s", i, code, resp)
+		}
+	}
+	if atomic.LoadInt32(&badCalls) != 1 {
+		t.Fatalf("invalid JSON provider should be cooled after one try, got %d calls", badCalls)
+	}
+	if atomic.LoadInt32(&goodCalls) != 2 {
+		t.Fatalf("valid provider should serve both calls, got %d", goodCalls)
 	}
 }

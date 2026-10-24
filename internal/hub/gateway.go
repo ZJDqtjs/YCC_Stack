@@ -50,6 +50,7 @@ const (
 	gatewayProviderShare   = 0.9 // the remaining 10% is the matching fee
 	gatewayCooldown        = 20 * time.Second
 	gatewayTimeout         = 10 * time.Minute
+	gatewayStickyTTL       = 30 * time.Minute
 )
 
 // ---- sealed upstream credentials ----
@@ -132,9 +133,17 @@ type upstreamHealth struct {
 type gatewayState struct {
 	mu     sync.Mutex
 	health map[string]*upstreamHealth
+	sticky map[string]stickyPin
 	seq    uint64
 	client *http.Client
 	probe  *http.Client
+}
+
+// stickyPin keeps one conversation on the upstream that already holds its
+// prefix, so a multi-turn chat does not pay for the same prefill on every hop.
+type stickyPin struct {
+	upID string
+	exp  time.Time
 }
 
 func newGatewayState() *gatewayState {
@@ -144,6 +153,7 @@ func newGatewayState() *gatewayState {
 	tr.MaxIdleConnsPerHost = 4
 	return &gatewayState{
 		health: map[string]*upstreamHealth{},
+		sticky: map[string]stickyPin{},
 		client: &http.Client{Transport: tr},
 		probe:  &http.Client{Transport: tr.Clone(), Timeout: 8 * time.Second},
 	}
@@ -198,6 +208,35 @@ func (g *gatewayState) view(id string) map[string]any {
 	return out
 }
 
+func (g *gatewayState) pin(key, upID string) {
+	if key == "" || upID == "" {
+		return
+	}
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	now := time.Now()
+	for k, p := range g.sticky {
+		if now.After(p.exp) {
+			delete(g.sticky, k)
+		}
+	}
+	g.sticky[key] = stickyPin{upID: upID, exp: now.Add(gatewayStickyTTL)}
+}
+
+func (g *gatewayState) pinned(key string) string {
+	if key == "" {
+		return ""
+	}
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	p, ok := g.sticky[key]
+	if !ok || time.Now().After(p.exp) {
+		delete(g.sticky, key)
+		return ""
+	}
+	return p.upID
+}
+
 // ---- registration / catalog ----
 
 type modelRoute struct {
@@ -205,26 +244,49 @@ type modelRoute struct {
 	price float64
 }
 
-// routesFor returns enabled upstreams serving model, cheapest first. Equal
-// prices rotate between calls so a single cheap machine is not the only one
-// ever picked.
-func (s *Server) routesFor(model string) []modelRoute {
+// routeNeed is everything the gateway knows about a request before choosing a
+// provider. Price is only one axis: an upstream that cannot hold the context,
+// has not declared the required capability, or is not deterministic must not be
+// picked even if it is the cheapest.
+type routeNeed struct {
+	PromptTokens int
+	MaxTokens    int
+	Caps         []string
+	Sticky       string
+}
+
+// routesFor returns enabled upstreams serving model that fit the request,
+// cheapest first. Equal prices rotate between calls so a single cheap machine
+// is not the only one ever picked. The second return value counts every
+// upstream that serves the model, before capability filtering, so the caller
+// can distinguish "unknown model" from "no capable provider".
+func (s *Server) routesFor(model string, need routeNeed) ([]modelRoute, int) {
 	ups, err := s.st.Upstreams()
 	if err != nil {
 		log.Printf("gateway: list upstreams: %v", err)
-		return nil
+		return nil, 0
 	}
+	total := 0
 	var out []modelRoute
 	for _, u := range ups {
+		serves := false
 		for _, m := range u.Models {
 			if strings.EqualFold(m, model) {
-				out = append(out, modelRoute{up: u, price: u.Price})
+				serves = true
 				break
 			}
 		}
+		if !serves {
+			continue
+		}
+		total++
+		if !upstreamFits(u, need) {
+			continue
+		}
+		out = append(out, modelRoute{up: u, price: u.Price})
 	}
 	if len(out) == 0 {
-		return nil
+		return nil, total
 	}
 	s.gateway.mu.Lock()
 	rot := int(s.gateway.seq % uint64(len(out)))
@@ -234,16 +296,79 @@ func (s *Server) routesFor(model string) []modelRoute {
 		out = append(out[rot:], out[:rot]...)
 	}
 	sort.SliceStable(out, func(i, j int) bool { return out[i].price < out[j].price })
-	// Stable sort keeps cooling entries in the honest price order; the caller
-	// skips them and only reports "all busy" when no healthy route is left.
-	return out
+	// A conversation that already warmed one upstream's prefix goes back there;
+	// price still decides when the pinned provider is cooling or gone.
+	if pinned := s.gateway.pinned(need.Sticky); pinned != "" {
+		for i, rt := range out {
+			if rt.up.ID != pinned {
+				continue
+			}
+			if i > 0 {
+				reordered := make([]modelRoute, 0, len(out))
+				reordered = append(reordered, rt)
+				reordered = append(reordered, out[:i]...)
+				reordered = append(reordered, out[i+1:]...)
+				out = reordered
+			}
+			break
+		}
+	}
+	return out, total
+}
+
+func upstreamFits(u *store.Upstream, need routeNeed) bool {
+	limit := u.MaxContext
+	if limit <= 0 {
+		limit = 32768
+	}
+	if need.PromptTokens+need.MaxTokens > limit {
+		return false
+	}
+	for _, c := range need.Caps {
+		if !has(u.Caps, c) {
+			return false
+		}
+	}
+	return true
+}
+
+// routeCost prices a call against one provider's three rates. Cached prompt
+// tokens are charged at PriceCached when set; output tokens at PriceOut. A zero
+// override means "same as the input price".
+func routeCost(u *store.Upstream, prompt, cached, completion int) float64 {
+	if cached > prompt {
+		cached = prompt
+	}
+	inPrice := u.Price
+	cachePrice := u.PriceCached
+	if cachePrice <= 0 {
+		cachePrice = inPrice
+	}
+	outPrice := u.PriceOut
+	if outPrice <= 0 {
+		outPrice = inPrice
+	}
+	return round4(float64(prompt-cached)/1000*inPrice +
+		float64(cached)/1000*cachePrice +
+		float64(completion)/1000*outPrice)
+}
+
+// routeReserve assumes no cache hit: the hold must cover the worst case.
+func routeReserve(u *store.Upstream, prompt, maxTokens int) float64 {
+	r := routeCost(u, prompt, 0, maxTokens)
+	if r < 0.0001 {
+		r = 0.0001
+	}
+	return r
 }
 
 type catalogModel struct {
-	ID           string  `json:"id"`
-	Providers    int     `json:"providers"`
-	PricePer1K   float64 `json:"price_per_1k"`
-	CheapestName string  `json:"cheapest_upstream,omitempty"`
+	ID           string   `json:"id"`
+	Providers    int      `json:"providers"`
+	PricePer1K   float64  `json:"price_per_1k"`
+	MaxContext   int      `json:"max_context"`
+	Capabilities []string `json:"capabilities,omitempty"`
+	CheapestName string   `json:"cheapest_upstream,omitempty"`
 }
 
 func (s *Server) modelCatalog() []catalogModel {
@@ -259,7 +384,8 @@ func (s *Server) modelCatalog() []catalogModel {
 			key := strings.ToLower(strings.TrimSpace(m))
 			c := idx[key]
 			if c == nil {
-				c = &catalogModel{ID: m, PricePer1K: u.Price, CheapestName: u.Name}
+				c = &catalogModel{ID: m, PricePer1K: u.Price, CheapestName: u.Name,
+					MaxContext: contextOf(u)}
 				idx[key] = c
 				order = append(order, key)
 			}
@@ -268,14 +394,31 @@ func (s *Server) modelCatalog() []catalogModel {
 				c.PricePer1K = u.Price
 				c.CheapestName = u.Name
 			}
+			if n := contextOf(u); n > c.MaxContext {
+				c.MaxContext = n
+			}
+			for _, cap := range u.Caps {
+				if !has(c.Capabilities, cap) {
+					c.Capabilities = append(c.Capabilities, cap)
+				}
+			}
 		}
 	}
 	out := make([]catalogModel, 0, len(order))
 	for _, k := range order {
-		out = append(out, *idx[k])
+		c := idx[k]
+		sort.Strings(c.Capabilities)
+		out = append(out, *c)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out
+}
+
+func contextOf(u *store.Upstream) int {
+	if u.MaxContext <= 0 {
+		return 32768
+	}
+	return u.MaxContext
 }
 
 // ---- console: API keys ----
@@ -401,11 +544,15 @@ func (s *Server) handleUpstreams(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req struct {
-		Name    string  `json:"name"`
-		BaseURL string  `json:"base_url"`
-		APIKey  string  `json:"api_key"`
-		Models  string  `json:"models"`
-		Price   float64 `json:"price"`
+		Name        string  `json:"name"`
+		BaseURL     string  `json:"base_url"`
+		APIKey      string  `json:"api_key"`
+		Models      string  `json:"models"`
+		Price       float64 `json:"price"`
+		MaxContext  int     `json:"max_context"`
+		Caps        string  `json:"caps"`
+		PriceOut    float64 `json:"price_out"`
+		PriceCached float64 `json:"price_cached"`
 	}
 	if err := decodeJSON(r, &req); err != nil {
 		http.Error(w, jsonErr("请求格式错误"), 400)
@@ -429,8 +576,25 @@ func (s *Server) handleUpstreams(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, jsonErr(err.Error()), 400)
 		return
 	}
+	caps, err := normalizeCaps(req.Caps)
+	if err != nil {
+		http.Error(w, jsonErr(err.Error()), 400)
+		return
+	}
 	if req.Price <= 0 || req.Price > 10000 {
-		http.Error(w, jsonErr("单价需在 0 ~ 10000 点/千 token 之间且大于 0"), 400)
+		http.Error(w, jsonErr("输入单价需在 0 ~ 10000 点/千 token 之间且大于 0"), 400)
+		return
+	}
+	if req.PriceOut < 0 || req.PriceOut > 10000 || req.PriceCached < 0 || req.PriceCached > 10000 {
+		http.Error(w, jsonErr("输出/缓存单价需在 0 ~ 10000 点/千 token 之间；0 表示与输入单价相同"), 400)
+		return
+	}
+	maxContext := req.MaxContext
+	if maxContext == 0 {
+		maxContext = 32768
+	}
+	if maxContext < 1024 || maxContext > 1048576 {
+		http.Error(w, jsonErr("最大上下文需在 1024 ~ 1048576 tokens 之间"), 400)
 		return
 	}
 	enc, err := s.secrets.seal(strings.TrimSpace(req.APIKey))
@@ -441,6 +605,8 @@ func (s *Server) handleUpstreams(w http.ResponseWriter, r *http.Request) {
 	up := &store.Upstream{
 		ID: "m" + newID() + newID(), OwnerID: u.ID, Name: name, BaseURL: base,
 		EncKey: enc, Models: models, Price: round4(req.Price),
+		MaxContext: maxContext, Caps: caps,
+		PriceOut: round4(req.PriceOut), PriceCached: round4(req.PriceCached),
 		Enabled: true, CreatedAt: time.Now().Unix(),
 	}
 	if err := s.st.CreateUpstream(up); err != nil {
@@ -533,7 +699,9 @@ func (s *Server) upstreamView(up *store.Upstream) map[string]any {
 	}
 	return map[string]any{
 		"id": up.ID, "name": up.Name, "base_url": up.BaseURL, "models": up.Models,
-		"price": up.Price, "enabled": up.Enabled, "created_at": up.CreatedAt,
+		"price": up.Price, "price_out": up.PriceOut, "price_cached": up.PriceCached,
+		"max_context": up.MaxContext, "caps": up.Caps,
+		"enabled": up.Enabled, "created_at": up.CreatedAt,
 		"has_key": hasKey, "key_state": keyState, "health": s.gateway.view(up.ID),
 	}
 }
@@ -576,6 +744,132 @@ func normalizeModels(raw string) ([]string, error) {
 		return nil, errors.New("一个上游最多登记 20 个模型")
 	}
 	return out, nil
+}
+
+// upstreamCaps is the routing contract a provider can claim. "chat" is always
+// present; everything else is opt-in because a wrong claim sends work to a
+// server that cannot finish it.
+var upstreamCaps = []string{
+	"chat", "tools", "json_object", "json_schema", "regex",
+	"vision", "reasoning", "deterministic", "prefix_cache",
+}
+
+var capAliases = map[string]string{
+	"batch_invariant": "deterministic",
+	"cache":           "prefix_cache",
+	"json":            "json_object",
+	"grammar":         "regex",
+}
+
+func normalizeCaps(raw string) ([]string, error) {
+	parts := strings.FieldsFunc(strings.ToLower(raw), func(r rune) bool {
+		return r == ',' || r == '，' || r == '\n' || r == ' ' || r == '\t'
+	})
+	out := []string{"chat"}
+	for _, p := range parts {
+		if p == "" || p == "chat" {
+			continue
+		}
+		if alias, ok := capAliases[p]; ok {
+			p = alias
+		}
+		if !has(upstreamCaps, p) {
+			return nil, fmt.Errorf("不支持的能力 %q；可用：%s", p,
+				strings.Join(upstreamCaps[1:], ", "))
+		}
+		if !has(out, p) {
+			out = append(out, p)
+		}
+	}
+	return out, nil
+}
+
+// requiredCaps derives routing requirements from the request body. Absent
+// capabilities are not sent to an upstream that did not claim them.
+func requiredCaps(body map[string]any) []string {
+	var out []string
+	add := func(c string) {
+		if !has(out, c) {
+			out = append(out, c)
+		}
+	}
+	if v, ok := body["tools"].([]any); ok && len(v) > 0 {
+		add("tools")
+	}
+	if v, ok := body["functions"].([]any); ok && len(v) > 0 {
+		add("tools")
+	}
+	switch structuredKind(body) {
+	case "json_object":
+		add("json_object")
+	case "json_schema":
+		add("json_schema")
+	case "regex":
+		add("regex")
+	}
+	if hasImagePart(body["messages"]) {
+		add("vision")
+	}
+	if deterministicRequested(body) {
+		add("deterministic")
+	}
+	return out
+}
+
+func structuredKind(body map[string]any) string {
+	rf, _ := body["response_format"].(map[string]any)
+	if rf == nil {
+		return ""
+	}
+	t, _ := rf["type"].(string)
+	switch strings.ToLower(strings.TrimSpace(t)) {
+	case "json_object":
+		return "json_object"
+	case "json_schema":
+		return "json_schema"
+	case "regex", "grammar":
+		return "regex"
+	default:
+		return ""
+	}
+}
+
+func deterministicRequested(body map[string]any) bool {
+	if v, ok := body["starstack_deterministic"].(bool); ok && v {
+		return true
+	}
+	_, hasSeed := body["seed"]
+	return hasSeed
+}
+
+func hasImagePart(v any) bool {
+	msgs, _ := v.([]any)
+	for _, m := range msgs {
+		msg, _ := m.(map[string]any)
+		parts, _ := msg["content"].([]any)
+		for _, p := range parts {
+			part, _ := p.(map[string]any)
+			if t, _ := part["type"].(string); t == "image_url" || t == "image" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// stickyKey is an explicit conversation id. We do not infer one from message
+// content: two buyers with the same prompt should still be free to route to
+// different providers.
+func stickyKey(r *http.Request, body map[string]any) string {
+	key := strings.TrimSpace(r.Header.Get("X-Starstack-Session"))
+	if key == "" {
+		key, _ = body["prompt_cache_key"].(string)
+		key = strings.TrimSpace(key)
+	}
+	if len(key) > 120 {
+		key = key[:120]
+	}
+	return strings.ToLower(key)
 }
 
 // validateUpstreamURL blocks schemes and destinations that would turn the
@@ -731,6 +1025,7 @@ func (s *Server) handleV1Models(w http.ResponseWriter, r *http.Request) {
 		data = append(data, map[string]any{
 			"id": m.ID, "object": "model", "created": 0, "owned_by": "starstack",
 			"starstack_price_per_1k": m.PricePer1K, "starstack_providers": m.Providers,
+			"starstack_max_context": m.MaxContext, "starstack_capabilities": m.Capabilities,
 		})
 	}
 	writeJSON(w, map[string]any{"object": "list", "data": data})
@@ -739,6 +1034,8 @@ func (s *Server) handleV1Models(w http.ResponseWriter, r *http.Request) {
 type tokenUsage struct {
 	Prompt     int
 	Completion int
+	Cached     int // prompt tokens served from the provider's prefix cache
+	Reasoning  int // subset of Completion, reported for visibility only
 }
 
 func (u tokenUsage) total() int { return u.Prompt + u.Completion }
@@ -799,6 +1096,15 @@ func (s *Server) handleV1Chat(w http.ResponseWriter, r *http.Request) {
 		opts["include_usage"] = true
 		body["stream_options"] = opts
 	}
+	// Deterministic requests must not be silently answered by a provider that
+	// only promises best-effort sampling. Pinning temperature/seed here also
+	// makes the output hash meaningful across calls.
+	if v, ok := body["starstack_deterministic"].(bool); ok && v {
+		body["temperature"] = 0
+		if _, ok := body["seed"]; !ok {
+			body["seed"] = 1
+		}
+	}
 
 	// Prompt tokens are estimated before any upstream is contacted: the hold
 	// must be sized from the request, not from a provider's later claim.
@@ -815,18 +1121,22 @@ func (s *Server) handleV1Chat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	routes := s.routesFor(model)
+	need := routeNeed{PromptTokens: promptEst, MaxTokens: maxTok,
+		Caps: requiredCaps(body), Sticky: stickyKey(r, body)}
+	routes, served := s.routesFor(model, need)
 	if len(routes) == 0 {
-		oaiError(w, http.StatusNotFound, "model_not_found", "invalid_request_error",
-			"没有可用上游提供模型 "+model+"；请让上游方在控制台登记该模型")
+		if served == 0 {
+			oaiError(w, http.StatusNotFound, "model_not_found", "invalid_request_error",
+				"没有可用上游提供模型 "+model+"；请让上游方在控制台登记该模型")
+			return
+		}
+		oaiError(w, http.StatusBadRequest, "no_capable_upstream", "invalid_request_error",
+			fmt.Sprintf("有 %d 家上游提供 %s，但没有一家满足本次请求（上下文约 %d tokens，需要能力：%s）",
+				served, model, promptEst, strings.Join(need.Caps, ", ")))
 		return
 	}
-	maxPrice := 0.0
 	healthy := 0
 	for _, rt := range routes {
-		if rt.price > maxPrice {
-			maxPrice = rt.price
-		}
 		if !s.gateway.cooling(rt.up.ID) {
 			healthy++
 		}
@@ -836,8 +1146,14 @@ func (s *Server) handleV1Chat(w http.ResponseWriter, r *http.Request) {
 			"该模型的上游都在冷却中（最近连续失败），请稍后重试")
 		return
 	}
-	// Reserve against the dearest candidate, so a failover cannot overdraw.
-	reserve := ceil4(float64(promptEst+maxTok) / 1000 * maxPrice)
+	// Reserve against the dearest candidate at its own three rates, so a
+	// failover onto a pricier or output-heavy upstream cannot overdraw.
+	reserve := 0.0
+	for _, rt := range routes {
+		if r := routeReserve(rt.up, promptEst, maxTok); r > reserve {
+			reserve = r
+		}
+	}
 	if reserve < 0.0001 {
 		reserve = 0.0001
 	}
@@ -868,6 +1184,7 @@ func (s *Server) handleV1Chat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	structKind := structuredKind(body)
 	var lastErr error
 	for _, rt := range routes {
 		if s.gateway.cooling(rt.up.ID) {
@@ -909,11 +1226,19 @@ func (s *Server) handleV1Chat(w http.ResponseWriter, r *http.Request) {
 					s.gateway.fail(rt.up.ID, lastErr)
 					continue
 				}
+				if !structuredOutputOK(bodyOut, structKind) {
+					lastErr = errors.New("上游返回的结构化输出不是合法 JSON")
+					s.gateway.fail(rt.up.ID, lastErr)
+					log.Printf("gateway %s upstream %s returned invalid structured output", reqID, rt.up.ID)
+					continue
+				}
 				us := usageFromResponse(bodyOut, promptEst)
 				s.gateway.ok(rt.up.ID)
+				s.gateway.pin(need.Sticky, rt.up.ID)
 				s.settleGateway(u, rt.up, model, reqID, us, reserve, promptEst)
 				w.Header().Set("Content-Type", "application/json")
 				w.Header().Set("X-Starstack-Request-Id", reqID)
+				w.Header().Set("X-Starstack-Output-SHA256", outputHash(bodyOut))
 				w.WriteHeader(http.StatusOK)
 				w.Write(bodyOut)
 				return
@@ -925,6 +1250,7 @@ func (s *Server) handleV1Chat(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			s.gateway.ok(rt.up.ID)
+			s.gateway.pin(need.Sticky, rt.up.ID)
 			s.settleGateway(u, rt.up, model, reqID, us, reserve, promptEst)
 			return
 		}
@@ -936,11 +1262,19 @@ func (s *Server) handleV1Chat(w http.ResponseWriter, r *http.Request) {
 			s.gateway.fail(rt.up.ID, lastErr)
 			continue
 		}
+		if !structuredOutputOK(bodyOut, structKind) {
+			lastErr = errors.New("上游返回的结构化输出不是合法 JSON")
+			s.gateway.fail(rt.up.ID, lastErr)
+			log.Printf("gateway %s upstream %s returned invalid structured output", reqID, rt.up.ID)
+			continue
+		}
 		us := usageFromResponse(bodyOut, promptEst)
 		s.gateway.ok(rt.up.ID)
+		s.gateway.pin(need.Sticky, rt.up.ID)
 		s.settleGateway(u, rt.up, model, reqID, us, reserve, promptEst)
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("X-Starstack-Request-Id", reqID)
+		w.Header().Set("X-Starstack-Output-SHA256", outputHash(bodyOut))
 		w.WriteHeader(http.StatusOK)
 		w.Write(bodyOut)
 		return
@@ -999,19 +1333,20 @@ func (s *Server) settleGateway(u *store.User, up *store.Upstream, model, reqID s
 	if us.Prompt <= 0 {
 		us.Prompt = promptEst
 	}
-	cost := round4(float64(us.total()) / 1000 * up.Price)
+	cost := routeCost(up, us.Prompt, us.Cached, us.Completion)
 	delta := round4(reserve - cost)
+	detail := fmt.Sprintf("输入 %d（缓存 %d）输出 %d", us.Prompt, us.Cached, us.Completion)
 	if delta > 0 {
 		if bal, err := s.st.AddCredits(u.ID, delta); err == nil {
 			s.st.Ledger(&store.Entry{TS: time.Now().Unix(), Kind: store.Refund, UserID: u.ID,
 				Amount: delta, Balance: bal,
-				Note: fmt.Sprintf("模型 %s %d tokens，差额退还 · %s", model, us.total(), reqID)})
+				Note: fmt.Sprintf("模型 %s %s，差额退还 · %s", model, detail, reqID)})
 		}
 	} else if delta < 0 {
 		if bal, err := s.st.AddCredits(u.ID, delta); err == nil {
 			s.st.Ledger(&store.Entry{TS: time.Now().Unix(), Kind: store.Settle, UserID: u.ID,
 				Amount: delta, Balance: bal,
-				Note: fmt.Sprintf("模型 %s %d tokens，超出预扣补扣 · %s", model, us.total(), reqID)})
+				Note: fmt.Sprintf("模型 %s %s，超出预扣补扣 · %s", model, detail, reqID)})
 		}
 	}
 	pay := round4(cost * gatewayProviderShare)
@@ -1019,11 +1354,11 @@ func (s *Server) settleGateway(u *store.User, up *store.Upstream, model, reqID s
 		if bal, err := s.st.AddCredits(up.OwnerID, pay); err == nil {
 			s.st.Ledger(&store.Entry{TS: time.Now().Unix(), Kind: store.Earn, UserID: up.OwnerID,
 				Amount: pay, Balance: bal,
-				Note: fmt.Sprintf("模型 %s · %d tokens · 上游 %s · %s", model, us.total(), up.Name, reqID)})
+				Note: fmt.Sprintf("模型 %s · %s · 上游 %s · %s", model, detail, up.Name, reqID)})
 		}
 	}
-	log.Printf("gateway %s user=%s model=%s upstream=%s prompt=%d completion=%d cost=%.4f",
-		reqID, u.Name, model, up.ID, us.Prompt, us.Completion, cost)
+	log.Printf("gateway %s user=%s model=%s upstream=%s prompt=%d cached=%d completion=%d cost=%.4f",
+		reqID, u.Name, model, up.ID, us.Prompt, us.Cached, us.Completion, cost)
 }
 
 func (s *Server) gatewayRefund(u *store.User, reqID string, reserve float64, why string) {
@@ -1097,8 +1432,14 @@ func (s *Server) streamUpstream(w http.ResponseWriter, res *http.Response, reqID
 func parseStreamChunk(payload string, content *strings.Builder, seen **tokenUsage) {
 	var doc struct {
 		Usage *struct {
-			PromptTokens     int `json:"prompt_tokens"`
-			CompletionTokens int `json:"completion_tokens"`
+			PromptTokens        int `json:"prompt_tokens"`
+			CompletionTokens    int `json:"completion_tokens"`
+			PromptTokensDetails *struct {
+				CachedTokens int `json:"cached_tokens"`
+			} `json:"prompt_tokens_details"`
+			CompletionTokensDetails *struct {
+				ReasoningTokens int `json:"reasoning_tokens"`
+			} `json:"completion_tokens_details"`
 		} `json:"usage"`
 		Choices []struct {
 			Delta struct {
@@ -1119,7 +1460,14 @@ func parseStreamChunk(payload string, content *strings.Builder, seen **tokenUsag
 		return
 	}
 	if doc.Usage != nil && (doc.Usage.PromptTokens > 0 || doc.Usage.CompletionTokens > 0) {
-		*seen = &tokenUsage{Prompt: doc.Usage.PromptTokens, Completion: doc.Usage.CompletionTokens}
+		us := tokenUsage{Prompt: doc.Usage.PromptTokens, Completion: doc.Usage.CompletionTokens}
+		if doc.Usage.PromptTokensDetails != nil {
+			us.Cached = doc.Usage.PromptTokensDetails.CachedTokens
+		}
+		if doc.Usage.CompletionTokensDetails != nil {
+			us.Reasoning = doc.Usage.CompletionTokensDetails.ReasoningTokens
+		}
+		*seen = &us
 	}
 	for _, c := range doc.Choices {
 		content.WriteString(c.Delta.Content)
@@ -1134,8 +1482,14 @@ func parseStreamChunk(payload string, content *strings.Builder, seen **tokenUsag
 func usageFromResponse(body []byte, promptEst int) tokenUsage {
 	var doc struct {
 		Usage *struct {
-			PromptTokens     int `json:"prompt_tokens"`
-			CompletionTokens int `json:"completion_tokens"`
+			PromptTokens        int `json:"prompt_tokens"`
+			CompletionTokens    int `json:"completion_tokens"`
+			PromptTokensDetails *struct {
+				CachedTokens int `json:"cached_tokens"`
+			} `json:"prompt_tokens_details"`
+			CompletionTokensDetails *struct {
+				ReasoningTokens int `json:"reasoning_tokens"`
+			} `json:"completion_tokens_details"`
 		} `json:"usage"`
 		Choices []struct {
 			Message struct {
@@ -1152,6 +1506,12 @@ func usageFromResponse(body []byte, promptEst int) tokenUsage {
 	json.Unmarshal(body, &doc)
 	if doc.Usage != nil && (doc.Usage.PromptTokens > 0 || doc.Usage.CompletionTokens > 0) {
 		us := tokenUsage{Prompt: doc.Usage.PromptTokens, Completion: doc.Usage.CompletionTokens}
+		if doc.Usage.PromptTokensDetails != nil {
+			us.Cached = doc.Usage.PromptTokensDetails.CachedTokens
+		}
+		if doc.Usage.CompletionTokensDetails != nil {
+			us.Reasoning = doc.Usage.CompletionTokensDetails.ReasoningTokens
+		}
 		if us.Prompt <= 0 {
 			us.Prompt = promptEst
 		}
@@ -1228,6 +1588,64 @@ func relayUpstreamError(w http.ResponseWriter, status int, body []byte) {
 	}
 	oaiError(w, http.StatusBadGateway, "upstream_rejected", "invalid_request_error",
 		"上游拒绝了请求："+clip(strings.TrimSpace(string(body)), 300))
+}
+
+// structuredOutputOK catches the cheapest failure mode: a provider that claims
+// JSON support but returns prose or truncated JSON. Full schema validation is
+// not attempted; syntax plus a top-level object is what the gateway can check
+// without knowing the provider's decoder.
+func structuredOutputOK(body []byte, kind string) bool {
+	if kind != "json_object" && kind != "json_schema" {
+		return true
+	}
+	var doc struct {
+		Choices []struct {
+			Message struct {
+				Content json.RawMessage `json:"content"`
+			} `json:"message"`
+		} `json:"choices"`
+	}
+	if json.Unmarshal(body, &doc) != nil || len(doc.Choices) == 0 {
+		return false
+	}
+	var content string
+	if err := json.Unmarshal(doc.Choices[0].Message.Content, &content); err != nil {
+		return false
+	}
+	var v any
+	if json.Unmarshal([]byte(strings.TrimSpace(content)), &v) != nil {
+		return false
+	}
+	_, ok := v.(map[string]any)
+	return ok
+}
+
+func outputHash(body []byte) string {
+	var doc struct {
+		Choices []struct {
+			Message struct {
+				Content          string `json:"content"`
+				ReasoningContent string `json:"reasoning_content"`
+				ToolCalls        []struct {
+					Function struct {
+						Arguments string `json:"arguments"`
+					} `json:"function"`
+				} `json:"tool_calls"`
+			} `json:"message"`
+		} `json:"choices"`
+	}
+	json.Unmarshal(body, &doc)
+	var b strings.Builder
+	for _, c := range doc.Choices {
+		b.WriteString(c.Message.Content)
+		b.WriteString(c.Message.ReasoningContent)
+		for _, tc := range c.Message.ToolCalls {
+			b.WriteString(tc.Function.Arguments)
+		}
+		b.WriteString("\x00")
+	}
+	sum := sha256.Sum256([]byte(b.String()))
+	return hex.EncodeToString(sum[:])
 }
 
 func intField(m map[string]any, keys ...string) (int, bool, error) {

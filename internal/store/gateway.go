@@ -88,12 +88,19 @@ func (s *Store) TouchAPIKey(id string) error {
 // Upstream is one OpenAI-compatible endpoint a provider contributed to the
 // model market. EncKey is the provider's upstream credential, sealed with the
 // broker's local gateway key; Models is the list of model ids it serves and
-// Price is what the provider charges per 1000 tokens.
+// Price is what the provider charges per 1000 input tokens. PriceOut and
+// PriceCached are optional overrides (0 means "same as Price"). MaxContext and
+// Caps are the routing contract: the gateway will not send a request the
+// upstream did not claim to support.
 type Upstream struct {
 	ID, OwnerID, Name, BaseURL string
 	EncKey                     string
 	Models                     []string
 	Price                      float64
+	MaxContext                 int
+	Caps                       []string
+	PriceOut                   float64
+	PriceCached                float64
 	Enabled                    bool
 	CreatedAt                  int64
 }
@@ -103,24 +110,32 @@ func (s *Store) CreateUpstream(u *Upstream) error {
 	if err != nil {
 		return err
 	}
-	_, err = s.db.Exec(`INSERT INTO upstreams(id,owner_id,name,base_url,api_key_enc,models,price,enabled,created_at)
-		VALUES(?,?,?,?,?,?,?,?,?)`, u.ID, u.OwnerID, u.Name, u.BaseURL, u.EncKey, string(b),
-		u.Price, b2i(u.Enabled), u.CreatedAt)
+	caps, err := json.Marshal(u.Caps)
+	if err != nil {
+		return err
+	}
+	_, err = s.db.Exec(`INSERT INTO upstreams(id,owner_id,name,base_url,api_key_enc,models,price,
+		max_context,caps,price_out,price_cached,enabled,created_at)
+		VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`, u.ID, u.OwnerID, u.Name, u.BaseURL, u.EncKey, string(b),
+		u.Price, u.MaxContext, string(caps), u.PriceOut, u.PriceCached, b2i(u.Enabled), u.CreatedAt)
 	return err
 }
 
 func (s *Store) Upstreams() ([]*Upstream, error) {
-	return s.queryUpstreams(`SELECT id,owner_id,name,base_url,api_key_enc,models,price,enabled,created_at
+	return s.queryUpstreams(`SELECT id,owner_id,name,base_url,api_key_enc,models,price,
+		max_context,caps,price_out,price_cached,enabled,created_at
 		FROM upstreams WHERE enabled=1 ORDER BY price, created_at`)
 }
 
 func (s *Store) UpstreamsByOwner(ownerID string) ([]*Upstream, error) {
-	return s.queryUpstreams(`SELECT id,owner_id,name,base_url,api_key_enc,models,price,enabled,created_at
+	return s.queryUpstreams(`SELECT id,owner_id,name,base_url,api_key_enc,models,price,
+		max_context,caps,price_out,price_cached,enabled,created_at
 		FROM upstreams WHERE owner_id=? ORDER BY created_at DESC`, ownerID)
 }
 
 func (s *Store) Upstream(id string) (*Upstream, error) {
-	rows, err := s.queryUpstreams(`SELECT id,owner_id,name,base_url,api_key_enc,models,price,enabled,created_at
+	rows, err := s.queryUpstreams(`SELECT id,owner_id,name,base_url,api_key_enc,models,price,
+		max_context,caps,price_out,price_cached,enabled,created_at
 		FROM upstreams WHERE id=?`, id)
 	if err != nil {
 		return nil, err
@@ -140,13 +155,17 @@ func (s *Store) queryUpstreams(q string, args ...any) ([]*Upstream, error) {
 	var out []*Upstream
 	for rows.Next() {
 		u := &Upstream{}
-		var models string
+		var models, caps string
 		var enabled int
 		if err := rows.Scan(&u.ID, &u.OwnerID, &u.Name, &u.BaseURL, &u.EncKey, &models,
-			&u.Price, &enabled, &u.CreatedAt); err != nil {
+			&u.Price, &u.MaxContext, &caps, &u.PriceOut, &u.PriceCached, &enabled, &u.CreatedAt); err != nil {
 			return nil, err
 		}
 		json.Unmarshal([]byte(models), &u.Models)
+		json.Unmarshal([]byte(caps), &u.Caps)
+		if len(u.Caps) == 0 {
+			u.Caps = []string{"chat"}
+		}
 		u.Enabled = enabled != 0
 		out = append(out, u)
 	}

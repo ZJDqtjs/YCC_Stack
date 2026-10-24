@@ -195,17 +195,29 @@ clip 裁剪、缩放/补边、统一帧率与像素格式后编码，Broker 直�
 
 ## 模型网关：OpenAI 兼容 API
 
-控制台新增「模型 API」视图，买家与提供方都在这里完成闭环：
+控制台「模型 API」视图把买家与提供方接在同一套账本上：
 
 - **买家**：创建 `sk-ss-...` 密钥（只显示一次，库中仅存 SHA-256 哈希），用任意 OpenAI SDK
   指向 `http://BROKER/v1`。支持 `/v1/models`、`/v1/chat/completions`、SSE 流式。
-- **提供方**：登记 llama.cpp / vLLM / Ollama 的 OpenAI 兼容地址、模型名和每千 token 单价。
-  平台按「同一模型的最低报价且健康」路由，失败上游冷却 20 秒并自动切换。
+- **提供方**：登记 OpenAI 兼容地址、模型名、输入单价，并声明最大上下文与能力
+  （工具调用 / JSON 输出 / 图像输入 / 推理 / 确定性采样 / 前缀缓存），可选填输出与缓存单价。
 
-计费复用同一套算力点账本：请求进来按 prompt 估算 + `max_tokens`（默认 1024，上限 8192）
-以候选上游最高价预扣，余额不足 402；结束后优先用上游 `usage`，缺失时按输出文本估算，
-多退少补；提供方拿 90%，平台留 10% 撮合费。上游凭据用数据目录下的 `gateway.key` 做
-AES-GCM 加密后入库；公网档会拒绝把上游指向私网/链路本地/云元数据地址。
+**路由**先按请求实际需要的上下文长度和能力过滤，再在可用上游中按价格排序；同价轮流，
+避免一台机器吃满。会话可用 `X-Starstack-Session`（或 `prompt_cache_key`）固定回原上游
+30 分钟，复用其前缀缓存；上游冷却或消失时价格重新接管。
+
+**计费**按未缓存输入 / 缓存命中输入 / 输出三段计价，未填写的段沿用输入价。
+预扣按 prompt 估算 + `max_tokens`（默认 1024，上限 8192）取候选上游的最高价，余额不足 402；
+结束后优先用上游 `usage`（含 `cached_tokens`），缺失时按输出文本估算，多退少补。
+提供方拿 90%，平台留 10% 撮合费。
+
+**可复现与结构化输出**：`"starstack_deterministic": true` 只路由到声明了
+`deterministic` 的上游，网关注入 `temperature=0`、`seed=1`，并在响应头返回
+`X-Starstack-Output-SHA256`。请求 `response_format.type=json_object|json_schema` 时，
+网关会校验上游返回的 content 是否为 JSON 对象；不合法就按失败切换上游。
+
+上游凭据用数据目录下的 `gateway.key` 做 AES-GCM 加密后入库；公网档会拒绝把上游指向
+私网/链路本地/云元数据地址。
 
 MoE 与分布式部署的具体参数、脚本和 systemd 示例见
 [`deploy/models/README.md`](deploy/models/README.md)：
@@ -224,8 +236,11 @@ MODEL=Qwen/Qwen3-30B-A3B TP=2 bash deploy/models/vllm-tp.sh
 
 ```bash
 curl http://BROKER/v1/chat/completions \
-  -H "Authorization: Bearer sk-ss-..." -H "Content-Type: application/json" \
-  -d '{"model":"qwen3-30b-a3b","messages":[{"role":"user","content":"你好"}]}'
+  -H "Authorization: Bearer sk-ss-..." \
+  -H "X-Starstack-Session: conv-42" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"qwen3-30b-a3b","starstack_deterministic":true,
+       "messages":[{"role":"user","content":"你好"}]}'
 ```
 
 ## 代码结构
@@ -236,7 +251,7 @@ internal/ffx/    ffmpeg/ffprobe 封装：探测、关键帧抽取、切分规划
 internal/hub/    Broker：节点注册、两阶段匹配调度、租约回收、回传校验、合并、基线对比
                  + users.go：账户/会话/口令哈希、节点认领、报价、预扣与结算、账单流水
                  + render.go：Blender/时间线渲染的登记、切片分发与合并
-                 + gateway.go：OpenAI 兼容模型网关、密钥哈希、上游加密、低成本路由、token 结算、SSE 透传
+                 + gateway.go：OpenAI 兼容网关、能力/上下文路由、三段计费、会话粘性、结构化输出校验
                  + policy.go：演示/公网两套部署档位、Agent 凭证与签名源地址、登录限流、提交护栏
                  + launch.go：启动码、按平台生成的 .cmd/.sh 启动器、/dl/ 下发节点程序、暂停派活
                  + scheduler_test.go：调度与结算核心逻辑的单元测试（不需要 ffmpeg）
