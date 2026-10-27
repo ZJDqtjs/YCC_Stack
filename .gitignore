@@ -25,3 +25,8 @@ cookies.txt
 agent.key
 __pycache__/
 *.pyc
+
+# ComfyHub / ComfyUI 拆阶段本地运行数据
+deploy/comfyhub/data-local/
+deploy/comfy-split/config.local.json
+deploy/comfy-split/orchestrator-state*.json

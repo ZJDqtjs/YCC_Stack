@@ -113,6 +113,10 @@ nav button:hover{color:var(--ink);background:var(--soft)}
 nav button:focus-visible{outline:2px solid var(--focus);outline-offset:-3px}
 nav button.on{color:var(--ink);font-weight:500}
 nav button.on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--ink)}
+nav .navlink{display:flex;align-items:center;padding:0 12px;color:var(--body);
+  font:400 13.5px/1 var(--sans);letter-spacing:-.1px;white-space:nowrap;text-decoration:none;
+  transition:color .14s,background .14s}
+nav .navlink:hover{color:var(--ink);background:var(--soft);text-decoration:none}
 
 /* ---------- surfaces ---------- */
 .card{background:var(--card);border:1px solid var(--hair);border-radius:8px;
@@ -312,7 +316,7 @@ td .tag{margin:2px 4px 2px 0}
   .brand-txt span,.who{display:none}
   .wallet{font-size:11.5px;padding:0 9px}
   nav{gap:0}
-  nav button{padding:0 7px;font-size:12px}
+  nav button,nav .navlink{padding:0 7px;font-size:12px}
 }
 </style>
 </head>
@@ -332,6 +336,7 @@ td .tag{margin:2px 4px 2px 0}
     <button data-v="market">算力市场</button>
     <button data-v="nodes">我的节点</button>
     <button data-v="bill">账单</button>
+    <a class="navlink" href="/comfy/" target="_blank" rel="noreferrer">AI 视频</a>
   </nav>
 
   <div class="spacer"></div>

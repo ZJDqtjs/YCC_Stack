@@ -38,6 +38,8 @@ func main() {
 		"(only correct when a proxy you control sets that header)")
 	nodeBin := flag.String("node-bin-dir", "", "directory holding starstack-worker-<os>-<arch>[.exe], "+
 		"served under /dl/ so the console can hand out a double-click launcher")
+	comfyhub := flag.String("comfyhub", "", "ComfyHub base URL to expose under /comfy/ (e.g. http://127.0.0.1:8788); "+
+		"prefer STARSTACK_COMFYHUB so the URL stays out of the process list")
 	flag.Parse()
 
 	ffx.Ffmpeg, ffx.Ffprobe = *ffmpeg, *ffprobe
@@ -46,6 +48,9 @@ func main() {
 	}
 	if *signupInvite == "" {
 		*signupInvite = os.Getenv("STARSTACK_SIGNUP_INVITE")
+	}
+	if *comfyhub == "" {
+		*comfyhub = os.Getenv("STARSTACK_COMFYHUB")
 	}
 	*data, _ = filepath.Abs(*data)
 	os.MkdirAll(*data, 0o700)
@@ -106,6 +111,10 @@ func main() {
 
 	srv := hub.NewServer(*data, *base, st, pol)
 	srv.SetNodeBinDir(*nodeBin)
+	srv.SetComfyHubURL(*comfyhub)
+	if *comfyhub == "" {
+		log.Printf("note: --comfyhub not set, /comfy/ AI video share page is disabled")
+	}
 	if *nodeBin == "" {
 		log.Printf("note: --node-bin-dir not set, the console's one-click launcher has no " +
 			"starstack-worker binary to hand out (put starstack-worker-<os>-<arch>[.exe] in a directory and point at it)")

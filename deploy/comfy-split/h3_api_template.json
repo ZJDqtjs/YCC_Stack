@@ -1,0 +1,463 @@
+{
+ "115": {
+  "inputs": {
+   "aspect_ratio": "16:9 (Widescreen)",
+   "megapixels": 0.2,
+   "multiple": 32
+  },
+  "class_type": "ResolutionSelector",
+  "_meta": {
+   "title": "Resolution Selector (Size)",
+   "cnr_id": "comfy-core",
+   "ver": "0.30.0"
+  }
+ },
+ "119": {
+  "inputs": {
+   "vae_name": "minimax_h3_video_vae_fp16.safetensors"
+  },
+  "class_type": "VAELoader",
+  "_meta": {
+   "title": "加载VAE",
+   "cnr_id": "comfy-core",
+   "ver": "0.30.0"
+  }
+ },
+ "120": {
+  "inputs": {
+   "vae_name": "minimax_h3_audio_vae_fp32.safetensors"
+  },
+  "class_type": "VAELoader",
+  "_meta": {
+   "title": "加载VAE",
+   "cnr_id": "comfy-core",
+   "ver": "0.30.0"
+  }
+ },
+ "123": {
+  "inputs": {
+   "sampler_name": "euler"
+  },
+  "class_type": "KSamplerSelect",
+  "_meta": {
+   "title": "K采样器选择",
+   "cnr_id": "comfy-core",
+   "ver": "0.30.0"
+  }
+ },
+ "124": {
+  "inputs": {
+   "scheduler": "simple",
+   "steps": 4,
+   "denoise": 1,
+   "model": [
+    "141",
+    0
+   ]
+  },
+  "class_type": "BasicScheduler",
+  "_meta": {
+   "title": "基本调度器",
+   "cnr_id": "comfy-core",
+   "ver": "0.30.0"
+  }
+ },
+ "125": {
+  "inputs": {
+   "noise": [
+    "129",
+    0
+   ],
+   "guider": [
+    "126",
+    0
+   ],
+   "sampler": [
+    "123",
+    0
+   ],
+   "sigmas": [
+    "208",
+    0
+   ],
+   "latent_image": [
+    "136",
+    1
+   ]
+  },
+  "class_type": "SamplerCustomAdvanced",
+  "_meta": {
+   "title": "自定义采样器（高级）",
+   "cnr_id": "comfy-core",
+   "ver": "0.30.0"
+  }
+ },
+ "126": {
+  "inputs": {
+   "model": [
+    "141",
+    0
+   ],
+   "conditioning": [
+    "136",
+    0
+   ]
+  },
+  "class_type": "BasicGuider",
+  "_meta": {
+   "title": "基本引导器",
+   "cnr_id": "comfy-core",
+   "ver": "0.30.0"
+  }
+ },
+ "127": {
+  "inputs": {
+   "unet_name": "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+   "weight_dtype": "default"
+  },
+  "class_type": "UNETLoader",
+  "_meta": {
+   "title": "UNet加载器",
+   "cnr_id": "comfy-core",
+   "ver": "0.30.0"
+  }
+ },
+ "128": {
+  "inputs": {
+   "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+   "type": "minimax",
+   "device": "default"
+  },
+  "class_type": "CLIPLoader",
+  "_meta": {
+   "title": "加载CLIP",
+   "cnr_id": "comfy-core",
+   "ver": "0.30.0"
+  }
+ },
+ "129": {
+  "inputs": {
+   "noise_seed": 999
+  },
+  "class_type": "RandomNoise",
+  "_meta": {
+   "title": "随机噪波",
+   "cnr_id": "comfy-core",
+   "ver": "0.30.0"
+  }
+ },
+ "131": {
+  "inputs": {
+   "expression": "max(5, round(a * 24)) + (5 - (max(5, round(a * 24)) % 17)) % 17",
+   "values.a": [
+    "132",
+    0
+   ]
+  },
+  "class_type": "ComfyMathExpression",
+  "_meta": {
+   "title": "数学表达式",
+   "cnr_id": "comfy-core",
+   "ver": "0.30.0"
+  }
+ },
+ "132": {
+  "inputs": {
+   "value": 2.0
+  },
+  "class_type": "PrimitiveFloat",
+  "_meta": {
+   "title": "Float (Duration)",
+   "cnr_id": "comfy-core",
+   "ver": "0.30.0"
+  }
+ },
+ "136": {
+  "inputs": {
+   "prompt": [
+    "138",
+    0
+   ],
+   "width": [
+    "115",
+    0
+   ],
+   "height": [
+    "115",
+    1
+   ],
+   "length": [
+    "131",
+    1
+   ],
+   "ref_image_size": "max",
+   "clip": [
+    "128",
+    0
+   ],
+   "vae": [
+    "119",
+    0
+   ],
+   "audio_vae": [
+    "120",
+    0
+   ],
+   "ref_images.ref_image_0": [
+    "139",
+    0
+   ]
+  },
+  "class_type": "MiniMaxH3ReferenceToVideo",
+  "_meta": {
+   "title": "MiniMax H3 参考转视频",
+   "cnr_id": "comfy-core",
+   "ver": "0.30.0"
+  }
+ },
+ "138": {
+  "inputs": {
+   "value": "A simple test scene: a red cube slowly rotating on a wooden table, soft studio light, no people, no text."
+  },
+  "class_type": "PrimitiveStringMultiline",
+  "_meta": {
+   "title": "Input Text (Prompt)",
+   "cnr_id": "comfy-core",
+   "ver": "0.30.0"
+  }
+ },
+ "139": {
+  "inputs": {
+   "image": "comfy-split-test.png"
+  },
+  "class_type": "LoadImage",
+  "_meta": {
+   "title": "加载图像",
+   "cnr_id": "comfy-core",
+   "ver": "0.30.0"
+  }
+ },
+ "141": {
+  "inputs": {
+   "max_resolution": 1024,
+   "jpeg_quality": 80,
+   "suppress_default_preview": true,
+   "preview_frames": [
+    "131",
+    1
+   ],
+   "preview_fps": 12,
+   "tiny_vae": "taeh3.safetensors",
+   "model": [
+    "178",
+    0
+   ]
+  },
+  "class_type": "ModelPreviewOverrideKJ",
+  "_meta": {
+   "title": "Model Preview Override"
+  }
+ },
+ "147": {
+  "inputs": {
+   "lora_name": "minimax_h3_ref2v_turbo_8step_v1.0_768p_comfyui_bf16.safetensors",
+   "strength_model": 1,
+   "model": [
+    "127",
+    0
+   ]
+  },
+  "class_type": "LoraLoaderModelOnly",
+  "_meta": {
+   "title": "LoRA加载器（仅模型）",
+   "cnr_id": "comfy-core",
+   "ver": "0.31.0"
+  }
+ },
+ "149": {
+  "inputs": {
+   "shift_video": 12,
+   "shift_audio": 3,
+   "model": [
+    "147",
+    0
+   ]
+  },
+  "class_type": "MiniMaxH3SigmaShift",
+  "_meta": {
+   "title": "MiniMax H3 Sigma Shift",
+   "cnr_id": "comfy-core",
+   "ver": "0.31.0"
+  }
+ },
+ "178": {
+  "inputs": {
+   "attention": "comfy kitchen attention",
+   "model": [
+    "149",
+    0
+   ]
+  },
+  "class_type": "ModelAttentionBackend",
+  "_meta": {
+   "title": "模型注意力后端",
+   "cnr_id": "comfy-core",
+   "ver": "0.31.0"
+  }
+ },
+ "208": {
+  "inputs": {
+   "step": 2,
+   "sigmas": [
+    "254",
+    0
+   ]
+  },
+  "class_type": "SplitSigmas",
+  "_meta": {
+   "title": "分离Sigma",
+   "cnr_id": "comfy-core",
+   "ver": "0.33.0"
+  }
+ },
+ "209": {
+  "inputs": {
+   "noise": [
+    "129",
+    0
+   ],
+   "guider": [
+    "126",
+    0
+   ],
+   "sampler": [
+    "123",
+    0
+   ],
+   "sigmas": [
+    "208",
+    1
+   ],
+   "latent_image": [
+    "212",
+    0
+   ]
+  },
+  "class_type": "SamplerCustomAdvanced",
+  "_meta": {
+   "title": "自定义采样器（高级）",
+   "cnr_id": "comfy-core",
+   "ver": "0.30.0"
+  }
+ },
+ "211": {
+  "inputs": {
+   "av_latent": [
+    "125",
+    1
+   ]
+  },
+  "class_type": "LTXVSeparateAVLatent",
+  "_meta": {
+   "title": "分离 AV 潜空间",
+   "cnr_id": "comfy-core",
+   "ver": "0.33.0"
+  }
+ },
+ "212": {
+  "inputs": {
+   "video_latent": [
+    "263",
+    0
+   ],
+   "audio_latent": [
+    "211",
+    1
+   ]
+  },
+  "class_type": "LTXVConcatAVLatent",
+  "_meta": {
+   "title": "拼接 AV 潜空间",
+   "cnr_id": "comfy-core",
+   "ver": "0.33.0"
+  }
+ },
+ "254": {
+  "inputs": {
+   "extra_steps": 1,
+   "start_at_sigma": 0.7,
+   "end_at_sigma": 0,
+   "spacing": "cosine",
+   "sigmas": [
+    "124",
+    0
+   ]
+  },
+  "class_type": "H3SigmaRefiner",
+  "_meta": {
+   "title": "H3 Sigma Refiner",
+   "aux_id": "yichengup/ComfyUI-YCNodes-MiniMax-H3",
+   "ver": "146207295c1d2bd6b64a6552484cb6ed8be1c9ef"
+  }
+ },
+ "263": {
+  "inputs": {
+   "model_name": "minimax_h3_latent_upscaler_3d_conv_v1_fp16.safetensors",
+   "mode": "scale by multiplier",
+   "mode.scale": 1.0,
+   "align": 32,
+   "enable_temporal_chunking": true,
+   "force_unload": true,
+   "device": "cuda",
+   "precision": "bf16",
+   "latent": [
+    "211",
+    0
+   ]
+  },
+  "class_type": "MinimaxH3LatentUpscaler3D",
+  "_meta": {
+   "title": "Minimax H3 Latent Upscaler (3D)",
+   "aux_id": "LBH-123-AI/Comfyui_Minimax_h3_latent_Upscaler",
+   "ver": "6a4b191e8af583b7c097f564690325f91d18c2e2"
+  }
+ },
+ "901": {
+  "inputs": {
+   "av_latent": [
+    "209",
+    0
+   ]
+  },
+  "class_type": "LTXVSeparateAVLatent",
+  "_meta": {
+   "title": "分离 AV 潜空间"
+  }
+ },
+ "902": {
+  "inputs": {
+   "filename_prefix": "comfyhub/template_video",
+   "samples": [
+    "901",
+    0
+   ]
+  },
+  "class_type": "SaveLatent",
+  "_meta": {
+   "title": "保存Latent"
+  }
+ },
+ "903": {
+  "inputs": {
+   "filename_prefix": "comfyhub/template_audio",
+   "samples": [
+    "901",
+    1
+   ]
+  },
+  "class_type": "SaveLatent",
+  "_meta": {
+   "title": "保存Latent"
+  }
+ }
+}

@@ -1,0 +1,4928 @@
+{
+ "id": "e3f2b845-8f2c-4b5a-9caf-eac1029d3e7e",
+ "revision": 0,
+ "last_node_id": 329,
+ "last_link_id": 503,
+ "nodes": [
+  {
+   "id": 209,
+   "type": "SamplerCustomAdvanced",
+   "pos": [
+    -1144.6821353644139,
+    5667.650739923963
+   ],
+   "size": [
+    230,
+    140
+   ],
+   "flags": {},
+   "order": 74,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "noise",
+     "name": "noise",
+     "type": "NOISE",
+     "link": 355
+    },
+    {
+     "label": "guider",
+     "name": "guider",
+     "type": "GUIDER",
+     "link": 408
+    },
+    {
+     "label": "sampler",
+     "name": "sampler",
+     "type": "SAMPLER",
+     "link": 409
+    },
+    {
+     "label": "sigmas",
+     "name": "sigmas",
+     "type": "SIGMAS",
+     "link": 406
+    },
+    {
+     "label": "latent_image",
+     "name": "latent_image",
+     "type": "LATENT",
+     "link": 365
+    }
+   ],
+   "outputs": [
+    {
+     "label": "output",
+     "name": "output",
+     "type": "LATENT",
+     "links": [
+      375
+     ]
+    },
+    {
+     "label": "denoised_output",
+     "name": "denoised_output",
+     "type": "LATENT",
+     "links": []
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "SamplerCustomAdvanced",
+    "cnr_id": "comfy-core",
+    "ver": "0.30.0",
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.5.2"
+    },
+    "widget_ue_connectable": {}
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 226,
+   "type": "SetNode",
+   "pos": [
+    -729.3690052453154,
+    5489.371841846188
+   ],
+   "size": [
+    210,
+    50
+   ],
+   "flags": {
+    "collapsed": true
+   },
+   "order": 50,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "输入",
+     "name": "VAE",
+     "type": "VAE",
+     "link": 390
+    }
+   ],
+   "outputs": [
+    {
+     "label": "输出",
+     "name": "VAE",
+     "type": "VAE"
+    }
+   ],
+   "title": "Set_音频vae",
+   "properties": {
+    "Node name for S&R": "SetNode",
+    "aux_id": "kijai/ComfyUI-KJNodes",
+    "previousName": "音频vae",
+    "ue_properties": {
+     "version": "7.8",
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {}
+    }
+   },
+   "widgets_values": [
+    "音频vae"
+   ],
+   "widgets_values_named": {
+    "Constant": "音频vae"
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 227,
+   "type": "SetNode",
+   "pos": [
+    -729.3690052453154,
+    5439.371841846188
+   ],
+   "size": [
+    210,
+    50
+   ],
+   "flags": {
+    "collapsed": true
+   },
+   "order": 49,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "输入",
+     "name": "VAE",
+     "type": "VAE",
+     "link": 391
+    }
+   ],
+   "outputs": [
+    {
+     "label": "输出",
+     "name": "VAE",
+     "type": "VAE"
+    }
+   ],
+   "title": "Set_视频vae",
+   "properties": {
+    "Node name for S&R": "SetNode",
+    "aux_id": "kijai/ComfyUI-KJNodes",
+    "previousName": "视频vae",
+    "ue_properties": {
+     "version": "7.8",
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {}
+    }
+   },
+   "widgets_values": [
+    "视频vae"
+   ],
+   "widgets_values_named": {
+    "Constant": "视频vae"
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 233,
+   "type": "GetNode",
+   "pos": [
+    -1383.462943221308,
+    5328.198312442466
+   ],
+   "size": [
+    210,
+    50
+   ],
+   "flags": {
+    "collapsed": true
+   },
+   "order": 0,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "label": "输出",
+     "name": "INT",
+     "type": "INT",
+     "links": [
+      397
+     ]
+    }
+   ],
+   "title": "Get_高",
+   "properties": {
+    "Node name for S&R": "GetNode",
+    "aux_id": "kijai/ComfyUI-KJNodes",
+    "ue_properties": {
+     "version": "7.8",
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {}
+    }
+   },
+   "widgets_values": [
+    "高"
+   ],
+   "widgets_values_named": {
+    "Constant": "高"
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 232,
+   "type": "GetNode",
+   "pos": [
+    -1260.5248328697455,
+    5331.356515567466
+   ],
+   "size": [
+    210,
+    50
+   ],
+   "flags": {
+    "collapsed": true
+   },
+   "order": 1,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "label": "输出",
+     "name": "INT",
+     "type": "INT",
+     "links": [
+      396
+     ]
+    }
+   ],
+   "title": "Get_宽",
+   "properties": {
+    "Node name for S&R": "GetNode",
+    "aux_id": "kijai/ComfyUI-KJNodes",
+    "ue_properties": {
+     "version": "7.8",
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {}
+    }
+   },
+   "widgets_values": [
+    "宽"
+   ],
+   "widgets_values_named": {
+    "Constant": "宽"
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 229,
+   "type": "GetNode",
+   "pos": [
+    -1383.6083289634955,
+    5378.246164004966
+   ],
+   "size": [
+    210,
+    60
+   ],
+   "flags": {
+    "collapsed": true
+   },
+   "order": 2,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "label": "输出",
+     "name": "INT",
+     "type": "INT",
+     "links": [
+      393
+     ]
+    }
+   ],
+   "title": "Get_时长",
+   "properties": {
+    "Node name for S&R": "GetNode",
+    "aux_id": "kijai/ComfyUI-KJNodes",
+    "ue_properties": {
+     "version": "7.8",
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {}
+    }
+   },
+   "widgets_values": [
+    "时长"
+   ],
+   "widgets_values_named": {
+    "Constant": "时长"
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 234,
+   "type": "GetNode",
+   "pos": [
+    -1254.0661536705268,
+    5381.578195254966
+   ],
+   "size": [
+    210,
+    50
+   ],
+   "flags": {
+    "collapsed": true
+   },
+   "order": 3,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "label": "输出",
+     "name": "VAE",
+     "type": "VAE",
+     "links": [
+      398
+     ]
+    }
+   ],
+   "title": "Get_视频vae",
+   "properties": {
+    "Node name for S&R": "GetNode",
+    "aux_id": "kijai/ComfyUI-KJNodes",
+    "ue_properties": {
+     "version": "7.8",
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {}
+    }
+   },
+   "widgets_values": [
+    "视频vae"
+   ],
+   "widgets_values_named": {
+    "Constant": "视频vae"
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 235,
+   "type": "GetNode",
+   "pos": [
+    -1254.0195228111518,
+    5426.711007754966
+   ],
+   "size": [
+    210,
+    50
+   ],
+   "flags": {
+    "collapsed": true
+   },
+   "order": 4,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "label": "输出",
+     "name": "VAE",
+     "type": "VAE",
+     "links": [
+      399
+     ]
+    }
+   ],
+   "title": "Get_音频vae",
+   "properties": {
+    "Node name for S&R": "GetNode",
+    "aux_id": "kijai/ComfyUI-KJNodes",
+    "ue_properties": {
+     "version": "7.8",
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {}
+    }
+   },
+   "widgets_values": [
+    "音频vae"
+   ],
+   "widgets_values_named": {
+    "Constant": "音频vae"
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 239,
+   "type": "SetNode",
+   "pos": [
+    -781.1005785130707,
+    5473.3900691476865
+   ],
+   "size": [
+    210,
+    50
+   ],
+   "flags": {
+    "collapsed": true
+   },
+   "order": 68,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "输入",
+     "name": "SIGMAS",
+     "type": "SIGMAS",
+     "link": 402
+    }
+   ],
+   "outputs": [
+    {
+     "label": "输出",
+     "name": "SIGMAS",
+     "type": "SIGMAS"
+    }
+   ],
+   "title": "Set_sigma02",
+   "properties": {
+    "Node name for S&R": "SetNode",
+    "aux_id": "kijai/ComfyUI-KJNodes",
+    "previousName": "sigma02",
+    "ue_properties": {
+     "version": "7.8",
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {}
+    }
+   },
+   "widgets_values": [
+    "sigma02"
+   ],
+   "widgets_values_named": {
+    "Constant": "sigma02"
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 240,
+   "type": "SetNode",
+   "pos": [
+    -781.1005785130707,
+    5433.3900691476865
+   ],
+   "size": [
+    210,
+    50
+   ],
+   "flags": {
+    "collapsed": true
+   },
+   "order": 67,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "输入",
+     "name": "SIGMAS",
+     "type": "SIGMAS",
+     "link": 403
+    }
+   ],
+   "outputs": [
+    {
+     "label": "输出",
+     "name": "SIGMAS",
+     "type": "SIGMAS"
+    }
+   ],
+   "title": "Set_sigma01",
+   "properties": {
+    "Node name for S&R": "SetNode",
+    "aux_id": "kijai/ComfyUI-KJNodes",
+    "previousName": "sigma01",
+    "ue_properties": {
+     "version": "7.8",
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {}
+    }
+   },
+   "widgets_values": [
+    "sigma01"
+   ],
+   "widgets_values_named": {
+    "Constant": "sigma01"
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 237,
+   "type": "GetNode",
+   "pos": [
+    -1129.5810611456639,
+    6037.711775080213
+   ],
+   "size": [
+    210,
+    50
+   ],
+   "flags": {
+    "collapsed": true
+   },
+   "order": 5,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "label": "输出",
+     "name": "VAE",
+     "type": "VAE",
+     "links": null
+    }
+   ],
+   "title": "Get_视频vae",
+   "properties": {
+    "Node name for S&R": "GetNode",
+    "aux_id": "kijai/ComfyUI-KJNodes",
+    "ue_properties": {
+     "version": "7.8",
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {}
+    }
+   },
+   "widgets_values": [
+    "视频vae"
+   ],
+   "widgets_values_named": {
+    "Constant": "视频vae"
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 242,
+   "type": "SetNode",
+   "pos": [
+    -833.9615504813682,
+    5491.228509442578
+   ],
+   "size": [
+    210,
+    50
+   ],
+   "flags": {
+    "collapsed": true
+   },
+   "order": 51,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "输入",
+     "name": "NOISE",
+     "type": "NOISE",
+     "link": 405
+    }
+   ],
+   "outputs": [
+    {
+     "label": "输出",
+     "name": "NOISE",
+     "type": "NOISE"
+    }
+   ],
+   "title": "Set_种子",
+   "properties": {
+    "Node name for S&R": "SetNode",
+    "aux_id": "kijai/ComfyUI-KJNodes",
+    "previousName": "种子",
+    "ue_properties": {
+     "version": "7.8",
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {}
+    }
+   },
+   "widgets_values": [
+    "种子"
+   ],
+   "widgets_values_named": {
+    "Constant": "种子"
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 245,
+   "type": "SetNode",
+   "pos": [
+    -833.9615504813682,
+    5441.228509442578
+   ],
+   "size": [
+    210,
+    50
+   ],
+   "flags": {
+    "collapsed": true
+   },
+   "order": 65,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "输入",
+     "name": "GUIDER",
+     "type": "GUIDER",
+     "link": 407
+    }
+   ],
+   "outputs": [
+    {
+     "label": "输出",
+     "name": "GUIDER",
+     "type": "GUIDER"
+    }
+   ],
+   "title": "Set_引导器",
+   "properties": {
+    "Node name for S&R": "SetNode",
+    "aux_id": "kijai/ComfyUI-KJNodes",
+    "previousName": "引导器",
+    "ue_properties": {
+     "version": "7.8",
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {}
+    }
+   },
+   "widgets_values": [
+    "引导器"
+   ],
+   "widgets_values_named": {
+    "Constant": "引导器"
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 244,
+   "type": "GetNode",
+   "pos": [
+    -1129.5810611456639,
+    5977.711775080213
+   ],
+   "size": [
+    210,
+    50
+   ],
+   "flags": {
+    "collapsed": true
+   },
+   "order": 6,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "label": "输出",
+     "name": "SIGMAS",
+     "type": "SIGMAS",
+     "links": [
+      406
+     ]
+    }
+   ],
+   "title": "Get_sigma02",
+   "properties": {
+    "Node name for S&R": "GetNode",
+    "aux_id": "kijai/ComfyUI-KJNodes",
+    "ue_properties": {
+     "version": "7.8",
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {}
+    }
+   },
+   "widgets_values": [
+    "sigma02"
+   ],
+   "widgets_values_named": {
+    "Constant": "sigma02"
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 236,
+   "type": "GetNode",
+   "pos": [
+    -1129.5810611456639,
+    6087.711775080213
+   ],
+   "size": [
+    210,
+    50
+   ],
+   "flags": {
+    "collapsed": true
+   },
+   "order": 7,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "label": "输出",
+     "name": "VAE",
+     "type": "VAE",
+     "links": null
+    }
+   ],
+   "title": "Get_音频vae",
+   "properties": {
+    "Node name for S&R": "GetNode",
+    "aux_id": "kijai/ComfyUI-KJNodes",
+    "ue_properties": {
+     "version": "7.8",
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {}
+    }
+   },
+   "widgets_values": [
+    "音频vae"
+   ],
+   "widgets_values_named": {
+    "Constant": "音频vae"
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 246,
+   "type": "GetNode",
+   "pos": [
+    -1126.2412173956639,
+    5934.011579767713
+   ],
+   "size": [
+    210,
+    50
+   ],
+   "flags": {
+    "collapsed": true
+   },
+   "order": 8,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "label": "输出",
+     "name": "GUIDER",
+     "type": "GUIDER",
+     "links": [
+      408
+     ]
+    }
+   ],
+   "title": "Get_引导器",
+   "properties": {
+    "Node name for S&R": "GetNode",
+    "aux_id": "kijai/ComfyUI-KJNodes",
+    "ue_properties": {
+     "version": "7.8",
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {}
+    }
+   },
+   "widgets_values": [
+    "引导器"
+   ],
+   "widgets_values_named": {
+    "Constant": "引导器"
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 247,
+   "type": "GetNode",
+   "pos": [
+    -1127.9014957159764,
+    5884.989607111463
+   ],
+   "size": [
+    210,
+    50
+   ],
+   "flags": {
+    "collapsed": true
+   },
+   "order": 9,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "label": "输出",
+     "name": "SAMPLER",
+     "type": "SAMPLER",
+     "links": [
+      409
+     ]
+    }
+   ],
+   "title": "Get_采样器设置",
+   "properties": {
+    "Node name for S&R": "GetNode",
+    "aux_id": "kijai/ComfyUI-KJNodes",
+    "ue_properties": {
+     "version": "7.8",
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {}
+    }
+   },
+   "widgets_values": [
+    "采样器设置"
+   ],
+   "widgets_values_named": {
+    "Constant": "采样器设置"
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 224,
+   "type": "SetNode",
+   "pos": [
+    -781.1005785130707,
+    5513.3900691476865
+   ],
+   "size": [
+    210,
+    60
+   ],
+   "flags": {
+    "collapsed": true
+   },
+   "order": 71,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "输入",
+     "name": "MODEL",
+     "type": "MODEL",
+     "link": 386
+    }
+   ],
+   "outputs": [
+    {
+     "label": "输出",
+     "name": "MODEL",
+     "type": "MODEL"
+    }
+   ],
+   "title": "Set_加载模型",
+   "properties": {
+    "Node name for S&R": "SetNode",
+    "aux_id": "kijai/ComfyUI-KJNodes",
+    "previousName": "加载模型",
+    "ue_properties": {
+     "version": "7.8",
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {}
+    }
+   },
+   "widgets_values": [
+    "加载模型"
+   ],
+   "widgets_values_named": {
+    "Constant": "加载模型"
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 253,
+   "type": "GetNode",
+   "pos": [
+    -825.6324582369348,
+    5515.951108683548
+   ],
+   "size": [
+    210,
+    50
+   ],
+   "flags": {
+    "collapsed": true
+   },
+   "order": 10,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "label": "输出",
+     "name": "MODEL",
+     "type": "MODEL",
+     "links": [
+      413,
+      414
+     ]
+    }
+   ],
+   "title": "Get_预览模型",
+   "properties": {
+    "Node name for S&R": "GetNode",
+    "aux_id": "kijai/ComfyUI-KJNodes",
+    "ue_properties": {
+     "version": "7.8",
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {}
+    }
+   },
+   "widgets_values": [
+    "预览模型"
+   ],
+   "widgets_values_named": {
+    "Constant": "预览模型"
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 230,
+   "type": "SetNode",
+   "pos": [
+    -729.3690052453154,
+    5539.371841846188
+   ],
+   "size": [
+    210,
+    50
+   ],
+   "flags": {
+    "collapsed": true
+   },
+   "order": 53,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "输入",
+     "name": "INT",
+     "type": "INT",
+     "link": 394
+    }
+   ],
+   "outputs": [
+    {
+     "label": "输出",
+     "name": "INT",
+     "type": "INT"
+    }
+   ],
+   "title": "Set_宽",
+   "properties": {
+    "Node name for S&R": "SetNode",
+    "aux_id": "kijai/ComfyUI-KJNodes",
+    "previousName": "宽",
+    "ue_properties": {
+     "version": "7.8",
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {}
+    }
+   },
+   "widgets_values": [
+    "宽"
+   ],
+   "widgets_values_named": {
+    "Constant": "宽"
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 123,
+   "type": "KSamplerSelect",
+   "pos": [
+    -1072.3519507896663,
+    5143.560617129965
+   ],
+   "size": [
+    210,
+    58
+   ],
+   "flags": {},
+   "order": 11,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "sampler_name",
+     "name": "sampler_name",
+     "type": "COMBO",
+     "widget": {
+      "name": "sampler_name"
+     }
+    }
+   ],
+   "outputs": [
+    {
+     "label": "SAMPLER",
+     "name": "SAMPLER",
+     "type": "SAMPLER",
+     "links": [
+      255,
+      404
+     ]
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "KSamplerSelect",
+    "cnr_id": "comfy-core",
+    "ver": "0.30.0",
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.5.2"
+    },
+    "widget_ue_connectable": {}
+   },
+   "widgets_values": [
+    "euler"
+   ],
+   "widgets_values_named": {
+    "sampler_name": "euler"
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 254,
+   "type": "H3SigmaRefiner",
+   "pos": [
+    -1070.075492049432,
+    5401.083078067465
+   ],
+   "size": [
+    210,
+    130
+   ],
+   "flags": {},
+   "order": 57,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "sigmas",
+     "name": "sigmas",
+     "type": "SIGMAS",
+     "link": 415
+    },
+    {
+     "label": "extra_steps",
+     "name": "extra_steps",
+     "type": "INT",
+     "widget": {
+      "name": "extra_steps"
+     }
+    },
+    {
+     "label": "start_at_sigma",
+     "name": "start_at_sigma",
+     "type": "FLOAT",
+     "widget": {
+      "name": "start_at_sigma"
+     }
+    },
+    {
+     "label": "end_at_sigma",
+     "name": "end_at_sigma",
+     "type": "FLOAT",
+     "widget": {
+      "name": "end_at_sigma"
+     }
+    },
+    {
+     "label": "spacing",
+     "name": "spacing",
+     "type": "COMBO",
+     "widget": {
+      "name": "spacing"
+     }
+    }
+   ],
+   "outputs": [
+    {
+     "label": "sigmas",
+     "name": "sigmas",
+     "type": "SIGMAS",
+     "links": [
+      416
+     ]
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "H3SigmaRefiner",
+    "aux_id": "yichengup/ComfyUI-YCNodes-MiniMax-H3",
+    "ver": "146207295c1d2bd6b64a6552484cb6ed8be1c9ef",
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.8"
+    },
+    "widget_ue_connectable": {}
+   },
+   "widgets_values": [
+    1,
+    0.7,
+    0,
+    "cosine"
+   ],
+   "widgets_values_named": {
+    "extra_steps": 1,
+    "start_at_sigma": 0.7,
+    "end_at_sigma": 0,
+    "spacing": "cosine"
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 126,
+   "type": "BasicGuider",
+   "pos": [
+    -1066.0394507896663,
+    5056.285226504965
+   ],
+   "size": [
+    159.568359375,
+    46
+   ],
+   "flags": {},
+   "order": 61,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "model",
+     "name": "model",
+     "type": "MODEL",
+     "link": 413
+    },
+    {
+     "label": "conditioning",
+     "name": "conditioning",
+     "type": "CONDITIONING",
+     "link": 270
+    }
+   ],
+   "outputs": [
+    {
+     "label": "GUIDER",
+     "name": "GUIDER",
+     "type": "GUIDER",
+     "links": [
+      254,
+      407
+     ]
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "BasicGuider",
+    "cnr_id": "comfy-core",
+    "ver": "0.30.0",
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.5.2"
+    },
+    "widget_ue_connectable": {}
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 125,
+   "type": "SamplerCustomAdvanced",
+   "pos": [
+    -830.2903968345893,
+    4946.662179629965
+   ],
+   "size": [
+    212.90542602539062,
+    237.77435302734375
+   ],
+   "flags": {},
+   "order": 66,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "noise",
+     "name": "noise",
+     "type": "NOISE",
+     "link": 253
+    },
+    {
+     "label": "guider",
+     "name": "guider",
+     "type": "GUIDER",
+     "link": 254
+    },
+    {
+     "label": "sampler",
+     "name": "sampler",
+     "type": "SAMPLER",
+     "link": 255
+    },
+    {
+     "label": "sigmas",
+     "name": "sigmas",
+     "type": "SIGMAS",
+     "link": 354
+    },
+    {
+     "label": "latent_image",
+     "name": "latent_image",
+     "type": "LATENT",
+     "link": 271
+    }
+   ],
+   "outputs": [
+    {
+     "label": "output",
+     "name": "output",
+     "type": "LATENT",
+     "links": []
+    },
+    {
+     "label": "denoised_output",
+     "name": "denoised_output",
+     "type": "LATENT",
+     "links": [
+      384
+     ]
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "SamplerCustomAdvanced",
+    "cnr_id": "comfy-core",
+    "ver": "0.30.0",
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.5.2"
+    },
+    "widget_ue_connectable": {}
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 149,
+   "type": "MiniMaxH3SigmaShift",
+   "pos": [
+    -1816.734171712338,
+    5152.215488231239
+   ],
+   "size": [
+    344.7380676269531,
+    82
+   ],
+   "flags": {},
+   "order": 63,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "model",
+     "name": "model",
+     "type": "MODEL",
+     "link": 327
+    },
+    {
+     "label": "shift_video",
+     "name": "shift_video",
+     "type": "FLOAT",
+     "widget": {
+      "name": "shift_video"
+     }
+    },
+    {
+     "label": "shift_audio",
+     "name": "shift_audio",
+     "type": "FLOAT",
+     "widget": {
+      "name": "shift_audio"
+     }
+    }
+   ],
+   "outputs": [
+    {
+     "label": "MODEL",
+     "name": "MODEL",
+     "type": "MODEL",
+     "links": [
+      425
+     ]
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "MiniMaxH3SigmaShift",
+    "cnr_id": "comfy-core",
+    "ver": "0.31.0",
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.5.2"
+    },
+    "widget_ue_connectable": {}
+   },
+   "widgets_values": [
+    12,
+    3
+   ],
+   "widgets_values_named": {
+    "shift_video": 12,
+    "shift_audio": 3
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 178,
+   "type": "ModelAttentionBackend",
+   "pos": [
+    -1816.734171712338,
+    5282.215488231239
+   ],
+   "size": [
+    341.70074462890625,
+    58
+   ],
+   "flags": {},
+   "order": 69,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "model",
+     "name": "model",
+     "type": "MODEL",
+     "link": 425
+    },
+    {
+     "label": "attention",
+     "name": "attention",
+     "type": "COMBO",
+     "widget": {
+      "name": "attention"
+     }
+    }
+   ],
+   "outputs": [
+    {
+     "label": "MODEL",
+     "name": "MODEL",
+     "type": "MODEL",
+     "links": [
+      386
+     ]
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "ModelAttentionBackend",
+    "cnr_id": "comfy-core",
+    "ver": "0.31.0",
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.5.2"
+    },
+    "widget_ue_connectable": {}
+   },
+   "widgets_values": [
+    "comfy kitchen attention"
+   ],
+   "widgets_values_named": {
+    "attention": "comfy kitchen attention"
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 119,
+   "type": "VAELoader",
+   "pos": [
+    -2282.9857586264015,
+    5220.592929637489
+   ],
+   "size": [
+    442.95452880859375,
+    58
+   ],
+   "flags": {},
+   "order": 12,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "vae_name",
+     "name": "vae_name",
+     "type": "COMBO",
+     "widget": {
+      "name": "vae_name"
+     }
+    }
+   ],
+   "outputs": [
+    {
+     "label": "VAE",
+     "name": "VAE",
+     "type": "VAE",
+     "links": [
+      391
+     ]
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "VAELoader",
+    "cnr_id": "comfy-core",
+    "ver": "0.30.0",
+    "models": [
+     {
+      "directory_invalid": true,
+      "name": "minimax_h3_video_vae_fp16.safetensors",
+      "directory": "vae",
+      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_video_vae_fp16.safetensors"
+     }
+    ],
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.5.2"
+    },
+    "widget_ue_connectable": {}
+   },
+   "widgets_values": [
+    "minimax_h3_video_vae_fp16.safetensors"
+   ],
+   "widgets_values_named": {
+    "vae_name": "minimax_h3_video_vae_fp16.safetensors"
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 120,
+   "type": "VAELoader",
+   "pos": [
+    -2282.9857586264015,
+    5327.799960887489
+   ],
+   "size": [
+    450.646728515625,
+    58.941837310791016
+   ],
+   "flags": {},
+   "order": 13,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "vae_name",
+     "name": "vae_name",
+     "type": "COMBO",
+     "widget": {
+      "name": "vae_name"
+     }
+    }
+   ],
+   "outputs": [
+    {
+     "label": "VAE",
+     "name": "VAE",
+     "type": "VAE",
+     "links": [
+      390
+     ]
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "VAELoader",
+    "cnr_id": "comfy-core",
+    "ver": "0.30.0",
+    "models": [
+     {
+      "directory_invalid": true,
+      "name": "minimax_h3_audio_vae_fp32.safetensors",
+      "directory": "vae",
+      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_audio_vae_fp32.safetensors"
+     }
+    ],
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.5.2"
+    },
+    "widget_ue_connectable": {}
+   },
+   "widgets_values": [
+    "minimax_h3_audio_vae_fp32.safetensors"
+   ],
+   "widgets_values_named": {
+    "vae_name": "minimax_h3_audio_vae_fp32.safetensors"
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 129,
+   "type": "RandomNoise",
+   "pos": [
+    -1065.8524085533381,
+    4931.643624942465
+   ],
+   "size": [
+    210,
+    82
+   ],
+   "flags": {},
+   "order": 14,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "noise_seed",
+     "name": "noise_seed",
+     "type": "INT",
+     "widget": {
+      "name": "noise_seed"
+     }
+    }
+   ],
+   "outputs": [
+    {
+     "label": "NOISE",
+     "name": "NOISE",
+     "type": "NOISE",
+     "links": [
+      253,
+      355,
+      405
+     ]
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "RandomNoise",
+    "cnr_id": "comfy-core",
+    "ver": "0.30.0",
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.5.2"
+    },
+    "widget_ue_connectable": {}
+   },
+   "widgets_values": [
+    999,
+    "fixed"
+   ],
+   "widgets_values_named": {
+    "noise_seed": 999,
+    "control_after_generate": "fixed"
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 208,
+   "type": "SplitSigmas",
+   "pos": [
+    -830.6327430259955,
+    5253.773507754965
+   ],
+   "size": [
+    210,
+    78
+   ],
+   "flags": {},
+   "order": 62,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "sigmas",
+     "name": "sigmas",
+     "type": "SIGMAS",
+     "link": 416
+    },
+    {
+     "label": "step",
+     "name": "step",
+     "type": "INT",
+     "widget": {
+      "name": "step"
+     }
+    }
+   ],
+   "outputs": [
+    {
+     "label": "high_sigmas",
+     "name": "high_sigmas",
+     "type": "SIGMAS",
+     "links": [
+      354,
+      403
+     ]
+    },
+    {
+     "label": "low_sigmas",
+     "name": "low_sigmas",
+     "type": "SIGMAS",
+     "links": [
+      402
+     ]
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "SplitSigmas",
+    "cnr_id": "comfy-core",
+    "ver": "0.33.0",
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.5.2"
+    },
+    "widget_ue_connectable": {}
+   },
+   "widgets_values": [
+    2
+   ],
+   "widgets_values_named": {
+    "step": 5
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 265,
+   "type": "MarkdownNote",
+   "pos": [
+    -3186.660414173118,
+    5998.134643276546
+   ],
+   "size": [
+    644.6679283961714,
+    192.24362992495958
+   ],
+   "flags": {},
+   "order": 15,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [],
+   "title": "MiniMax H3 5秒视频提示词三流程模板",
+   "properties": {
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "version": "7.8",
+     "input_ue_unconnectable": {}
+    }
+   },
+   "widgets_values": [
+    "# MiniMax H3 5秒视频提示词三流程模板\n\n以下内容可直接作为AI助手的系统提示词或长期复用模板。\n\n---\n\n你是一名专门为MiniMax H3设计5秒视频的导演与提示词编剧。你的任务不是套用固定分镜，而是先识别用户选择的生产流程，再把用户的一句话故事、粗略想法、剧本片段、单张图片或“图片＋故事”压缩成一个可以直接用于MiniMax H3的完整微型事件；选择九宫格流程时，还要先生成九宫格视觉母版，再依据实际成图生成对应的视频提示词。\n\n## 一、首次入口：必须先确定流程\n\n如果用户尚未明确选择模式，第一条回复只询问以下问题，不提前生成提示词：\n\n```text\n请选择这次要走的流程：\n\n1. 文戏模式：人物关系、对白、微表情、情绪转折与剧情结果。\n2. 武戏模式：高密度打斗、连续攻防、快慢节奏、受力与反制。\n3. 九宫格模式：先生成3×3关键画面，再根据实际九宫格生成对应的H3视频提示词。\n\n你可以直接回复数字，并发送一句大概的故事；也可以直接上传一张图片。我会在选定模式后继续生成。\n```\n\n如果用户已经明确说出“文戏”“武戏”“九宫格”或对应数字，不再重复询问。若用户已经同时提供模式和故事或图片，立即开始生成，不再要求确认。\n\n如果用户先发了故事或图片但没有选择模式，保留并分析已有内容，只询问模式，继续沿用已经收到的素材。\n\n## 二、支持的输入方式\n\n### 1. 用户只提供粗略故事\n\n故事可以只有一句话。提取其中的主体、关系、目标、阻碍、关键动作、情绪转折、结局和风格线索。缺少普通美术细节时自行做合理决定，不把用户拦在连续的选择题前。\n\n### 2. 用户只提供一张图片\n\n先观察图片中的人物或主体数量、外貌、服装、道具、环境、时代、材质、光线、色彩和构图。图片负责锁定可见身份与视觉世界，所选模式负责推导动作和叙事。\n\n- 文戏模式：从人物姿态、关系距离、道具和环境中推导一个克制、可理解的关系转折。\n- 武戏模式：锁定图片中的主角与装备；若图片没有对手，设计一个与现有世界观匹配、轮廓明显不同的对手。\n- 九宫格模式：把图片视为视觉母版或主体参考，派生九个连续但构图不同的关键状态。\n\n### 3. 用户同时提供图片和故事\n\n图片锁定人物、物体、服装、材质、场景与色彩；故事锁定事件顺序、角色关系、动作结果和结尾。两者冲突时优先保留图片中可见的身份特征，同时用故事决定后续事件。\n\n只有以下信息会实质改变成片且无法从素材判断时，才补问一个简短问题：谁是主角、文戏对白使用什么语言、用户是否要求特定结局。其他细节自行完成。\n\n### 4. 图片引用前缀\n\n先统计本次最终会与提示词一起提交给H3的全部图片，并按照实际提交顺序编号为图片1、图片2、图片3，依次类推。观察每张图片承担的真实功能，用简短、明确的中文写出角色、主体、场景、动作、构图、风格、装备、界面或九宫格时序等用途。\n\n存在图片时，最终提示词的绝对开头使用一整行连续图片引用，格式为：\n\n```text\n@图片1作为主角身份与服装参考@图片2作为对手身份与装备参考@图片3作为场景与光影参考\n```\n\n图片数量与引用数量完全一致，每张图片只编号一次，一张图片承担多个功能时合并为一句，例如`@图片1作为人物身份、服装与场景参考`。九宫格图片用于生成视频时写为`@图片1作为九宫格时序、构图与画面状态参考`。图片引用行结束后换行，下一行直接进入“生成一段……”正文。当前任务没有图片时，提示词第一行直接进入“生成一段……”正文。\n\n## 三、全局生成规格\n\n用户没有另行指定时，默认：5秒、16:9、2K、MiniMax H3、开启原生立体声。\n\n成品提示词统一采用自然语言制作简报格式：\n\n1. 影片目标与核心概念。\n2. 固定人物、主体、场景、道具与一致性。\n3. 按时间连续覆盖0—5秒的画面和动作。\n4. 剪辑、摄影、表演或动作规则。\n5. 视觉风格与材质。\n6. 声音设计。\n7. 收束人物、动作、镜头与结尾一致性的正向结果。\n\n最终成品回复只包含一份可以直接复制进MiniMax H3的完整中文提示词正文。存在图片时，第一行先按图片引用前缀规则输出全部`@图片N作为XX`，第二行直接以“生成一段5秒、16:9、2K、原生立体声……”开头；当前任务没有图片时，第一行直接以“生成一段5秒、16:9、2K、原生立体声……”开头。随后依次写核心概念、人物或主体锁定、0—5秒时间线、镜头运动、视觉材质和声音设计，最后一句结束整条回复。\n\n所有成品提示词采用全正向描述结构，只陈述画面需要呈现的元素、动作、镜头、时长、声音和结果。约束转换为人物锁定、动作因果、镜头规则、时间预算与画面结果，并放在对应内容中就地表达。成品始终以“生成什么”为核心。\n\n时间段必须无缺口地覆盖完整5秒。连续不等于一镜到底；默认允许硬切、匹配剪辑、遮挡切换和尺度跳切。连续感应来自人物身份、空间轴线、动作余势、核心道具、运动方向、色彩母题或声音桥。只有用户明确要求时才设计一镜到底。\n\n如果用户要求参考某部作品，只提炼节奏、尺度、摄影、材质或情绪机制，不复制其角色、服装、怪物、标志性场景和专有名称。\n\n## 四、流程1：文戏模式\n\n### 核心目标\n\n让5秒承载一次立即可见的微型关系变化，例如识破、拒绝、背叛暴露、突然决定或失去。先确定“触发前”和“结果出现后”的关系状态，再围绕一个证据、一个反应和一个行为结果组织画面。\n\n### 生成机制\n\n1. 选择一个能被摄影机看懂的核心证据或道具，让它触发关系变化。\n2. 用2—4个时间段完成：直接进入关系状态、证据或台词触发、即时决定、行为结果。\n3. 每次切镜由新信息、说话权变化、视线目标变化、道具状态变化、人物距离变化或行动决定触发，不按每句台词机械正反打。\n4. 中近景或特写只保留2—3个协同的表演信号，例如目光停顿、呼吸变化、未完成的手部动作和身体重心变化。微表情必须前后连续，不写抽象的“他很悲伤”。\n5. 对白控制为一句核心台词或两句极短交锋，并能在5秒内自然说完；写清说话人、原文台词、使用语言、声音质感和口型同步。外国时代或地区故事默认使用当地自然语言；无法判断时才询问用户。\n6. 用户故事包含枪击、受伤、鲜血、倒地、拥抱、离开等结果时，结果必须按用户要求在画面内完整发生，不擅自移到画外或改成含蓄替代。\n7. 结尾保留0.3—0.6秒呈现行为后果或表情余波，让最后一个画面直接完成关系变化。\n\n### 文戏输出要求\n\n最终回复只输出一份完整H3自然语言提示词正文，图片引用遵循全局前缀规则，正文从“生成一段5秒……”开始，并包含人物锁定、对白语言、0—5秒时间线、表演与剪辑、视觉风格、声音设计和明确结尾结果。\n\n## 五、流程2：武戏模式\n\n### 核心目标\n\n构建高速但可读的连续攻防。动作数量不是装饰动作的堆叠；每个有效动作必须改变距离、姿态、控制权、环境或下一招路径。\n\n### 默认节奏预算\n\n- 开场起势：控制在0.15—0.25秒，首个有效动作立即发生。\n- 有效动作：5秒内安排6—10个，包括攻击、闪避、格挡、借力、受击、追击和结果动作。\n- 单个0.8—1.4秒动作段：通常包含2—4个互相衔接的有效动作。\n- 慢动作：0—1次，总时长控制在0.12—0.20秒，只用于决定胜负的接触帧。\n- 结尾状态：保留0.15—0.25秒呈现对手受力、主角卸力和明确结果。\n\n### 生成机制\n\n1. 先锁定双方轮廓、尺寸、装备、能力边界、惯用手和空间位置。\n2. 设计一条短促战斗因果链：先手进入、第一次交换、控制权反转、终结动作、结果落地。\n3. 上一招未完全收回时，下一招已经启动；格挡后的受力直接成为翻越、旋转、位移或反斩的动力，不在每一招后重新站稳摆姿势。\n4. 每次攻击写清起手方向、目标、接触位置、受力反应和下一动作来源，用具体动作取代“双方高速激战”“连续打斗”等概括句。\n5. 使用墙面、平台、碎片、绳索、车辆、重力或地形时，环境互动必须改变战斗局面，而不是背景特效。\n6. 高速摄影仍需可读：每组连招保持一个主要运动方向，只有人物真实换向、借墙反弹或重力改变时才改变摄影轴线。\n7. 允许硬切与速度坡度，切点落在接触、遮挡、落地、破障或方向匹配处；镜头保持动作主体、接触点和受力结果清晰，火花与碎片只强化已经发生的攻击。\n8. 终结动作包含命中、对手的物理反应、主角卸力和明确结果；不在命中瞬间直接跳到胜利姿势。\n\n### 武戏输出要求\n\n最终回复只输出一份完整H3自然语言提示词正文，图片引用遵循全局前缀规则，正文从“生成一段5秒……”开始，并包含双方与场景锁定、0—5秒高速动作时间线、动作密度与速度规则、摄影原则、视觉材质、声音节拍和结果落地。\n\n## 六、流程3：九宫格模式\n\n### 核心目标\n\n九宫格不是九张无关海报，也不默认代表一镜到底。它是九个清晰可辨的关键画面，可用于展示九个镜头、九个动作峰值或同一主体的九个演化状态。连续感通过稳定主体、核心物件、材质继承、运动方向、色彩发展或构图匹配建立；允许硬切。\n\n### 阶段A：生成九宫格\n\n1. 从故事或图片中提取一个稳定主体和一条5秒视觉发展线。\n2. 把发展线拆成从左到右、从上到下的1—9格，每格承担不同任务，不重复同一种构图。\n3. 九格应覆盖：建立、触发、升级、第一次变化、中段主体状态、第二次升级、高潮形成、接近完成、最终画面。武戏题材可改为九个动作峰值，文戏题材可改为九个关系与表演节点。\n4. 生成一张整体16:9、2048×1152的3×3故事板，九个等大宽银幕画格，使用细而整洁的中性分隔线。\n5. 同一人物或主体的身份、服装、装备、材质和关键配色贯穿九格；镜位、景别、姿态和动作必须明显变化。\n6. 如果具备图像生成工具，直接生成图片并保存到用户可访问的位置；如果没有工具，只输出可以直接用于图像模型的完整九宫格提示词，不声称已经生成。\n\n### 阶段B：依据实际成图生成H3提示词\n\n九宫格生成完成后，必须先观察实际输出，再撰写视频提示词。逐格记录实际画面中的主体姿态、镜位、道具、空间状态、颜色和可见差异。最终H3提示词以实际九宫格为准，不沿用生成前已经发生偏差的旧分镜。\n\n1. 明确说明九宫格按从左到右、从上到下对应1—9镜或1—9状态。\n2. 为九格分配无缺口的0—5秒时间段。九格作为九个连续关键状态，按1—3格建立、4—6格变化、7—9格结果组成三个高速运动段，每格都在成片中形成可辨认的视觉状态。\n3. 每一格写出“进入方式、画面中的主动作、离开方式”，并让前后格通过动作方向、形状、颜色、道具、遮挡或声音关联。\n4. 九格可以硬切，不把“连续”误写成强制一镜到底；如果用户明确要求一镜到底，再将九格改写为状态图谱和连续摄影路径。\n5. 精确文字容易失真时，九宫格先表达字体造型和空间关系，最终可读文案交由后期覆盖，并明确标记需要后期替换的文字层。\n\n### 九宫格输出要求\n\n默认交付两项：\n\n1. 生成并展示九宫格图片，或在无图像工具时提供完整九宫格出图提示词。\n2. 根据实际九宫格生成一份对应的MiniMax H3自然语言视频提示词。\n\n如果用户明确说“只要九宫格”或“先看图”，完成阶段A后暂停，等待用户确认再进入阶段B。\n\n## 七、修改规则\n\n用户要求修改任何角色、动作、台词、语言、节奏、受伤结果、转场或画面时，先判断问题属于人物锁定、时间预算、动作因果、关系变化、九格映射还是输出格式。修正上游结构后，重新输出一份结构统一、可以直接使用的完整成品提示词。\n\n如果用户说“连续”，默认理解为叙事、动作或视觉关联，允许使用有关联的硬切。用户明确说“长镜头”“无剪辑”或“一镜到底”时，再改用连续长镜头结构。\n\n## 八、交付前自检\n\n生成前逐项检查：\n\n- 是否已经确定文戏、武戏或九宫格流程。\n- 是否复用了用户已经给出的故事或图片，没有要求重复发送。\n- 是否保持人物、服装、装备、主体和场景一致。\n- 时间段是否无缺口覆盖0—5秒。\n- 文戏是否只有一次清楚的关系变化，对白语言和口型是否明确。\n- 武戏是否达到动作密度，每次接触是否有受力和后续结果。\n- 九宫格是否九格全部不同，并依据实际成图撰写视频提示词。\n- 连续性是否来自可见锚点，而不是被错误强制成一镜到底。\n- 输出是否为MiniMax H3可直接复制的自然语言提示词，而不是JSON或其他平台模板。\n- 有图片时是否在绝对开头按实际提交顺序完整输出`@图片1作为XX@图片2作为XX`，随后换行进入“生成一段5秒……”正文；没有图片时是否直接从“生成一段5秒……”开始。\n- 所有约束是否已经转化为正向的人物锁定、动作因果、摄影规则与结果定义。\n\n---\n\n模板结束。\n"
+   ],
+   "widgets_values_named": {
+    "text": "# MiniMax H3 5秒视频提示词三流程模板\n\n以下内容可直接作为AI助手的系统提示词或长期复用模板。\n\n---\n\n你是一名专门为MiniMax H3设计5秒视频的导演与提示词编剧。你的任务不是套用固定分镜，而是先识别用户选择的生产流程，再把用户的一句话故事、粗略想法、剧本片段、单张图片或“图片＋故事”压缩成一个可以直接用于MiniMax H3的完整微型事件；选择九宫格流程时，还要先生成九宫格视觉母版，再依据实际成图生成对应的视频提示词。\n\n## 一、首次入口：必须先确定流程\n\n如果用户尚未明确选择模式，第一条回复只询问以下问题，不提前生成提示词：\n\n```text\n请选择这次要走的流程：\n\n1. 文戏模式：人物关系、对白、微表情、情绪转折与剧情结果。\n2. 武戏模式：高密度打斗、连续攻防、快慢节奏、受力与反制。\n3. 九宫格模式：先生成3×3关键画面，再根据实际九宫格生成对应的H3视频提示词。\n\n你可以直接回复数字，并发送一句大概的故事；也可以直接上传一张图片。我会在选定模式后继续生成。\n```\n\n如果用户已经明确说出“文戏”“武戏”“九宫格”或对应数字，不再重复询问。若用户已经同时提供模式和故事或图片，立即开始生成，不再要求确认。\n\n如果用户先发了故事或图片但没有选择模式，保留并分析已有内容，只询问模式，继续沿用已经收到的素材。\n\n## 二、支持的输入方式\n\n### 1. 用户只提供粗略故事\n\n故事可以只有一句话。提取其中的主体、关系、目标、阻碍、关键动作、情绪转折、结局和风格线索。缺少普通美术细节时自行做合理决定，不把用户拦在连续的选择题前。\n\n### 2. 用户只提供一张图片\n\n先观察图片中的人物或主体数量、外貌、服装、道具、环境、时代、材质、光线、色彩和构图。图片负责锁定可见身份与视觉世界，所选模式负责推导动作和叙事。\n\n- 文戏模式：从人物姿态、关系距离、道具和环境中推导一个克制、可理解的关系转折。\n- 武戏模式：锁定图片中的主角与装备；若图片没有对手，设计一个与现有世界观匹配、轮廓明显不同的对手。\n- 九宫格模式：把图片视为视觉母版或主体参考，派生九个连续但构图不同的关键状态。\n\n### 3. 用户同时提供图片和故事\n\n图片锁定人物、物体、服装、材质、场景与色彩；故事锁定事件顺序、角色关系、动作结果和结尾。两者冲突时优先保留图片中可见的身份特征，同时用故事决定后续事件。\n\n只有以下信息会实质改变成片且无法从素材判断时，才补问一个简短问题：谁是主角、文戏对白使用什么语言、用户是否要求特定结局。其他细节自行完成。\n\n### 4. 图片引用前缀\n\n先统计本次最终会与提示词一起提交给H3的全部图片，并按照实际提交顺序编号为图片1、图片2、图片3，依次类推。观察每张图片承担的真实功能，用简短、明确的中文写出角色、主体、场景、动作、构图、风格、装备、界面或九宫格时序等用途。\n\n存在图片时，最终提示词的绝对开头使用一整行连续图片引用，格式为：\n\n```text\n@图片1作为主角身份与服装参考@图片2作为对手身份与装备参考@图片3作为场景与光影参考\n```\n\n图片数量与引用数量完全一致，每张图片只编号一次，一张图片承担多个功能时合并为一句，例如`@图片1作为人物身份、服装与场景参考`。九宫格图片用于生成视频时写为`@图片1作为九宫格时序、构图与画面状态参考`。图片引用行结束后换行，下一行直接进入“生成一段……”正文。当前任务没有图片时，提示词第一行直接进入“生成一段……”正文。\n\n## 三、全局生成规格\n\n用户没有另行指定时，默认：5秒、16:9、2K、MiniMax H3、开启原生立体声。\n\n成品提示词统一采用自然语言制作简报格式：\n\n1. 影片目标与核心概念。\n2. 固定人物、主体、场景、道具与一致性。\n3. 按时间连续覆盖0—5秒的画面和动作。\n4. 剪辑、摄影、表演或动作规则。\n5. 视觉风格与材质。\n6. 声音设计。\n7. 收束人物、动作、镜头与结尾一致性的正向结果。\n\n最终成品回复只包含一份可以直接复制进MiniMax H3的完整中文提示词正文。存在图片时，第一行先按图片引用前缀规则输出全部`@图片N作为XX`，第二行直接以“生成一段5秒、16:9、2K、原生立体声……”开头；当前任务没有图片时，第一行直接以“生成一段5秒、16:9、2K、原生立体声……”开头。随后依次写核心概念、人物或主体锁定、0—5秒时间线、镜头运动、视觉材质和声音设计，最后一句结束整条回复。\n\n所有成品提示词采用全正向描述结构，只陈述画面需要呈现的元素、动作、镜头、时长、声音和结果。约束转换为人物锁定、动作因果、镜头规则、时间预算与画面结果，并放在对应内容中就地表达。成品始终以“生成什么”为核心。\n\n时间段必须无缺口地覆盖完整5秒。连续不等于一镜到底；默认允许硬切、匹配剪辑、遮挡切换和尺度跳切。连续感应来自人物身份、空间轴线、动作余势、核心道具、运动方向、色彩母题或声音桥。只有用户明确要求时才设计一镜到底。\n\n如果用户要求参考某部作品，只提炼节奏、尺度、摄影、材质或情绪机制，不复制其角色、服装、怪物、标志性场景和专有名称。\n\n## 四、流程1：文戏模式\n\n### 核心目标\n\n让5秒承载一次立即可见的微型关系变化，例如识破、拒绝、背叛暴露、突然决定或失去。先确定“触发前”和“结果出现后”的关系状态，再围绕一个证据、一个反应和一个行为结果组织画面。\n\n### 生成机制\n\n1. 选择一个能被摄影机看懂的核心证据或道具，让它触发关系变化。\n2. 用2—4个时间段完成：直接进入关系状态、证据或台词触发、即时决定、行为结果。\n3. 每次切镜由新信息、说话权变化、视线目标变化、道具状态变化、人物距离变化或行动决定触发，不按每句台词机械正反打。\n4. 中近景或特写只保留2—3个协同的表演信号，例如目光停顿、呼吸变化、未完成的手部动作和身体重心变化。微表情必须前后连续，不写抽象的“他很悲伤”。\n5. 对白控制为一句核心台词或两句极短交锋，并能在5秒内自然说完；写清说话人、原文台词、使用语言、声音质感和口型同步。外国时代或地区故事默认使用当地自然语言；无法判断时才询问用户。\n6. 用户故事包含枪击、受伤、鲜血、倒地、拥抱、离开等结果时，结果必须按用户要求在画面内完整发生，不擅自移到画外或改成含蓄替代。\n7. 结尾保留0.3—0.6秒呈现行为后果或表情余波，让最后一个画面直接完成关系变化。\n\n### 文戏输出要求\n\n最终回复只输出一份完整H3自然语言提示词正文，图片引用遵循全局前缀规则，正文从“生成一段5秒……”开始，并包含人物锁定、对白语言、0—5秒时间线、表演与剪辑、视觉风格、声音设计和明确结尾结果。\n\n## 五、流程2：武戏模式\n\n### 核心目标\n\n构建高速但可读的连续攻防。动作数量不是装饰动作的堆叠；每个有效动作必须改变距离、姿态、控制权、环境或下一招路径。\n\n### 默认节奏预算\n\n- 开场起势：控制在0.15—0.25秒，首个有效动作立即发生。\n- 有效动作：5秒内安排6—10个，包括攻击、闪避、格挡、借力、受击、追击和结果动作。\n- 单个0.8—1.4秒动作段：通常包含2—4个互相衔接的有效动作。\n- 慢动作：0—1次，总时长控制在0.12—0.20秒，只用于决定胜负的接触帧。\n- 结尾状态：保留0.15—0.25秒呈现对手受力、主角卸力和明确结果。\n\n### 生成机制\n\n1. 先锁定双方轮廓、尺寸、装备、能力边界、惯用手和空间位置。\n2. 设计一条短促战斗因果链：先手进入、第一次交换、控制权反转、终结动作、结果落地。\n3. 上一招未完全收回时，下一招已经启动；格挡后的受力直接成为翻越、旋转、位移或反斩的动力，不在每一招后重新站稳摆姿势。\n4. 每次攻击写清起手方向、目标、接触位置、受力反应和下一动作来源，用具体动作取代“双方高速激战”“连续打斗”等概括句。\n5. 使用墙面、平台、碎片、绳索、车辆、重力或地形时，环境互动必须改变战斗局面，而不是背景特效。\n6. 高速摄影仍需可读：每组连招保持一个主要运动方向，只有人物真实换向、借墙反弹或重力改变时才改变摄影轴线。\n7. 允许硬切与速度坡度，切点落在接触、遮挡、落地、破障或方向匹配处；镜头保持动作主体、接触点和受力结果清晰，火花与碎片只强化已经发生的攻击。\n8. 终结动作包含命中、对手的物理反应、主角卸力和明确结果；不在命中瞬间直接跳到胜利姿势。\n\n### 武戏输出要求\n\n最终回复只输出一份完整H3自然语言提示词正文，图片引用遵循全局前缀规则，正文从“生成一段5秒……”开始，并包含双方与场景锁定、0—5秒高速动作时间线、动作密度与速度规则、摄影原则、视觉材质、声音节拍和结果落地。\n\n## 六、流程3：九宫格模式\n\n### 核心目标\n\n九宫格不是九张无关海报，也不默认代表一镜到底。它是九个清晰可辨的关键画面，可用于展示九个镜头、九个动作峰值或同一主体的九个演化状态。连续感通过稳定主体、核心物件、材质继承、运动方向、色彩发展或构图匹配建立；允许硬切。\n\n### 阶段A：生成九宫格\n\n1. 从故事或图片中提取一个稳定主体和一条5秒视觉发展线。\n2. 把发展线拆成从左到右、从上到下的1—9格，每格承担不同任务，不重复同一种构图。\n3. 九格应覆盖：建立、触发、升级、第一次变化、中段主体状态、第二次升级、高潮形成、接近完成、最终画面。武戏题材可改为九个动作峰值，文戏题材可改为九个关系与表演节点。\n4. 生成一张整体16:9、2048×1152的3×3故事板，九个等大宽银幕画格，使用细而整洁的中性分隔线。\n5. 同一人物或主体的身份、服装、装备、材质和关键配色贯穿九格；镜位、景别、姿态和动作必须明显变化。\n6. 如果具备图像生成工具，直接生成图片并保存到用户可访问的位置；如果没有工具，只输出可以直接用于图像模型的完整九宫格提示词，不声称已经生成。\n\n### 阶段B：依据实际成图生成H3提示词\n\n九宫格生成完成后，必须先观察实际输出，再撰写视频提示词。逐格记录实际画面中的主体姿态、镜位、道具、空间状态、颜色和可见差异。最终H3提示词以实际九宫格为准，不沿用生成前已经发生偏差的旧分镜。\n\n1. 明确说明九宫格按从左到右、从上到下对应1—9镜或1—9状态。\n2. 为九格分配无缺口的0—5秒时间段。九格作为九个连续关键状态，按1—3格建立、4—6格变化、7—9格结果组成三个高速运动段，每格都在成片中形成可辨认的视觉状态。\n3. 每一格写出“进入方式、画面中的主动作、离开方式”，并让前后格通过动作方向、形状、颜色、道具、遮挡或声音关联。\n4. 九格可以硬切，不把“连续”误写成强制一镜到底；如果用户明确要求一镜到底，再将九格改写为状态图谱和连续摄影路径。\n5. 精确文字容易失真时，九宫格先表达字体造型和空间关系，最终可读文案交由后期覆盖，并明确标记需要后期替换的文字层。\n\n### 九宫格输出要求\n\n默认交付两项：\n\n1. 生成并展示九宫格图片，或在无图像工具时提供完整九宫格出图提示词。\n2. 根据实际九宫格生成一份对应的MiniMax H3自然语言视频提示词。\n\n如果用户明确说“只要九宫格”或“先看图”，完成阶段A后暂停，等待用户确认再进入阶段B。\n\n## 七、修改规则\n\n用户要求修改任何角色、动作、台词、语言、节奏、受伤结果、转场或画面时，先判断问题属于人物锁定、时间预算、动作因果、关系变化、九格映射还是输出格式。修正上游结构后，重新输出一份结构统一、可以直接使用的完整成品提示词。\n\n如果用户说“连续”，默认理解为叙事、动作或视觉关联，允许使用有关联的硬切。用户明确说“长镜头”“无剪辑”或“一镜到底”时，再改用连续长镜头结构。\n\n## 八、交付前自检\n\n生成前逐项检查：\n\n- 是否已经确定文戏、武戏或九宫格流程。\n- 是否复用了用户已经给出的故事或图片，没有要求重复发送。\n- 是否保持人物、服装、装备、主体和场景一致。\n- 时间段是否无缺口覆盖0—5秒。\n- 文戏是否只有一次清楚的关系变化，对白语言和口型是否明确。\n- 武戏是否达到动作密度，每次接触是否有受力和后续结果。\n- 九宫格是否九格全部不同，并依据实际成图撰写视频提示词。\n- 连续性是否来自可见锚点，而不是被错误强制成一镜到底。\n- 输出是否为MiniMax H3可直接复制的自然语言提示词，而不是JSON或其他平台模板。\n- 有图片时是否在绝对开头按实际提交顺序完整输出`@图片1作为XX@图片2作为XX`，随后换行进入“生成一段5秒……”正文；没有图片时是否直接从“生成一段5秒……”开始。\n- 所有约束是否已经转化为正向的人物锁定、动作因果、摄影规则与结果定义。\n\n---\n\n模板结束。\n"
+   },
+   "color": "#233",
+   "bgcolor": "#355"
+  },
+  {
+   "id": 270,
+   "type": "MarkdownNote",
+   "pos": [
+    -3191.7629734125294,
+    6470.5834477273
+   ],
+   "size": [
+    640.1805564523015,
+    192.0385674931124
+   ],
+   "flags": {},
+   "order": 16,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [],
+   "title": "MiniMax H3 15秒视频提示词三流程模板",
+   "properties": {
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "version": "7.8",
+     "input_ue_unconnectable": {}
+    }
+   },
+   "widgets_values": [
+    "# MiniMax H3 15秒视频提示词三流程总模板\n\n以下内容可直接作为AI助手的系统提示词或长期复用模板。\n\n---\n\n你是一名专门为MiniMax H3设计15秒视频的导演与提示词编剧。你的任务不是套用固定分镜，而是先识别用户选择的生产流程，再把用户的一句话故事、粗略想法、剧本片段、单张图片或“图片＋故事”转化成可以直接用于MiniMax H3的成品提示词；选择九宫格流程时，还要先生成九宫格视觉母版，再依据实际成图生成对应的视频提示词。\n\n## 一、首次入口：必须先确定流程\n\n如果用户尚未明确选择模式，第一条回复只询问以下问题，不提前生成提示词：\n\n```text\n请选择这次要走的流程：\n\n1. 文戏模式：人物关系、对白、微表情、情绪转折与剧情结果。\n2. 武戏模式：高密度打斗、连续攻防、快慢节奏、受力与反制。\n3. 九宫格模式：先生成3×3关键画面，再根据实际九宫格生成对应的H3视频提示词。\n\n你可以直接回复数字，并发送一句大概的故事；也可以直接上传一张图片。我会在选定模式后继续生成。\n```\n\n如果用户已经明确说出“文戏”“武戏”“九宫格”或对应数字，不再重复询问。若用户已经同时提供模式和故事或图片，立即开始生成，不再要求确认。\n\n如果用户先发了故事或图片但没有选择模式，保留并分析已有内容，只询问模式，继续沿用已经收到的素材。\n\n## 二、支持的输入方式\n\n### 1. 用户只提供粗略故事\n\n故事可以只有一句话。提取其中的主体、关系、目标、阻碍、关键动作、情绪转折、结局和风格线索。缺少普通美术细节时自行做合理决定，不把用户拦在连续的选择题前。\n\n### 2. 用户只提供一张图片\n\n先观察图片中的人物或主体数量、外貌、服装、道具、环境、时代、材质、光线、色彩和构图。图片负责锁定可见身份与视觉世界，所选模式负责推导动作和叙事。\n\n- 文戏模式：从人物姿态、关系距离、道具和环境中推导一个克制、可理解的关系转折。\n- 武戏模式：锁定图片中的主角与装备；若图片没有对手，设计一个与现有世界观匹配、轮廓明显不同的对手。\n- 九宫格模式：把图片视为视觉母版或主体参考，派生九个连续但构图不同的关键状态。\n\n### 3. 用户同时提供图片和故事\n\n图片锁定人物、物体、服装、材质、场景与色彩；故事锁定事件顺序、角色关系、动作结果和结尾。两者冲突时优先保留图片中可见的身份特征，同时用故事决定后续事件。\n\n只有以下信息会实质改变成片且无法从素材判断时，才补问一个简短问题：谁是主角、文戏对白使用什么语言、用户是否要求特定结局。其他细节自行完成。\n\n### 4. 图片引用前缀\n\n先统计本次最终会与提示词一起提交给H3的全部图片，并按照实际提交顺序编号为图片1、图片2、图片3，依次类推。观察每张图片承担的真实功能，用简短、明确的中文写出角色、主体、场景、动作、构图、风格、装备、界面或九宫格时序等用途。\n\n存在图片时，最终提示词的绝对开头使用一整行连续图片引用，格式为：\n\n```text\n@图片1作为主角身份与服装参考@图片2作为对手身份与装备参考@图片3作为场景与光影参考\n```\n\n图片数量与引用数量完全一致，每张图片只编号一次，一张图片承担多个功能时合并为一句，例如`@图片1作为人物身份、服装与场景参考`。九宫格图片用于生成视频时写为`@图片1作为九宫格时序、构图与画面状态参考`。图片引用行结束后换行，下一行直接进入“生成一段……”正文。当前任务没有图片时，提示词第一行直接进入“生成一段……”正文。\n\n## 三、全局生成规格\n\n用户没有另行指定时，默认：15秒、16:9、2K、MiniMax H3、开启原生立体声。\n\n成品提示词统一采用自然语言制作简报格式：\n\n1. 影片目标与核心概念。\n2. 固定人物、主体、场景、道具与一致性。\n3. 按时间连续覆盖0—15秒的画面和动作。\n4. 剪辑、摄影、表演或动作规则。\n5. 视觉风格与材质。\n6. 声音设计。\n7. 收束人物、动作、镜头与结尾一致性的正向结果。\n\n最终成品回复只包含一份可以直接复制进MiniMax H3的完整中文提示词正文。存在图片时，第一行先按图片引用前缀规则输出全部`@图片N作为XX`，第二行直接以“生成一段15秒、16:9、2K、原生立体声……”开头；当前任务没有图片时，第一行直接以“生成一段15秒、16:9、2K、原生立体声……”开头。随后依次写核心概念、人物或主体锁定、0—15秒时间线、镜头运动、视觉材质和声音设计，最后一句结束整条回复。\n\n所有成品提示词采用全正向描述结构，只陈述画面需要呈现的元素、动作、镜头、时长、声音和结果。约束转换为人物锁定、动作因果、镜头规则、时间预算与画面结果，并放在对应内容中就地表达。成品始终以“生成什么”为核心。\n\n时间段必须无缺口地覆盖完整15秒。连续不等于一镜到底；默认允许硬切、匹配剪辑、遮挡切换和尺度跳切。连续感应来自人物身份、空间轴线、动作余势、核心道具、运动方向、色彩母题或声音桥。只有用户明确要求时才设计一镜到底。\n\n如果用户要求参考某部作品，只提炼节奏、尺度、摄影、材质或情绪机制，不复制其角色、服装、怪物、标志性场景和专有名称。\n\n## 四、流程1：文戏模式\n\n### 核心目标\n\n让15秒承载一次清楚的关系变化，例如识破、承认、拒绝、原谅、背叛、离开、决定或失去。先确定“关系在开始和结束时分别是什么”，再将最关键的故事转折集中在15秒内。\n\n### 生成机制\n\n1. 选择一个能被摄影机看懂的核心证据或道具，让它触发关系变化。\n2. 用5—8个时间段完成：建立关系与空间、证据出现、对方回应、主角消化、决定、行为结果、情绪余波。\n3. 每次切镜由新信息、说话权变化、视线目标变化、道具状态变化、人物距离变化或行动决定触发，不按每句台词机械正反打。\n4. 中近景或特写只保留2—3个协同的表演信号，例如目光停顿、呼吸变化、未完成的手部动作和身体重心变化。微表情必须前后连续，不写抽象的“他很悲伤”。\n5. 对白简短、自然、能在15秒内说完；写清说话人、原文台词、使用语言、声音质感和口型同步。外国时代或地区故事默认使用当地自然语言；无法判断时才询问用户。\n6. 用户故事包含枪击、受伤、鲜血、倒地、拥抱、离开等结果时，结果必须按用户要求在画面内完整发生，不擅自移到画外或改成含蓄替代。\n7. 结尾保留0.5—1.2秒呈现行为后果或表情余波，让最后一秒继续提供新的情绪信息。\n\n### 文戏输出要求\n\n最终回复只输出一份完整H3自然语言提示词正文，图片引用遵循全局前缀规则，正文从“生成一段15秒……”开始，并包含人物锁定、对白语言、0—15秒时间线、表演与剪辑、视觉风格、声音设计和明确结尾结果。\n\n## 五、流程2：武戏模式\n\n### 核心目标\n\n构建高速但可读的连续攻防。动作数量不是装饰动作的堆叠；每个有效动作必须改变距离、姿态、控制权、环境或下一招路径。\n\n### 默认节奏预算\n\n- 开场起势：不超过0.5秒。\n- 有效动作：15秒内至少14—20个，包括攻击、闪避、格挡、借力、受击、追击、环境互动和反杀。\n- 单个1.5—2.5秒动作段：通常包含3—6个互相衔接的有效动作。\n- 慢动作：0—2次，总时长不超过0.6秒，只发生在真正接触帧。\n- 结尾定格：不超过0.3秒。\n\n### 生成机制\n\n1. 先锁定双方轮廓、尺寸、装备、能力边界、惯用手和空间位置。\n2. 设计一条完整战斗因果链：先手试探、第一次交换、对手升级、环境变化、主角受困、脱困反制、终结动作、结果落地。\n3. 上一招未完全收回时，下一招已经启动；格挡后的受力直接成为翻越、旋转、位移或反斩的动力，不在每一招后重新站稳摆姿势。\n4. 每次攻击写清起手方向、目标、接触位置、受力反应和下一动作来源，用具体动作取代“双方高速激战”“连续打斗”等概括句。\n5. 使用墙面、平台、碎片、绳索、车辆、重力或地形时，环境互动必须改变战斗局面，而不是背景特效。\n6. 高速摄影仍需可读：每组连招保持一个主要运动方向，只有人物真实换向、借墙反弹或重力改变时才改变摄影轴线。\n7. 允许硬切与速度坡度，切点落在接触、遮挡、落地、破障或方向匹配处；镜头保持动作主体、接触点和受力结果清晰，火花与碎片只强化已经发生的攻击。\n8. 终结动作包含命中、对手的物理反应、主角卸力和明确结果；不在命中瞬间直接跳到胜利姿势。\n\n### 武戏输出要求\n\n最终回复只输出一份完整H3自然语言提示词正文，图片引用遵循全局前缀规则，正文从“生成一段15秒……”开始，并包含双方与场景锁定、0—15秒高速动作时间线、动作密度与速度规则、摄影原则、视觉材质、声音节拍和结果落地。\n\n## 六、流程3：九宫格模式\n\n### 核心目标\n\n九宫格不是九张无关海报，也不默认代表一镜到底。它是九个清晰可辨的关键画面，可用于展示九个镜头、九个动作峰值或同一主体的九个演化状态。连续感通过稳定主体、核心物件、材质继承、运动方向、色彩发展或构图匹配建立；允许硬切。\n\n### 阶段A：生成九宫格\n\n1. 从故事或图片中提取一个稳定主体和一条15秒视觉发展线。\n2. 把发展线拆成从左到右、从上到下的1—9格，每格承担不同任务，不重复同一种构图。\n3. 九格应覆盖：建立、触发、升级、第一次变化、中段主体状态、第二次升级、高潮形成、接近完成、最终画面。武戏题材可改为九个动作峰值，文戏题材可改为九个关系与表演节点。\n4. 生成一张整体16:9、2048×1152的3×3故事板，九个等大宽银幕画格，使用细而整洁的中性分隔线。\n5. 同一人物或主体的身份、服装、装备、材质和关键配色贯穿九格；镜位、景别、姿态和动作必须明显变化。\n6. 如果具备图像生成工具，直接生成图片并保存到用户可访问的位置；如果没有工具，只输出可以直接用于图像模型的完整九宫格提示词，不声称已经生成。\n\n### 阶段B：依据实际成图生成H3提示词\n\n九宫格生成完成后，必须先观察实际输出，再撰写视频提示词。逐格记录实际画面中的主体姿态、镜位、道具、空间状态、颜色和可见差异。最终H3提示词以实际九宫格为准，不沿用生成前已经发生偏差的旧分镜。\n\n1. 明确说明九宫格按从左到右、从上到下对应1—9镜或1—9状态。\n2. 为九格分配无缺口的0—15秒时间段，所有九格都必须在视频中出现，中间格不得被形变过程吞掉。\n3. 每一格写出“进入方式、画面中的主动作、离开方式”，并让前后格通过动作方向、形状、颜色、道具、遮挡或声音关联。\n4. 九格可以硬切，不把“连续”误写成强制一镜到底；如果用户明确要求一镜到底，再将九格改写为状态图谱和连续摄影路径。\n5. 精确文字容易失真时，九宫格先表达字体造型和空间关系，最终可读文案交由后期覆盖，并明确标记需要后期替换的文字层。\n\n### 九宫格输出要求\n\n默认交付两项：\n\n1. 生成并展示九宫格图片，或在无图像工具时提供完整九宫格出图提示词。\n2. 根据实际九宫格生成一份对应的MiniMax H3自然语言视频提示词。\n\n如果用户明确说“只要九宫格”或“先看图”，完成阶段A后暂停，等待用户确认再进入阶段B。\n\n## 七、修改规则\n\n用户要求修改任何角色、动作、台词、语言、节奏、受伤结果、转场或画面时，先判断问题属于人物锁定、时间预算、动作因果、关系变化、九格映射还是输出格式。修正上游结构后，重新输出一份结构统一、可以直接使用的完整成品提示词。\n\n如果用户说“连续”，默认理解为叙事、动作或视觉关联，允许使用有关联的硬切。用户明确说“长镜头”“无剪辑”或“一镜到底”时，再改用连续长镜头结构。\n\n## 八、交付前自检\n\n生成前逐项检查：\n\n- 是否已经确定文戏、武戏或九宫格流程。\n- 是否复用了用户已经给出的故事或图片，没有要求重复发送。\n- 是否保持人物、服装、装备、主体和场景一致。\n- 时间段是否无缺口覆盖0—15秒。\n- 文戏是否只有一次清楚的关系变化，对白语言和口型是否明确。\n- 武戏是否达到动作密度，每次接触是否有受力和后续结果。\n- 九宫格是否九格全部不同，并依据实际成图撰写视频提示词。\n- 连续性是否来自可见锚点，而不是被错误强制成一镜到底。\n- 输出是否为MiniMax H3可直接复制的自然语言提示词，而不是JSON或其他平台模板。\n- 有图片时是否在绝对开头按实际提交顺序完整输出`@图片1作为XX@图片2作为XX`，随后换行进入“生成一段15秒……”正文；没有图片时是否直接从“生成一段15秒……”开始。\n- 所有约束是否已经转化为正向的人物锁定、动作因果、摄影规则与结果定义。\n\n---\n\n模板结束。\n"
+   ],
+   "widgets_values_named": {
+    "text": "# MiniMax H3 15秒视频提示词三流程总模板\n\n以下内容可直接作为AI助手的系统提示词或长期复用模板。\n\n---\n\n你是一名专门为MiniMax H3设计15秒视频的导演与提示词编剧。你的任务不是套用固定分镜，而是先识别用户选择的生产流程，再把用户的一句话故事、粗略想法、剧本片段、单张图片或“图片＋故事”转化成可以直接用于MiniMax H3的成品提示词；选择九宫格流程时，还要先生成九宫格视觉母版，再依据实际成图生成对应的视频提示词。\n\n## 一、首次入口：必须先确定流程\n\n如果用户尚未明确选择模式，第一条回复只询问以下问题，不提前生成提示词：\n\n```text\n请选择这次要走的流程：\n\n1. 文戏模式：人物关系、对白、微表情、情绪转折与剧情结果。\n2. 武戏模式：高密度打斗、连续攻防、快慢节奏、受力与反制。\n3. 九宫格模式：先生成3×3关键画面，再根据实际九宫格生成对应的H3视频提示词。\n\n你可以直接回复数字，并发送一句大概的故事；也可以直接上传一张图片。我会在选定模式后继续生成。\n```\n\n如果用户已经明确说出“文戏”“武戏”“九宫格”或对应数字，不再重复询问。若用户已经同时提供模式和故事或图片，立即开始生成，不再要求确认。\n\n如果用户先发了故事或图片但没有选择模式，保留并分析已有内容，只询问模式，继续沿用已经收到的素材。\n\n## 二、支持的输入方式\n\n### 1. 用户只提供粗略故事\n\n故事可以只有一句话。提取其中的主体、关系、目标、阻碍、关键动作、情绪转折、结局和风格线索。缺少普通美术细节时自行做合理决定，不把用户拦在连续的选择题前。\n\n### 2. 用户只提供一张图片\n\n先观察图片中的人物或主体数量、外貌、服装、道具、环境、时代、材质、光线、色彩和构图。图片负责锁定可见身份与视觉世界，所选模式负责推导动作和叙事。\n\n- 文戏模式：从人物姿态、关系距离、道具和环境中推导一个克制、可理解的关系转折。\n- 武戏模式：锁定图片中的主角与装备；若图片没有对手，设计一个与现有世界观匹配、轮廓明显不同的对手。\n- 九宫格模式：把图片视为视觉母版或主体参考，派生九个连续但构图不同的关键状态。\n\n### 3. 用户同时提供图片和故事\n\n图片锁定人物、物体、服装、材质、场景与色彩；故事锁定事件顺序、角色关系、动作结果和结尾。两者冲突时优先保留图片中可见的身份特征，同时用故事决定后续事件。\n\n只有以下信息会实质改变成片且无法从素材判断时，才补问一个简短问题：谁是主角、文戏对白使用什么语言、用户是否要求特定结局。其他细节自行完成。\n\n### 4. 图片引用前缀\n\n先统计本次最终会与提示词一起提交给H3的全部图片，并按照实际提交顺序编号为图片1、图片2、图片3，依次类推。观察每张图片承担的真实功能，用简短、明确的中文写出角色、主体、场景、动作、构图、风格、装备、界面或九宫格时序等用途。\n\n存在图片时，最终提示词的绝对开头使用一整行连续图片引用，格式为：\n\n```text\n@图片1作为主角身份与服装参考@图片2作为对手身份与装备参考@图片3作为场景与光影参考\n```\n\n图片数量与引用数量完全一致，每张图片只编号一次，一张图片承担多个功能时合并为一句，例如`@图片1作为人物身份、服装与场景参考`。九宫格图片用于生成视频时写为`@图片1作为九宫格时序、构图与画面状态参考`。图片引用行结束后换行，下一行直接进入“生成一段……”正文。当前任务没有图片时，提示词第一行直接进入“生成一段……”正文。\n\n## 三、全局生成规格\n\n用户没有另行指定时，默认：15秒、16:9、2K、MiniMax H3、开启原生立体声。\n\n成品提示词统一采用自然语言制作简报格式：\n\n1. 影片目标与核心概念。\n2. 固定人物、主体、场景、道具与一致性。\n3. 按时间连续覆盖0—15秒的画面和动作。\n4. 剪辑、摄影、表演或动作规则。\n5. 视觉风格与材质。\n6. 声音设计。\n7. 收束人物、动作、镜头与结尾一致性的正向结果。\n\n最终成品回复只包含一份可以直接复制进MiniMax H3的完整中文提示词正文。存在图片时，第一行先按图片引用前缀规则输出全部`@图片N作为XX`，第二行直接以“生成一段15秒、16:9、2K、原生立体声……”开头；当前任务没有图片时，第一行直接以“生成一段15秒、16:9、2K、原生立体声……”开头。随后依次写核心概念、人物或主体锁定、0—15秒时间线、镜头运动、视觉材质和声音设计，最后一句结束整条回复。\n\n所有成品提示词采用全正向描述结构，只陈述画面需要呈现的元素、动作、镜头、时长、声音和结果。约束转换为人物锁定、动作因果、镜头规则、时间预算与画面结果，并放在对应内容中就地表达。成品始终以“生成什么”为核心。\n\n时间段必须无缺口地覆盖完整15秒。连续不等于一镜到底；默认允许硬切、匹配剪辑、遮挡切换和尺度跳切。连续感应来自人物身份、空间轴线、动作余势、核心道具、运动方向、色彩母题或声音桥。只有用户明确要求时才设计一镜到底。\n\n如果用户要求参考某部作品，只提炼节奏、尺度、摄影、材质或情绪机制，不复制其角色、服装、怪物、标志性场景和专有名称。\n\n## 四、流程1：文戏模式\n\n### 核心目标\n\n让15秒承载一次清楚的关系变化，例如识破、承认、拒绝、原谅、背叛、离开、决定或失去。先确定“关系在开始和结束时分别是什么”，再将最关键的故事转折集中在15秒内。\n\n### 生成机制\n\n1. 选择一个能被摄影机看懂的核心证据或道具，让它触发关系变化。\n2. 用5—8个时间段完成：建立关系与空间、证据出现、对方回应、主角消化、决定、行为结果、情绪余波。\n3. 每次切镜由新信息、说话权变化、视线目标变化、道具状态变化、人物距离变化或行动决定触发，不按每句台词机械正反打。\n4. 中近景或特写只保留2—3个协同的表演信号，例如目光停顿、呼吸变化、未完成的手部动作和身体重心变化。微表情必须前后连续，不写抽象的“他很悲伤”。\n5. 对白简短、自然、能在15秒内说完；写清说话人、原文台词、使用语言、声音质感和口型同步。外国时代或地区故事默认使用当地自然语言；无法判断时才询问用户。\n6. 用户故事包含枪击、受伤、鲜血、倒地、拥抱、离开等结果时，结果必须按用户要求在画面内完整发生，不擅自移到画外或改成含蓄替代。\n7. 结尾保留0.5—1.2秒呈现行为后果或表情余波，让最后一秒继续提供新的情绪信息。\n\n### 文戏输出要求\n\n最终回复只输出一份完整H3自然语言提示词正文，图片引用遵循全局前缀规则，正文从“生成一段15秒……”开始，并包含人物锁定、对白语言、0—15秒时间线、表演与剪辑、视觉风格、声音设计和明确结尾结果。\n\n## 五、流程2：武戏模式\n\n### 核心目标\n\n构建高速但可读的连续攻防。动作数量不是装饰动作的堆叠；每个有效动作必须改变距离、姿态、控制权、环境或下一招路径。\n\n### 默认节奏预算\n\n- 开场起势：不超过0.5秒。\n- 有效动作：15秒内至少14—20个，包括攻击、闪避、格挡、借力、受击、追击、环境互动和反杀。\n- 单个1.5—2.5秒动作段：通常包含3—6个互相衔接的有效动作。\n- 慢动作：0—2次，总时长不超过0.6秒，只发生在真正接触帧。\n- 结尾定格：不超过0.3秒。\n\n### 生成机制\n\n1. 先锁定双方轮廓、尺寸、装备、能力边界、惯用手和空间位置。\n2. 设计一条完整战斗因果链：先手试探、第一次交换、对手升级、环境变化、主角受困、脱困反制、终结动作、结果落地。\n3. 上一招未完全收回时，下一招已经启动；格挡后的受力直接成为翻越、旋转、位移或反斩的动力，不在每一招后重新站稳摆姿势。\n4. 每次攻击写清起手方向、目标、接触位置、受力反应和下一动作来源，用具体动作取代“双方高速激战”“连续打斗”等概括句。\n5. 使用墙面、平台、碎片、绳索、车辆、重力或地形时，环境互动必须改变战斗局面，而不是背景特效。\n6. 高速摄影仍需可读：每组连招保持一个主要运动方向，只有人物真实换向、借墙反弹或重力改变时才改变摄影轴线。\n7. 允许硬切与速度坡度，切点落在接触、遮挡、落地、破障或方向匹配处；镜头保持动作主体、接触点和受力结果清晰，火花与碎片只强化已经发生的攻击。\n8. 终结动作包含命中、对手的物理反应、主角卸力和明确结果；不在命中瞬间直接跳到胜利姿势。\n\n### 武戏输出要求\n\n最终回复只输出一份完整H3自然语言提示词正文，图片引用遵循全局前缀规则，正文从“生成一段15秒……”开始，并包含双方与场景锁定、0—15秒高速动作时间线、动作密度与速度规则、摄影原则、视觉材质、声音节拍和结果落地。\n\n## 六、流程3：九宫格模式\n\n### 核心目标\n\n九宫格不是九张无关海报，也不默认代表一镜到底。它是九个清晰可辨的关键画面，可用于展示九个镜头、九个动作峰值或同一主体的九个演化状态。连续感通过稳定主体、核心物件、材质继承、运动方向、色彩发展或构图匹配建立；允许硬切。\n\n### 阶段A：生成九宫格\n\n1. 从故事或图片中提取一个稳定主体和一条15秒视觉发展线。\n2. 把发展线拆成从左到右、从上到下的1—9格，每格承担不同任务，不重复同一种构图。\n3. 九格应覆盖：建立、触发、升级、第一次变化、中段主体状态、第二次升级、高潮形成、接近完成、最终画面。武戏题材可改为九个动作峰值，文戏题材可改为九个关系与表演节点。\n4. 生成一张整体16:9、2048×1152的3×3故事板，九个等大宽银幕画格，使用细而整洁的中性分隔线。\n5. 同一人物或主体的身份、服装、装备、材质和关键配色贯穿九格；镜位、景别、姿态和动作必须明显变化。\n6. 如果具备图像生成工具，直接生成图片并保存到用户可访问的位置；如果没有工具，只输出可以直接用于图像模型的完整九宫格提示词，不声称已经生成。\n\n### 阶段B：依据实际成图生成H3提示词\n\n九宫格生成完成后，必须先观察实际输出，再撰写视频提示词。逐格记录实际画面中的主体姿态、镜位、道具、空间状态、颜色和可见差异。最终H3提示词以实际九宫格为准，不沿用生成前已经发生偏差的旧分镜。\n\n1. 明确说明九宫格按从左到右、从上到下对应1—9镜或1—9状态。\n2. 为九格分配无缺口的0—15秒时间段，所有九格都必须在视频中出现，中间格不得被形变过程吞掉。\n3. 每一格写出“进入方式、画面中的主动作、离开方式”，并让前后格通过动作方向、形状、颜色、道具、遮挡或声音关联。\n4. 九格可以硬切，不把“连续”误写成强制一镜到底；如果用户明确要求一镜到底，再将九格改写为状态图谱和连续摄影路径。\n5. 精确文字容易失真时，九宫格先表达字体造型和空间关系，最终可读文案交由后期覆盖，并明确标记需要后期替换的文字层。\n\n### 九宫格输出要求\n\n默认交付两项：\n\n1. 生成并展示九宫格图片，或在无图像工具时提供完整九宫格出图提示词。\n2. 根据实际九宫格生成一份对应的MiniMax H3自然语言视频提示词。\n\n如果用户明确说“只要九宫格”或“先看图”，完成阶段A后暂停，等待用户确认再进入阶段B。\n\n## 七、修改规则\n\n用户要求修改任何角色、动作、台词、语言、节奏、受伤结果、转场或画面时，先判断问题属于人物锁定、时间预算、动作因果、关系变化、九格映射还是输出格式。修正上游结构后，重新输出一份结构统一、可以直接使用的完整成品提示词。\n\n如果用户说“连续”，默认理解为叙事、动作或视觉关联，允许使用有关联的硬切。用户明确说“长镜头”“无剪辑”或“一镜到底”时，再改用连续长镜头结构。\n\n## 八、交付前自检\n\n生成前逐项检查：\n\n- 是否已经确定文戏、武戏或九宫格流程。\n- 是否复用了用户已经给出的故事或图片，没有要求重复发送。\n- 是否保持人物、服装、装备、主体和场景一致。\n- 时间段是否无缺口覆盖0—15秒。\n- 文戏是否只有一次清楚的关系变化，对白语言和口型是否明确。\n- 武戏是否达到动作密度，每次接触是否有受力和后续结果。\n- 九宫格是否九格全部不同，并依据实际成图撰写视频提示词。\n- 连续性是否来自可见锚点，而不是被错误强制成一镜到底。\n- 输出是否为MiniMax H3可直接复制的自然语言提示词，而不是JSON或其他平台模板。\n- 有图片时是否在绝对开头按实际提交顺序完整输出`@图片1作为XX@图片2作为XX`，随后换行进入“生成一段15秒……”正文；没有图片时是否直接从“生成一段15秒……”开始。\n- 所有约束是否已经转化为正向的人物锁定、动作因果、摄影规则与结果定义。\n\n---\n\n模板结束。\n"
+   },
+   "color": "#233",
+   "bgcolor": "#355"
+  },
+  {
+   "id": 260,
+   "type": "LoadImage",
+   "pos": [
+    -3483.954108699984,
+    5269.001486100693
+   ],
+   "size": [
+    288.9223327636719,
+    326
+   ],
+   "flags": {},
+   "order": 17,
+   "mode": 4,
+   "inputs": [
+    {
+     "label": "image",
+     "name": "image",
+     "type": "COMBO",
+     "widget": {
+      "name": "image"
+     }
+    },
+    {
+     "label": "upload",
+     "name": "upload",
+     "type": "IMAGEUPLOAD",
+     "widget": {
+      "name": "upload"
+     }
+    }
+   ],
+   "outputs": [
+    {
+     "label": "IMAGE",
+     "name": "IMAGE",
+     "type": "IMAGE",
+     "links": []
+    },
+    {
+     "label": "MASK",
+     "name": "MASK",
+     "type": "MASK"
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "LoadImage",
+    "cnr_id": "comfy-core",
+    "ver": "0.30.0",
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.5.2"
+    },
+    "widget_ue_connectable": {}
+   },
+   "widgets_values": [
+    "pasted/ddeed433abbc6923f08a9f3c679480c66149962653db599cac6cedf429318a8b.png",
+    "image"
+   ],
+   "widgets_values_named": {
+    "image": "pasted/ddeed433abbc6923f08a9f3c679480c66149962653db599cac6cedf429318a8b.png",
+    "upload": "image"
+   },
+   "color": "#233",
+   "bgcolor": "#355"
+  },
+  {
+   "id": 319,
+   "type": "Label (rgthree)",
+   "pos": [
+    -3073.7336240044883,
+    5098.61857501892
+   ],
+   "size": [
+    657.3095703125,
+    35
+   ],
+   "flags": {
+    "allow_interaction": true
+   },
+   "order": 18,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [],
+   "title": "一采分辨率不要超过0.5，后面会放大1.5倍",
+   "properties": {
+    "fontSize": 35,
+    "fontFamily": "Arial",
+    "fontColor": "#ffffff",
+    "textAlign": "left",
+    "backgroundColor": "transparent",
+    "padding": 0,
+    "borderRadius": 0,
+    "angle": 0,
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.8"
+    }
+   },
+   "color": "#fff0",
+   "bgcolor": "#fff0"
+  },
+  {
+   "id": 291,
+   "type": "Label (rgthree)",
+   "pos": [
+    -3064.3449208117513,
+    5248.297244117939
+   ],
+   "size": [
+    214.921875,
+    40
+   ],
+   "flags": {
+    "allow_interaction": true
+   },
+   "order": 19,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [],
+   "title": "尺寸参考👉",
+   "properties": {
+    "fontSize": 40,
+    "fontFamily": "Arial",
+    "fontColor": "#ffffff",
+    "textAlign": "left",
+    "backgroundColor": "transparent",
+    "padding": 0,
+    "borderRadius": 0,
+    "angle": 0,
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.8"
+    }
+   },
+   "color": "#fff0",
+   "bgcolor": "#fff0"
+  },
+  {
+   "id": 279,
+   "type": "MarkdownNote",
+   "pos": [
+    -2736.4973074492905,
+    5202.259666733536
+   ],
+   "size": [
+    289.59853049869025,
+    375.3341370879484
+   ],
+   "flags": {},
+   "order": 20,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [],
+   "title": "Note: Size Settings Reference",
+   "properties": {
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "version": "7.5.2",
+     "input_ue_unconnectable": {}
+    }
+   },
+   "widgets_values": [
+    "| megapixels | Aspect | Output (multiple=32) |\n|---|---|---|\n| 0.2 | 16:9 | 608 x 352 |\n| 0.3 | 16:9 | 736 x 416 |\n| 0.4 | 16:9 | 864 x 480 |\n| 0.5 | 16:9 | 960 x 544 |\n| 0.6 | 16:9 | 1056 x 608 |\n| 0.7 | 16:9 | 1152 x 640 |\n| 0.8 | 16:9 | 1216 x 672 |\n| 0.9 | 16:9 | 1280 x 736 |\n| 0.98 | 16:9 | 1344 x 768 |\n| 1.0 | 16:9 | 1376 x 768 |\n| 1.2 | 16:9 | 1504 x 832 |\n| 1.5 | 16:9 | 1664 x 928 |\n| 1.8 | 16:9 | 1824 x 1024 |\n| 2.0 | 16:9 | 1920 x 1088 |\n"
+   ],
+   "widgets_values_named": {
+    "text": "| megapixels | Aspect | Output (multiple=32) |\n|---|---|---|\n| 0.2 | 16:9 | 608 x 352 |\n| 0.3 | 16:9 | 736 x 416 |\n| 0.4 | 16:9 | 864 x 480 |\n| 0.5 | 16:9 | 960 x 544 |\n| 0.6 | 16:9 | 1056 x 608 |\n| 0.7 | 16:9 | 1152 x 640 |\n| 0.8 | 16:9 | 1216 x 672 |\n| 0.9 | 16:9 | 1280 x 736 |\n| 0.98 | 16:9 | 1344 x 768 |\n| 1.0 | 16:9 | 1376 x 768 |\n| 1.2 | 16:9 | 1504 x 832 |\n| 1.5 | 16:9 | 1664 x 928 |\n| 1.8 | 16:9 | 1824 x 1024 |\n| 2.0 | 16:9 | 1920 x 1088 |\n"
+   },
+   "color": "#233",
+   "bgcolor": "#355"
+  },
+  {
+   "id": 273,
+   "type": "Label (rgthree)",
+   "pos": [
+    -3774.7800884117582,
+    4690.911103595339
+   ],
+   "size": [
+    300,
+    60
+   ],
+   "flags": {
+    "allow_interaction": true
+   },
+   "order": 21,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [],
+   "title": "上传参考图",
+   "properties": {
+    "fontSize": 60,
+    "fontFamily": "Arial",
+    "fontColor": "#ffffff",
+    "textAlign": "left",
+    "backgroundColor": "transparent",
+    "padding": 0,
+    "borderRadius": 0,
+    "angle": 0,
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.8"
+    }
+   },
+   "color": "#fff0",
+   "bgcolor": "#fff0"
+  },
+  {
+   "id": 272,
+   "type": "Label (rgthree)",
+   "pos": [
+    -3381.8451127519893,
+    5701.760772275714
+   ],
+   "size": [
+    180,
+    60
+   ],
+   "flags": {
+    "allow_interaction": true
+   },
+   "order": 22,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [],
+   "title": "提示词",
+   "properties": {
+    "fontSize": 60,
+    "fontFamily": "Arial",
+    "fontColor": "#ffffff",
+    "textAlign": "left",
+    "backgroundColor": "transparent",
+    "padding": 0,
+    "borderRadius": 0,
+    "angle": 0,
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.8"
+    }
+   },
+   "color": "#fff0",
+   "bgcolor": "#fff0"
+  },
+  {
+   "id": 267,
+   "type": "Label (rgthree)",
+   "pos": [
+    -4117.422298327857,
+    4426.4178956867345
+   ],
+   "size": [
+    240,
+    60
+   ],
+   "flags": {
+    "allow_interaction": true
+   },
+   "order": 23,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [],
+   "title": "时长：秒",
+   "properties": {
+    "fontSize": 60,
+    "fontFamily": "Arial",
+    "fontColor": "#ffffff",
+    "textAlign": "left",
+    "backgroundColor": "transparent",
+    "padding": 0,
+    "borderRadius": 0,
+    "angle": 0,
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.8"
+    }
+   },
+   "color": "#fff0",
+   "bgcolor": "#fff0"
+  },
+  {
+   "id": 264,
+   "type": "Label (rgthree)",
+   "pos": [
+    -3205.3977366921536,
+    5849.319895495621
+   ],
+   "size": [
+    691.1328125,
+    40
+   ],
+   "flags": {
+    "allow_interaction": true
+   },
+   "order": 24,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [],
+   "title": "发给AI例如豆包 GPT的提示词参考模版",
+   "properties": {
+    "fontSize": 40,
+    "fontFamily": "Arial",
+    "fontColor": "#ffffff",
+    "textAlign": "left",
+    "backgroundColor": "transparent",
+    "padding": 0,
+    "borderRadius": 0,
+    "angle": 0,
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.8"
+    }
+   },
+   "color": "#fff0",
+   "bgcolor": "#fff0"
+  },
+  {
+   "id": 271,
+   "type": "Label (rgthree)",
+   "pos": [
+    -4153.93592730765,
+    3928.911535904313
+   ],
+   "size": [
+    422.4609375,
+    100
+   ],
+   "flags": {
+    "allow_interaction": true
+   },
+   "order": 25,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [],
+   "title": "PixStudio",
+   "properties": {
+    "fontSize": 100,
+    "fontFamily": "Arial",
+    "fontColor": "#ffffff",
+    "textAlign": "left",
+    "backgroundColor": "transparent",
+    "padding": 0,
+    "borderRadius": 0,
+    "angle": 0,
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.8"
+    }
+   },
+   "color": "#fff0",
+   "bgcolor": "#fff0"
+  },
+  {
+   "id": 131,
+   "type": "ComfyMathExpression",
+   "pos": [
+    -791.1082596124565,
+    5415.835196108865
+   ],
+   "size": [
+    225,
+    116
+   ],
+   "flags": {
+    "collapsed": true
+   },
+   "order": 55,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "values.a",
+     "name": "values.a",
+     "type": "FLOAT,INT,BOOLEAN",
+     "link": 261
+    },
+    {
+     "label": "b",
+     "name": "values.b",
+     "shape": 7,
+     "type": "FLOAT,INT,BOOLEAN"
+    },
+    {
+     "label": "expression",
+     "name": "expression",
+     "type": "STRING",
+     "widget": {
+      "name": "expression"
+     }
+    }
+   ],
+   "outputs": [
+    {
+     "label": "FLOAT",
+     "name": "FLOAT",
+     "type": "FLOAT",
+     "links": []
+    },
+    {
+     "label": "INT",
+     "name": "INT",
+     "type": "INT",
+     "links": [
+      283,
+      392
+     ]
+    },
+    {
+     "label": "BOOL",
+     "name": "BOOL",
+     "type": "BOOLEAN",
+     "links": []
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "ComfyMathExpression",
+    "cnr_id": "comfy-core",
+    "ver": "0.30.0",
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.5.2"
+    },
+    "widget_ue_connectable": {}
+   },
+   "widgets_values": [
+    "max(5, round(a * 24)) + (5 - (max(5, round(a * 24)) % 17)) % 17"
+   ],
+   "widgets_values_named": {
+    "expression": "max(5, round(a * 24)) + (5 - (max(5, round(a * 24)) % 17)) % 17"
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 252,
+   "type": "GetNode",
+   "pos": [
+    -830.0764584810754,
+    5465.359800089798
+   ],
+   "size": [
+    210,
+    60
+   ],
+   "flags": {
+    "collapsed": true
+   },
+   "order": 26,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "label": "输出",
+     "name": "MODEL",
+     "type": "MODEL",
+     "links": [
+      412
+     ]
+    }
+   ],
+   "title": "Get_加载模型",
+   "properties": {
+    "Node name for S&R": "GetNode",
+    "aux_id": "kijai/ComfyUI-KJNodes",
+    "ue_properties": {
+     "version": "7.8",
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {}
+    }
+   },
+   "widgets_values": [
+    "加载模型"
+   ],
+   "widgets_values_named": {
+    "Constant": "加载模型"
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 248,
+   "type": "SetNode",
+   "pos": [
+    -823.9615504813682,
+    5391.228509442578
+   ],
+   "size": [
+    210,
+    50
+   ],
+   "flags": {
+    "collapsed": true
+   },
+   "order": 64,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "输入",
+     "name": "MODEL",
+     "type": "MODEL",
+     "link": 410
+    }
+   ],
+   "outputs": [
+    {
+     "label": "输出",
+     "name": "MODEL",
+     "type": "MODEL"
+    }
+   ],
+   "title": "Set_预览模型",
+   "properties": {
+    "Node name for S&R": "SetNode",
+    "aux_id": "kijai/ComfyUI-KJNodes",
+    "previousName": "预览模型",
+    "ue_properties": {
+     "version": "7.8",
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {}
+    }
+   },
+   "widgets_values": [
+    "预览模型"
+   ],
+   "widgets_values_named": {
+    "Constant": "预览模型"
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 241,
+   "type": "SetNode",
+   "pos": [
+    -781.1005785130707,
+    5383.3900691476865
+   ],
+   "size": [
+    210,
+    50
+   ],
+   "flags": {
+    "collapsed": true
+   },
+   "order": 48,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "输入",
+     "name": "SAMPLER",
+     "type": "SAMPLER",
+     "link": 404
+    }
+   ],
+   "outputs": [
+    {
+     "label": "输出",
+     "name": "SAMPLER",
+     "type": "SAMPLER"
+    }
+   ],
+   "title": "Set_采样器设置",
+   "properties": {
+    "Node name for S&R": "SetNode",
+    "aux_id": "kijai/ComfyUI-KJNodes",
+    "previousName": "采样器设置",
+    "ue_properties": {
+     "version": "7.8",
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {}
+    }
+   },
+   "widgets_values": [
+    "采样器设置"
+   ],
+   "widgets_values_named": {
+    "Constant": "采样器设置"
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 228,
+   "type": "SetNode",
+   "pos": [
+    -729.3690052453154,
+    5389.371841846188
+   ],
+   "size": [
+    210,
+    50
+   ],
+   "flags": {
+    "collapsed": true
+   },
+   "order": 60,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "输入",
+     "name": "INT",
+     "type": "INT",
+     "link": 392
+    }
+   ],
+   "outputs": [
+    {
+     "label": "输出",
+     "name": "INT",
+     "type": "INT"
+    }
+   ],
+   "title": "Set_时长",
+   "properties": {
+    "Node name for S&R": "SetNode",
+    "aux_id": "kijai/ComfyUI-KJNodes",
+    "previousName": "时长",
+    "ue_properties": {
+     "version": "7.8",
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {}
+    }
+   },
+   "widgets_values": [
+    "时长"
+   ],
+   "widgets_values_named": {
+    "Constant": "时长"
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 231,
+   "type": "SetNode",
+   "pos": [
+    -703.3107229846992,
+    5514.175238319041
+   ],
+   "size": [
+    210,
+    50
+   ],
+   "flags": {
+    "collapsed": true
+   },
+   "order": 54,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "输入",
+     "name": "INT",
+     "type": "INT",
+     "link": 395
+    }
+   ],
+   "outputs": [
+    {
+     "label": "输出",
+     "name": "INT",
+     "type": "INT"
+    }
+   ],
+   "title": "Set_高",
+   "properties": {
+    "Node name for S&R": "SetNode",
+    "aux_id": "kijai/ComfyUI-KJNodes",
+    "previousName": "高",
+    "ue_properties": {
+     "version": "7.8",
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {}
+    }
+   },
+   "widgets_values": [
+    "高"
+   ],
+   "widgets_values_named": {
+    "Constant": "高"
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 296,
+   "type": "Label (rgthree)",
+   "pos": [
+    -1700.0590296404648,
+    4706.064615939402
+   ],
+   "size": [
+    300,
+    60
+   ],
+   "flags": {
+    "allow_interaction": true
+   },
+   "order": 27,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [],
+   "title": "核心区勿动",
+   "properties": {
+    "fontSize": 60,
+    "fontFamily": "Arial",
+    "fontColor": "#ffffff",
+    "textAlign": "left",
+    "backgroundColor": "transparent",
+    "padding": 0,
+    "borderRadius": 0,
+    "angle": 0,
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.8"
+    }
+   },
+   "color": "#fff0",
+   "bgcolor": "#fff0"
+  },
+  {
+   "id": 318,
+   "type": "Label (rgthree)",
+   "pos": [
+    -331.7048744177522,
+    4687.444564228378
+   ],
+   "size": [
+    120,
+    60
+   ],
+   "flags": {
+    "allow_interaction": true
+   },
+   "order": 28,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [],
+   "title": "结果",
+   "properties": {
+    "fontSize": 60,
+    "fontFamily": "Arial",
+    "fontColor": "#ffffff",
+    "textAlign": "left",
+    "backgroundColor": "transparent",
+    "padding": 0,
+    "borderRadius": 0,
+    "angle": 0,
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.8"
+    }
+   },
+   "color": "#fff0",
+   "bgcolor": "#fff0"
+  },
+  {
+   "id": 320,
+   "type": "Label (rgthree)",
+   "pos": [
+    -2780.959560149748,
+    4962.129623697974
+   ],
+   "size": [
+    315,
+    35
+   ],
+   "flags": {
+    "allow_interaction": true
+   },
+   "order": 29,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [],
+   "title": "如果断连就是爆显存",
+   "properties": {
+    "fontSize": 35,
+    "fontFamily": "Arial",
+    "fontColor": "#ffffff",
+    "textAlign": "left",
+    "backgroundColor": "transparent",
+    "padding": 0,
+    "borderRadius": 0,
+    "angle": 0,
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.8"
+    }
+   },
+   "color": "#fff0",
+   "bgcolor": "#fff0"
+  },
+  {
+   "id": 269,
+   "type": "Label (rgthree)",
+   "pos": [
+    -4252.366290156613,
+    4132.488603767131
+   ],
+   "size": [
+    3410.595703125,
+    150
+   ],
+   "flags": {
+    "allow_interaction": true
+   },
+   "order": 30,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [],
+   "title": "⭐（双采+Latent高清放大加速版）全能参考生视频",
+   "properties": {
+    "fontSize": 150,
+    "fontFamily": "Arial",
+    "fontColor": "#ffffff",
+    "textAlign": "left",
+    "backgroundColor": "transparent",
+    "padding": 0,
+    "borderRadius": 0,
+    "angle": 0,
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.8"
+    }
+   },
+   "color": "#fff0",
+   "bgcolor": "#fff0"
+  },
+  {
+   "id": 212,
+   "type": "LTXVConcatAVLatent",
+   "pos": [
+    -1403.1358453080566,
+    5656.995941971455
+   ],
+   "size": [
+    181.308203125,
+    46
+   ],
+   "flags": {},
+   "order": 73,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "video_latent",
+     "name": "video_latent",
+     "type": "LATENT",
+     "link": 491
+    },
+    {
+     "label": "audio_latent",
+     "name": "audio_latent",
+     "type": "LATENT",
+     "link": 363
+    }
+   ],
+   "outputs": [
+    {
+     "label": "latent",
+     "name": "latent",
+     "type": "LATENT",
+     "links": [
+      365
+     ]
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "LTXVConcatAVLatent",
+    "cnr_id": "comfy-core",
+    "ver": "0.33.0",
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.5.2"
+    },
+    "widget_ue_connectable": {}
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 211,
+   "type": "LTXVSeparateAVLatent",
+   "pos": [
+    -1657.7442863189233,
+    5664.181815884587
+   ],
+   "size": [
+    186.7154296875,
+    46
+   ],
+   "flags": {},
+   "order": 70,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "av_latent",
+     "name": "av_latent",
+     "type": "LATENT",
+     "link": 384
+    }
+   ],
+   "outputs": [
+    {
+     "label": "video_latent",
+     "name": "video_latent",
+     "type": "LATENT",
+     "links": [
+      489
+     ]
+    },
+    {
+     "label": "audio_latent",
+     "name": "audio_latent",
+     "type": "LATENT",
+     "links": [
+      363
+     ]
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "LTXVSeparateAVLatent",
+    "cnr_id": "comfy-core",
+    "ver": "0.33.0",
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.5.2"
+    },
+    "widget_ue_connectable": {}
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 324,
+   "type": "Label (rgthree)",
+   "pos": [
+    -1655.9278632173084,
+    5836.922501730788
+   ],
+   "size": [
+    161.19140625,
+    30
+   ],
+   "flags": {
+    "allow_interaction": true
+   },
+   "order": 31,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [],
+   "title": "放大倍数👉",
+   "properties": {
+    "fontSize": 30,
+    "fontFamily": "Arial",
+    "fontColor": "#ffffff",
+    "textAlign": "left",
+    "backgroundColor": "transparent",
+    "padding": 0,
+    "borderRadius": 0,
+    "angle": 0,
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.8"
+    }
+   },
+   "color": "#fff0",
+   "bgcolor": "#fff0"
+  },
+  {
+   "id": 124,
+   "type": "BasicScheduler",
+   "pos": [
+    -1069.1856615301338,
+    5242.978151319533
+   ],
+   "size": [
+    210,
+    106
+   ],
+   "flags": {},
+   "order": 47,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "model",
+     "name": "model",
+     "type": "MODEL",
+     "link": 414
+    },
+    {
+     "label": "scheduler",
+     "name": "scheduler",
+     "type": "COMBO",
+     "widget": {
+      "name": "scheduler"
+     }
+    },
+    {
+     "label": "steps",
+     "name": "steps",
+     "type": "INT",
+     "widget": {
+      "name": "steps"
+     }
+    },
+    {
+     "label": "denoise",
+     "name": "denoise",
+     "type": "FLOAT",
+     "widget": {
+      "name": "denoise"
+     }
+    }
+   ],
+   "outputs": [
+    {
+     "label": "SIGMAS",
+     "name": "SIGMAS",
+     "type": "SIGMAS",
+     "links": [
+      415
+     ]
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "BasicScheduler",
+    "cnr_id": "comfy-core",
+    "ver": "0.30.0",
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.5.2"
+    },
+    "widget_ue_connectable": {}
+   },
+   "widgets_values": [
+    "simple",
+    4,
+    1
+   ],
+   "widgets_values_named": {
+    "scheduler": "simple",
+    "steps": 10,
+    "denoise": 1
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 127,
+   "type": "UNETLoader",
+   "pos": [
+    -2282.9857586264015,
+    4942.050449168739
+   ],
+   "size": [
+    438.24774169921875,
+    85.54034423828125
+   ],
+   "flags": {},
+   "order": 32,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "unet_name",
+     "name": "unet_name",
+     "type": "COMBO",
+     "widget": {
+      "name": "unet_name"
+     }
+    },
+    {
+     "label": "weight_dtype",
+     "name": "weight_dtype",
+     "type": "COMBO",
+     "widget": {
+      "name": "weight_dtype"
+     }
+    }
+   ],
+   "outputs": [
+    {
+     "label": "MODEL",
+     "name": "MODEL",
+     "type": "MODEL",
+     "links": [
+      295
+     ]
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "UNETLoader",
+    "cnr_id": "comfy-core",
+    "ver": "0.30.0",
+    "models": [
+     {
+      "name": "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+      "directory": "diffusion_models",
+      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_ref2va_pruned_int8_convrot.safetensors"
+     }
+    ],
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.5.2"
+    },
+    "widget_ue_connectable": {}
+   },
+   "widgets_values": [
+    "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+    "default"
+   ],
+   "widgets_values_named": {
+    "unet_name": "minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+    "weight_dtype": "default"
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 128,
+   "type": "CLIPLoader",
+   "pos": [
+    -2282.9857586264015,
+    5070.711581981239
+   ],
+   "size": [
+    436.5819091796875,
+    106
+   ],
+   "flags": {},
+   "order": 33,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "clip_name",
+     "name": "clip_name",
+     "type": "COMBO",
+     "widget": {
+      "name": "clip_name"
+     }
+    },
+    {
+     "label": "type",
+     "name": "type",
+     "type": "COMBO",
+     "widget": {
+      "name": "type"
+     }
+    },
+    {
+     "label": "device",
+     "name": "device",
+     "shape": 7,
+     "type": "COMBO",
+     "widget": {
+      "name": "device"
+     }
+    }
+   ],
+   "outputs": [
+    {
+     "label": "CLIP",
+     "name": "CLIP",
+     "type": "CLIP",
+     "links": [
+      272
+     ]
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "CLIPLoader",
+    "cnr_id": "comfy-core",
+    "ver": "0.30.0",
+    "models": [
+     {
+      "name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+      "directory": "text_encoders",
+      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors"
+     }
+    ],
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.5.2"
+    },
+    "widget_ue_connectable": {}
+   },
+   "widgets_values": [
+    "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+    "minimax",
+    "default"
+   ],
+   "widgets_values_named": {
+    "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+    "type": "minimax",
+    "device": "default"
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 263,
+   "type": "MinimaxH3LatentUpscaler3D",
+   "pos": [
+    -1492.4932133151044,
+    5761.91036128447
+   ],
+   "size": [
+    307.75189208984375,
+    202
+   ],
+   "flags": {},
+   "order": 72,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "latent",
+     "name": "latent",
+     "type": "*",
+     "link": 489
+    },
+    {
+     "label": "model_name",
+     "name": "model_name",
+     "type": "COMBO",
+     "widget": {
+      "name": "model_name"
+     },
+     "link": null
+    },
+    {
+     "label": "mode",
+     "name": "mode",
+     "type": "COMFY_DYNAMICCOMBO_V3",
+     "widget": {
+      "name": "mode"
+     },
+     "link": null
+    },
+    {
+     "label": "align",
+     "name": "align",
+     "type": "INT",
+     "widget": {
+      "name": "align"
+     },
+     "link": null
+    },
+    {
+     "label": "enable_chunking",
+     "name": "enable_chunking",
+     "type": "BOOLEAN",
+     "widget": {
+      "name": "enable_chunking"
+     },
+     "link": null
+    },
+    {
+     "label": "device",
+     "name": "device",
+     "type": "COMBO",
+     "widget": {
+      "name": "device"
+     },
+     "link": null
+    },
+    {
+     "label": "precision",
+     "name": "precision",
+     "type": "COMBO",
+     "widget": {
+      "name": "precision"
+     },
+     "link": null
+    }
+   ],
+   "outputs": [
+    {
+     "label": "latent",
+     "name": "latent",
+     "type": "*",
+     "links": [
+      491
+     ]
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "MinimaxH3LatentUpscaler3D",
+    "aux_id": "LBH-123-AI/Comfyui_Minimax_h3_latent_Upscaler",
+    "ver": "6a4b191e8af583b7c097f564690325f91d18c2e2",
+    "ue_properties": {
+     "version": "7.8",
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {}
+    },
+    "models": [
+     {
+      "directory": "latent_upscale_models",
+      "name": "minimax_h3_latent_upscaler_3d_conv_v1_fp16.safetensors",
+      "url": "https://huggingface.co/LBH-123-AI/Minimax_h3_latent_Upscaler/resolve/main/minimax_h3_latent_upscaler_3d_conv_v1/minimax_h3_latent_upscaler_3d_conv_v1_fp16.safetensors"
+     }
+    ]
+   },
+   "widgets_values": [
+    "minimax_h3_latent_upscaler_3d_conv_v1_fp16.safetensors",
+    "scale by multiplier",
+    1.0,
+    32,
+    true,
+    true,
+    "cuda",
+    "bf16"
+   ],
+   "widgets_values_named": {
+    "model_name": "minimax_h3_latent_upscaler_3d_fp16.safetensors",
+    "mode": "scale by multiplier",
+    "mode.scale": 1.5,
+    "align": 32,
+    "enable_chunking": "cuda",
+    "device": "cuda",
+    "precision": "bf16"
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 147,
+   "type": "LoraLoaderModelOnly",
+   "pos": [
+    -1816.734171712338,
+    5021.045566356239
+   ],
+   "size": [
+    332.37255859375,
+    86.48795318603516
+   ],
+   "flags": {},
+   "order": 58,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "model",
+     "name": "model",
+     "type": "MODEL",
+     "link": 295
+    },
+    {
+     "label": "lora_name",
+     "name": "lora_name",
+     "type": "COMBO",
+     "widget": {
+      "name": "lora_name"
+     }
+    },
+    {
+     "label": "strength_model",
+     "name": "strength_model",
+     "type": "FLOAT",
+     "widget": {
+      "name": "strength_model"
+     }
+    }
+   ],
+   "outputs": [
+    {
+     "label": "MODEL",
+     "name": "MODEL",
+     "type": "MODEL",
+     "links": [
+      327
+     ]
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "LoraLoaderModelOnly",
+    "cnr_id": "comfy-core",
+    "ver": "0.31.0",
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.5.2"
+    },
+    "widget_ue_connectable": {},
+    "models": [
+     {
+      "directory": "loras",
+      "name": "minimax_h3_ref2v_turbo_8step_v1.0_768p_comfyui_bf16.safetensors",
+      "url": "https://huggingface.co/lightx2v/Minimax-h3-Turbo/resolve/main/minimax_h3_ref2v_turbo_8step_v1.0_768p_comfyui_bf16.safetensors"
+     }
+    ]
+   },
+   "widgets_values": [
+    "minimax_h3_ref2v_turbo_8step_v1.0_768p_comfyui_bf16.safetensors",
+    1
+   ],
+   "widgets_values_named": {
+    "lora_name": "minimax_h3_fl2v_turbo_8step_v1.0_768p_comfyui_bf16.safetensors",
+    "strength_model": 1.0000000000000002
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 136,
+   "type": "MiniMaxH3ReferenceToVideo",
+   "pos": [
+    -1417.863485472757,
+    4913.232304262448
+   ],
+   "size": [
+    289.189453125,
+    524
+   ],
+   "flags": {},
+   "order": 56,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "clip",
+     "name": "clip",
+     "type": "CLIP",
+     "link": 272
+    },
+    {
+     "label": "vae",
+     "name": "vae",
+     "type": "VAE",
+     "link": 398
+    },
+    {
+     "label": "audio_vae",
+     "name": "audio_vae",
+     "type": "VAE",
+     "link": 399
+    },
+    {
+     "label": "ref_images.ref_image_0",
+     "name": "ref_images.ref_image_0",
+     "shape": 7,
+     "type": "IMAGE",
+     "link": 282
+    },
+    {
+     "label": "ref_image_1",
+     "name": "ref_images.ref_image_1",
+     "shape": 7,
+     "type": "IMAGE",
+     "link": null
+    },
+    {
+     "label": "ref_image_2",
+     "name": "ref_images.ref_image_2",
+     "shape": 7,
+     "type": "IMAGE",
+     "link": null
+    },
+    {
+     "label": "ref_image_3",
+     "name": "ref_images.ref_image_3",
+     "shape": 7,
+     "type": "IMAGE",
+     "link": null
+    },
+    {
+     "label": "ref_image_4",
+     "name": "ref_images.ref_image_4",
+     "shape": 7,
+     "type": "IMAGE",
+     "link": null
+    },
+    {
+     "label": "ref_image_5",
+     "name": "ref_images.ref_image_5",
+     "shape": 7,
+     "type": "IMAGE",
+     "link": null
+    },
+    {
+     "label": "ref_image_6",
+     "name": "ref_images.ref_image_6",
+     "shape": 7,
+     "type": "IMAGE"
+    },
+    {
+     "label": "ref_videos.ref_video_0",
+     "name": "ref_videos.ref_video_0",
+     "shape": 7,
+     "type": "IMAGE",
+     "link": null
+    },
+    {
+     "label": "ref_video_1",
+     "name": "ref_videos.ref_video_1",
+     "shape": 7,
+     "type": "IMAGE",
+     "link": null
+    },
+    {
+     "label": "ref_video_audios.ref_video_audio_0",
+     "name": "ref_video_audios.ref_video_audio_0",
+     "shape": 7,
+     "type": "AUDIO",
+     "link": null,
+     "links": [
+      503
+     ]
+    },
+    {
+     "label": "ref_video_audio_1",
+     "name": "ref_video_audios.ref_video_audio_1",
+     "shape": 7,
+     "type": "AUDIO",
+     "link": null
+    },
+    {
+     "label": "ref_audios.ref_audio_0",
+     "name": "ref_audios.ref_audio_0",
+     "shape": 7,
+     "type": "AUDIO",
+     "link": null
+    },
+    {
+     "label": "ref_audio_1",
+     "name": "ref_audios.ref_audio_1",
+     "shape": 7,
+     "type": "AUDIO",
+     "link": null
+    },
+    {
+     "label": "ref_audio_2",
+     "name": "ref_audios.ref_audio_2",
+     "shape": 7,
+     "type": "AUDIO",
+     "link": null
+    },
+    {
+     "label": "prompt",
+     "name": "prompt",
+     "type": "STRING",
+     "widget": {
+      "name": "prompt"
+     },
+     "link": 279
+    },
+    {
+     "label": "width",
+     "name": "width",
+     "type": "INT",
+     "widget": {
+      "name": "width"
+     },
+     "link": 396
+    },
+    {
+     "label": "height",
+     "name": "height",
+     "type": "INT",
+     "widget": {
+      "name": "height"
+     },
+     "link": 397
+    },
+    {
+     "label": "length",
+     "name": "length",
+     "type": "INT",
+     "widget": {
+      "name": "length"
+     },
+     "link": 393
+    },
+    {
+     "label": "ref_image_size",
+     "name": "ref_image_size",
+     "type": "COMBO",
+     "widget": {
+      "name": "ref_image_size"
+     }
+    }
+   ],
+   "outputs": [
+    {
+     "label": "positive",
+     "name": "positive",
+     "type": "CONDITIONING",
+     "links": [
+      270
+     ]
+    },
+    {
+     "label": "LATENT",
+     "name": "LATENT",
+     "type": "LATENT",
+     "links": [
+      271
+     ]
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "MiniMaxH3ReferenceToVideo",
+    "cnr_id": "comfy-core",
+    "ver": "0.30.0",
+    "ue_properties": {
+     "widget_ue_connectable": {
+      "width": true,
+      "length": true,
+      "prompt": true,
+      "height": true
+     },
+     "input_ue_unconnectable": {},
+     "version": "7.5.2"
+    },
+    "widget_ue_connectable": {
+     "width": true,
+     "length": true,
+     "prompt": true,
+     "height": true
+    }
+   },
+   "widgets_values": [
+    "",
+    1344,
+    768,
+    124,
+    "max"
+   ],
+   "widgets_values_named": {
+    "prompt": "",
+    "width": 1344,
+    "height": 768,
+    "length": 124,
+    "ref_image_size": "max"
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 115,
+   "type": "ResolutionSelector",
+   "pos": [
+    -3086.9221468416317,
+    4936.112504391768
+   ],
+   "size": [
+    270,
+    126
+   ],
+   "flags": {},
+   "order": 34,
+   "mode": 0,
+   "showAdvanced": false,
+   "inputs": [
+    {
+     "label": "aspect_ratio",
+     "name": "aspect_ratio",
+     "type": "COMBO",
+     "widget": {
+      "name": "aspect_ratio"
+     }
+    },
+    {
+     "label": "megapixels",
+     "name": "megapixels",
+     "type": "FLOAT",
+     "widget": {
+      "name": "megapixels"
+     }
+    },
+    {
+     "label": "multiple",
+     "name": "multiple",
+     "type": "INT",
+     "widget": {
+      "name": "multiple"
+     }
+    }
+   ],
+   "outputs": [
+    {
+     "label": "width",
+     "name": "width",
+     "type": "INT",
+     "links": [
+      394
+     ]
+    },
+    {
+     "label": "height",
+     "name": "height",
+     "type": "INT",
+     "links": [
+      395
+     ]
+    }
+   ],
+   "title": "Resolution Selector (Size)",
+   "properties": {
+    "Node name for S&R": "ResolutionSelector",
+    "cnr_id": "comfy-core",
+    "ver": "0.30.0",
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.5.2"
+    },
+    "widget_ue_connectable": {}
+   },
+   "widgets_values": [
+    "16:9 (Widescreen)",
+    0.2,
+    32
+   ],
+   "widgets_values_named": {
+    "aspect_ratio": "16:9 (Widescreen)",
+    "megapixels": 0.5,
+    "multiple": 32
+   },
+   "color": "#233",
+   "bgcolor": "#355"
+  },
+  {
+   "id": 259,
+   "type": "LoadImage",
+   "pos": [
+    -3790.105489450851,
+    5272.890510623262
+   ],
+   "size": [
+    288.9223327636719,
+    326
+   ],
+   "flags": {},
+   "order": 35,
+   "mode": 4,
+   "inputs": [
+    {
+     "label": "image",
+     "name": "image",
+     "type": "COMBO",
+     "widget": {
+      "name": "image"
+     }
+    },
+    {
+     "label": "upload",
+     "name": "upload",
+     "type": "IMAGEUPLOAD",
+     "widget": {
+      "name": "upload"
+     }
+    }
+   ],
+   "outputs": [
+    {
+     "label": "IMAGE",
+     "name": "IMAGE",
+     "type": "IMAGE",
+     "links": []
+    },
+    {
+     "label": "MASK",
+     "name": "MASK",
+     "type": "MASK"
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "LoadImage",
+    "cnr_id": "comfy-core",
+    "ver": "0.30.0",
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.5.2"
+    },
+    "widget_ue_connectable": {}
+   },
+   "widgets_values": [
+    "ChatGPT Image 2026年8月18日 05_41_55.png",
+    "image"
+   ],
+   "widgets_values_named": {
+    "image": "ChatGPT Image 2026年8月18日 05_41_55.png",
+    "upload": "image"
+   },
+   "color": "#233",
+   "bgcolor": "#355"
+  },
+  {
+   "id": 329,
+   "type": "LoadAudio",
+   "pos": [
+    -2902.307439212197,
+    4588.947042229909
+   ],
+   "size": [
+    270,
+    136
+   ],
+   "flags": {},
+   "order": 36,
+   "mode": 4,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "AUDIO",
+     "type": "AUDIO",
+     "links": []
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "LoadAudio"
+   },
+   "widgets_values": [
+    "佩利卡语音.mp3",
+    null,
+    null
+   ],
+   "widgets_values_named": {
+    "audio": "佩利卡语音.mp3",
+    "upload": null
+   }
+  },
+  {
+   "id": 327,
+   "type": "LoadAudio",
+   "pos": [
+    -4136.819195221166,
+    4661.956481798571
+   ],
+   "size": [
+    270,
+    136
+   ],
+   "flags": {},
+   "order": 37,
+   "mode": 4,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "AUDIO",
+     "type": "AUDIO",
+     "links": []
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "LoadAudio",
+    "cnr_id": "comfy-core",
+    "ver": "0.34.1",
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.8"
+    }
+   },
+   "widgets_values": [
+    "管理员语音.mp3",
+    null,
+    null
+   ],
+   "widgets_values_named": {
+    "audio": "管理员语音.mp3",
+    "upload": null
+   }
+  },
+  {
+   "id": 266,
+   "type": "MarkdownNote",
+   "pos": [
+    -3187.8847603515214,
+    6241.602675426882
+   ],
+   "size": [
+    637.3217392318008,
+    172.65381083562897
+   ],
+   "flags": {},
+   "order": 38,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [],
+   "title": "MiniMax H3 10秒视频提示词三流程模板",
+   "properties": {
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "version": "7.8",
+     "input_ue_unconnectable": {}
+    }
+   },
+   "widgets_values": [
+    "# MiniMax H3 10秒视频提示词三流程模板\n\n以下内容可直接作为AI助手的系统提示词或长期复用模板。\n\n---\n\n你是一名专门为MiniMax H3设计10秒视频的导演与提示词编剧。你的任务不是套用固定分镜，而是先识别用户选择的生产流程，再把用户的一句话故事、粗略想法、剧本片段、单张图片或“图片＋故事”转化成可以直接用于MiniMax H3的紧凑成品提示词；选择九宫格流程时，还要先生成九宫格视觉母版，再依据实际成图生成对应的视频提示词。\n\n## 一、首次入口：必须先确定流程\n\n如果用户尚未明确选择模式，第一条回复只询问以下问题，不提前生成提示词：\n\n```text\n请选择这次要走的流程：\n\n1. 文戏模式：人物关系、对白、微表情、情绪转折与剧情结果。\n2. 武戏模式：高密度打斗、连续攻防、快慢节奏、受力与反制。\n3. 九宫格模式：先生成3×3关键画面，再根据实际九宫格生成对应的H3视频提示词。\n\n你可以直接回复数字，并发送一句大概的故事；也可以直接上传一张图片。我会在选定模式后继续生成。\n```\n\n如果用户已经明确说出“文戏”“武戏”“九宫格”或对应数字，不再重复询问。若用户已经同时提供模式和故事或图片，立即开始生成，不再要求确认。\n\n如果用户先发了故事或图片但没有选择模式，保留并分析已有内容，只询问模式，继续沿用已经收到的素材。\n\n## 二、支持的输入方式\n\n### 1. 用户只提供粗略故事\n\n故事可以只有一句话。提取其中的主体、关系、目标、阻碍、关键动作、情绪转折、结局和风格线索。缺少普通美术细节时自行做合理决定，不把用户拦在连续的选择题前。\n\n### 2. 用户只提供一张图片\n\n先观察图片中的人物或主体数量、外貌、服装、道具、环境、时代、材质、光线、色彩和构图。图片负责锁定可见身份与视觉世界，所选模式负责推导动作和叙事。\n\n- 文戏模式：从人物姿态、关系距离、道具和环境中推导一个克制、可理解的关系转折。\n- 武戏模式：锁定图片中的主角与装备；若图片没有对手，设计一个与现有世界观匹配、轮廓明显不同的对手。\n- 九宫格模式：把图片视为视觉母版或主体参考，派生九个连续但构图不同的关键状态。\n\n### 3. 用户同时提供图片和故事\n\n图片锁定人物、物体、服装、材质、场景与色彩；故事锁定事件顺序、角色关系、动作结果和结尾。两者冲突时优先保留图片中可见的身份特征，同时用故事决定后续事件。\n\n只有以下信息会实质改变成片且无法从素材判断时，才补问一个简短问题：谁是主角、文戏对白使用什么语言、用户是否要求特定结局。其他细节自行完成。\n\n### 4. 图片引用前缀\n\n先统计本次最终会与提示词一起提交给H3的全部图片，并按照实际提交顺序编号为图片1、图片2、图片3，依次类推。观察每张图片承担的真实功能，用简短、明确的中文写出角色、主体、场景、动作、构图、风格、装备、界面或九宫格时序等用途。\n\n存在图片时，最终提示词的绝对开头使用一整行连续图片引用，格式为：\n\n```text\n@图片1作为主角身份与服装参考@图片2作为对手身份与装备参考@图片3作为场景与光影参考\n```\n\n图片数量与引用数量完全一致，每张图片只编号一次，一张图片承担多个功能时合并为一句，例如`@图片1作为人物身份、服装与场景参考`。九宫格图片用于生成视频时写为`@图片1作为九宫格时序、构图与画面状态参考`。图片引用行结束后换行，下一行直接进入“生成一段……”正文。当前任务没有图片时，提示词第一行直接进入“生成一段……”正文。\n\n## 三、全局生成规格\n\n用户没有另行指定时，默认：10秒、16:9、2K、MiniMax H3、开启原生立体声。\n\n成品提示词统一采用自然语言制作简报格式：\n\n1. 影片目标与核心概念。\n2. 固定人物、主体、场景、道具与一致性。\n3. 按时间连续覆盖0—10秒的画面和动作。\n4. 剪辑、摄影、表演或动作规则。\n5. 视觉风格与材质。\n6. 声音设计。\n7. 收束人物、动作、镜头与结尾一致性的正向结果。\n\n最终成品回复只包含一份可以直接复制进MiniMax H3的完整中文提示词正文。存在图片时，第一行先按图片引用前缀规则输出全部`@图片N作为XX`，第二行直接以“生成一段10秒、16:9、2K、原生立体声……”开头；当前任务没有图片时，第一行直接以“生成一段10秒、16:9、2K、原生立体声……”开头。随后依次写核心概念、人物或主体锁定、0—10秒时间线、镜头运动、视觉材质和声音设计，最后一句结束整条回复。\n\n所有成品提示词采用全正向描述结构，只陈述画面需要呈现的元素、动作、镜头、时长、声音和结果。约束转换为人物锁定、动作因果、镜头规则、时间预算与画面结果，并放在对应内容中就地表达。成品始终以“生成什么”为核心。\n\n时间段必须无缺口地覆盖完整10秒。连续不等于一镜到底；默认允许硬切、匹配剪辑、遮挡切换和尺度跳切。连续感应来自人物身份、空间轴线、动作余势、核心道具、运动方向、色彩母题或声音桥。只有用户明确要求时才设计一镜到底。\n\n如果用户要求参考某部作品，只提炼节奏、尺度、摄影、材质或情绪机制，不复制其角色、服装、怪物、标志性场景和专有名称。\n\n## 四、流程1：文戏模式\n\n### 核心目标\n\n让10秒承载一次清楚的关系变化，例如识破、承认、拒绝、原谅、背叛、离开、决定或失去。先确定“关系在开始和结束时分别是什么”，再将触发、反应、决定和结果集中在10秒内。\n\n### 生成机制\n\n1. 选择一个能被摄影机看懂的核心证据或道具，让它触发关系变化。\n2. 用4—6个时间段完成：建立关系与空间、证据出现、对方回应、主角决定、行为结果、情绪余波。\n3. 每次切镜由新信息、说话权变化、视线目标变化、道具状态变化、人物距离变化或行动决定触发，不按每句台词机械正反打。\n4. 中近景或特写只保留2—3个协同的表演信号，例如目光停顿、呼吸变化、未完成的手部动作和身体重心变化。微表情必须前后连续，不写抽象的“他很悲伤”。\n5. 对白控制为两至四句短句，并能在10秒内自然说完；写清说话人、原文台词、使用语言、声音质感和口型同步。外国时代或地区故事默认使用当地自然语言；无法判断时才询问用户。\n6. 用户故事包含枪击、受伤、鲜血、倒地、拥抱、离开等结果时，结果必须按用户要求在画面内完整发生，不擅自移到画外或改成含蓄替代。\n7. 结尾保留0.4—0.8秒呈现行为后果或表情余波，让最终画面完成关系变化。\n\n### 文戏输出要求\n\n最终回复只输出一份完整H3自然语言提示词正文，图片引用遵循全局前缀规则，正文从“生成一段10秒……”开始，并包含人物锁定、对白语言、0—10秒时间线、表演与剪辑、视觉风格、声音设计和明确结尾结果。\n\n## 五、流程2：武戏模式\n\n### 核心目标\n\n构建高速但可读的连续攻防。动作数量不是装饰动作的堆叠；每个有效动作必须改变距离、姿态、控制权、环境或下一招路径。\n\n### 默认节奏预算\n\n- 开场起势：控制在0.20—0.35秒，迅速进入第一次攻防。\n- 有效动作：10秒内安排10—16个，包括攻击、闪避、格挡、借力、受击、追击、环境互动和反制。\n- 单个1.2—2.0秒动作段：通常包含3—5个互相衔接的有效动作。\n- 慢动作：0—2次，总时长控制在0.20—0.35秒，只用于关键接触帧。\n- 结尾状态：保留0.20—0.30秒呈现受力、卸力和明确结果。\n\n### 生成机制\n\n1. 先锁定双方轮廓、尺寸、装备、能力边界、惯用手和空间位置。\n2. 设计一条紧凑战斗因果链：先手进入、第一次交换、对手升级或环境变化、控制权反转、终结动作、结果落地。\n3. 上一招未完全收回时，下一招已经启动；格挡后的受力直接成为翻越、旋转、位移或反斩的动力，不在每一招后重新站稳摆姿势。\n4. 每次攻击写清起手方向、目标、接触位置、受力反应和下一动作来源，用具体动作取代“双方高速激战”“连续打斗”等概括句。\n5. 使用墙面、平台、碎片、绳索、车辆、重力或地形时，环境互动必须改变战斗局面，而不是背景特效。\n6. 高速摄影仍需可读：每组连招保持一个主要运动方向，只有人物真实换向、借墙反弹或重力改变时才改变摄影轴线。\n7. 允许硬切与速度坡度，切点落在接触、遮挡、落地、破障或方向匹配处；镜头保持动作主体、接触点和受力结果清晰，火花与碎片只强化已经发生的攻击。\n8. 终结动作包含命中、对手的物理反应、主角卸力和明确结果；不在命中瞬间直接跳到胜利姿势。\n\n### 武戏输出要求\n\n最终回复只输出一份完整H3自然语言提示词正文，图片引用遵循全局前缀规则，正文从“生成一段10秒……”开始，并包含双方与场景锁定、0—10秒高速动作时间线、动作密度与速度规则、摄影原则、视觉材质、声音节拍和结果落地。\n\n## 六、流程3：九宫格模式\n\n### 核心目标\n\n九宫格不是九张无关海报，也不默认代表一镜到底。它是九个清晰可辨的关键画面，可用于展示九个镜头、九个动作峰值或同一主体的九个演化状态。连续感通过稳定主体、核心物件、材质继承、运动方向、色彩发展或构图匹配建立；允许硬切。\n\n### 阶段A：生成九宫格\n\n1. 从故事或图片中提取一个稳定主体和一条10秒视觉发展线。\n2. 把发展线拆成从左到右、从上到下的1—9格，每格承担不同任务，不重复同一种构图。\n3. 九格应覆盖：建立、触发、升级、第一次变化、中段主体状态、第二次升级、高潮形成、接近完成、最终画面。武戏题材可改为九个动作峰值，文戏题材可改为九个关系与表演节点。\n4. 生成一张整体16:9、2048×1152的3×3故事板，九个等大宽银幕画格，使用细而整洁的中性分隔线。\n5. 同一人物或主体的身份、服装、装备、材质和关键配色贯穿九格；镜位、景别、姿态和动作必须明显变化。\n6. 如果具备图像生成工具，直接生成图片并保存到用户可访问的位置；如果没有工具，只输出可以直接用于图像模型的完整九宫格提示词，不声称已经生成。\n\n### 阶段B：依据实际成图生成H3提示词\n\n九宫格生成完成后，必须先观察实际输出，再撰写视频提示词。逐格记录实际画面中的主体姿态、镜位、道具、空间状态、颜色和可见差异。最终H3提示词以实际九宫格为准，不沿用生成前已经发生偏差的旧分镜。\n\n1. 明确说明九宫格按从左到右、从上到下对应1—9镜或1—9状态。\n2. 为九格分配无缺口的0—10秒时间段。九格按1—3格进入、4—6格核心变化、7—9格高潮与结果组织，每格获得约0.8—1.3秒的可辨认状态并完整进入成片。\n3. 每一格写出“进入方式、画面中的主动作、离开方式”，并让前后格通过动作方向、形状、颜色、道具、遮挡或声音关联。\n4. 九格可以硬切，不把“连续”误写成强制一镜到底；如果用户明确要求一镜到底，再将九格改写为状态图谱和连续摄影路径。\n5. 精确文字容易失真时，九宫格先表达字体造型和空间关系，最终可读文案交由后期覆盖，并明确标记需要后期替换的文字层。\n\n### 九宫格输出要求\n\n默认交付两项：\n\n1. 生成并展示九宫格图片，或在无图像工具时提供完整九宫格出图提示词。\n2. 根据实际九宫格生成一份对应的MiniMax H3自然语言视频提示词。\n\n如果用户明确说“只要九宫格”或“先看图”，完成阶段A后暂停，等待用户确认再进入阶段B。\n\n## 七、修改规则\n\n用户要求修改任何角色、动作、台词、语言、节奏、受伤结果、转场或画面时，先判断问题属于人物锁定、时间预算、动作因果、关系变化、九格映射还是输出格式。修正上游结构后，重新输出一份结构统一、可以直接使用的完整成品提示词。\n\n如果用户说“连续”，默认理解为叙事、动作或视觉关联，允许使用有关联的硬切。用户明确说“长镜头”“无剪辑”或“一镜到底”时，再改用连续长镜头结构。\n\n## 八、交付前自检\n\n生成前逐项检查：\n\n- 是否已经确定文戏、武戏或九宫格流程。\n- 是否复用了用户已经给出的故事或图片，没有要求重复发送。\n- 是否保持人物、服装、装备、主体和场景一致。\n- 时间段是否无缺口覆盖0—10秒。\n- 文戏是否只有一次清楚的关系变化，对白语言和口型是否明确。\n- 武戏是否达到动作密度，每次接触是否有受力和后续结果。\n- 九宫格是否九格全部不同，并依据实际成图撰写视频提示词。\n- 连续性是否来自可见锚点，而不是被错误强制成一镜到底。\n- 输出是否为MiniMax H3可直接复制的自然语言提示词，而不是JSON或其他平台模板。\n- 有图片时是否在绝对开头按实际提交顺序完整输出`@图片1作为XX@图片2作为XX`，随后换行进入“生成一段10秒……”正文；没有图片时是否直接从“生成一段10秒……”开始。\n- 所有约束是否已经转化为正向的人物锁定、动作因果、摄影规则与结果定义。\n\n---\n\n模板结束。\n"
+   ],
+   "widgets_values_named": {
+    "text": "# MiniMax H3 10秒视频提示词三流程模板\n\n以下内容可直接作为AI助手的系统提示词或长期复用模板。\n\n---\n\n你是一名专门为MiniMax H3设计10秒视频的导演与提示词编剧。你的任务不是套用固定分镜，而是先识别用户选择的生产流程，再把用户的一句话故事、粗略想法、剧本片段、单张图片或“图片＋故事”转化成可以直接用于MiniMax H3的紧凑成品提示词；选择九宫格流程时，还要先生成九宫格视觉母版，再依据实际成图生成对应的视频提示词。\n\n## 一、首次入口：必须先确定流程\n\n如果用户尚未明确选择模式，第一条回复只询问以下问题，不提前生成提示词：\n\n```text\n请选择这次要走的流程：\n\n1. 文戏模式：人物关系、对白、微表情、情绪转折与剧情结果。\n2. 武戏模式：高密度打斗、连续攻防、快慢节奏、受力与反制。\n3. 九宫格模式：先生成3×3关键画面，再根据实际九宫格生成对应的H3视频提示词。\n\n你可以直接回复数字，并发送一句大概的故事；也可以直接上传一张图片。我会在选定模式后继续生成。\n```\n\n如果用户已经明确说出“文戏”“武戏”“九宫格”或对应数字，不再重复询问。若用户已经同时提供模式和故事或图片，立即开始生成，不再要求确认。\n\n如果用户先发了故事或图片但没有选择模式，保留并分析已有内容，只询问模式，继续沿用已经收到的素材。\n\n## 二、支持的输入方式\n\n### 1. 用户只提供粗略故事\n\n故事可以只有一句话。提取其中的主体、关系、目标、阻碍、关键动作、情绪转折、结局和风格线索。缺少普通美术细节时自行做合理决定，不把用户拦在连续的选择题前。\n\n### 2. 用户只提供一张图片\n\n先观察图片中的人物或主体数量、外貌、服装、道具、环境、时代、材质、光线、色彩和构图。图片负责锁定可见身份与视觉世界，所选模式负责推导动作和叙事。\n\n- 文戏模式：从人物姿态、关系距离、道具和环境中推导一个克制、可理解的关系转折。\n- 武戏模式：锁定图片中的主角与装备；若图片没有对手，设计一个与现有世界观匹配、轮廓明显不同的对手。\n- 九宫格模式：把图片视为视觉母版或主体参考，派生九个连续但构图不同的关键状态。\n\n### 3. 用户同时提供图片和故事\n\n图片锁定人物、物体、服装、材质、场景与色彩；故事锁定事件顺序、角色关系、动作结果和结尾。两者冲突时优先保留图片中可见的身份特征，同时用故事决定后续事件。\n\n只有以下信息会实质改变成片且无法从素材判断时，才补问一个简短问题：谁是主角、文戏对白使用什么语言、用户是否要求特定结局。其他细节自行完成。\n\n### 4. 图片引用前缀\n\n先统计本次最终会与提示词一起提交给H3的全部图片，并按照实际提交顺序编号为图片1、图片2、图片3，依次类推。观察每张图片承担的真实功能，用简短、明确的中文写出角色、主体、场景、动作、构图、风格、装备、界面或九宫格时序等用途。\n\n存在图片时，最终提示词的绝对开头使用一整行连续图片引用，格式为：\n\n```text\n@图片1作为主角身份与服装参考@图片2作为对手身份与装备参考@图片3作为场景与光影参考\n```\n\n图片数量与引用数量完全一致，每张图片只编号一次，一张图片承担多个功能时合并为一句，例如`@图片1作为人物身份、服装与场景参考`。九宫格图片用于生成视频时写为`@图片1作为九宫格时序、构图与画面状态参考`。图片引用行结束后换行，下一行直接进入“生成一段……”正文。当前任务没有图片时，提示词第一行直接进入“生成一段……”正文。\n\n## 三、全局生成规格\n\n用户没有另行指定时，默认：10秒、16:9、2K、MiniMax H3、开启原生立体声。\n\n成品提示词统一采用自然语言制作简报格式：\n\n1. 影片目标与核心概念。\n2. 固定人物、主体、场景、道具与一致性。\n3. 按时间连续覆盖0—10秒的画面和动作。\n4. 剪辑、摄影、表演或动作规则。\n5. 视觉风格与材质。\n6. 声音设计。\n7. 收束人物、动作、镜头与结尾一致性的正向结果。\n\n最终成品回复只包含一份可以直接复制进MiniMax H3的完整中文提示词正文。存在图片时，第一行先按图片引用前缀规则输出全部`@图片N作为XX`，第二行直接以“生成一段10秒、16:9、2K、原生立体声……”开头；当前任务没有图片时，第一行直接以“生成一段10秒、16:9、2K、原生立体声……”开头。随后依次写核心概念、人物或主体锁定、0—10秒时间线、镜头运动、视觉材质和声音设计，最后一句结束整条回复。\n\n所有成品提示词采用全正向描述结构，只陈述画面需要呈现的元素、动作、镜头、时长、声音和结果。约束转换为人物锁定、动作因果、镜头规则、时间预算与画面结果，并放在对应内容中就地表达。成品始终以“生成什么”为核心。\n\n时间段必须无缺口地覆盖完整10秒。连续不等于一镜到底；默认允许硬切、匹配剪辑、遮挡切换和尺度跳切。连续感应来自人物身份、空间轴线、动作余势、核心道具、运动方向、色彩母题或声音桥。只有用户明确要求时才设计一镜到底。\n\n如果用户要求参考某部作品，只提炼节奏、尺度、摄影、材质或情绪机制，不复制其角色、服装、怪物、标志性场景和专有名称。\n\n## 四、流程1：文戏模式\n\n### 核心目标\n\n让10秒承载一次清楚的关系变化，例如识破、承认、拒绝、原谅、背叛、离开、决定或失去。先确定“关系在开始和结束时分别是什么”，再将触发、反应、决定和结果集中在10秒内。\n\n### 生成机制\n\n1. 选择一个能被摄影机看懂的核心证据或道具，让它触发关系变化。\n2. 用4—6个时间段完成：建立关系与空间、证据出现、对方回应、主角决定、行为结果、情绪余波。\n3. 每次切镜由新信息、说话权变化、视线目标变化、道具状态变化、人物距离变化或行动决定触发，不按每句台词机械正反打。\n4. 中近景或特写只保留2—3个协同的表演信号，例如目光停顿、呼吸变化、未完成的手部动作和身体重心变化。微表情必须前后连续，不写抽象的“他很悲伤”。\n5. 对白控制为两至四句短句，并能在10秒内自然说完；写清说话人、原文台词、使用语言、声音质感和口型同步。外国时代或地区故事默认使用当地自然语言；无法判断时才询问用户。\n6. 用户故事包含枪击、受伤、鲜血、倒地、拥抱、离开等结果时，结果必须按用户要求在画面内完整发生，不擅自移到画外或改成含蓄替代。\n7. 结尾保留0.4—0.8秒呈现行为后果或表情余波，让最终画面完成关系变化。\n\n### 文戏输出要求\n\n最终回复只输出一份完整H3自然语言提示词正文，图片引用遵循全局前缀规则，正文从“生成一段10秒……”开始，并包含人物锁定、对白语言、0—10秒时间线、表演与剪辑、视觉风格、声音设计和明确结尾结果。\n\n## 五、流程2：武戏模式\n\n### 核心目标\n\n构建高速但可读的连续攻防。动作数量不是装饰动作的堆叠；每个有效动作必须改变距离、姿态、控制权、环境或下一招路径。\n\n### 默认节奏预算\n\n- 开场起势：控制在0.20—0.35秒，迅速进入第一次攻防。\n- 有效动作：10秒内安排10—16个，包括攻击、闪避、格挡、借力、受击、追击、环境互动和反制。\n- 单个1.2—2.0秒动作段：通常包含3—5个互相衔接的有效动作。\n- 慢动作：0—2次，总时长控制在0.20—0.35秒，只用于关键接触帧。\n- 结尾状态：保留0.20—0.30秒呈现受力、卸力和明确结果。\n\n### 生成机制\n\n1. 先锁定双方轮廓、尺寸、装备、能力边界、惯用手和空间位置。\n2. 设计一条紧凑战斗因果链：先手进入、第一次交换、对手升级或环境变化、控制权反转、终结动作、结果落地。\n3. 上一招未完全收回时，下一招已经启动；格挡后的受力直接成为翻越、旋转、位移或反斩的动力，不在每一招后重新站稳摆姿势。\n4. 每次攻击写清起手方向、目标、接触位置、受力反应和下一动作来源，用具体动作取代“双方高速激战”“连续打斗”等概括句。\n5. 使用墙面、平台、碎片、绳索、车辆、重力或地形时，环境互动必须改变战斗局面，而不是背景特效。\n6. 高速摄影仍需可读：每组连招保持一个主要运动方向，只有人物真实换向、借墙反弹或重力改变时才改变摄影轴线。\n7. 允许硬切与速度坡度，切点落在接触、遮挡、落地、破障或方向匹配处；镜头保持动作主体、接触点和受力结果清晰，火花与碎片只强化已经发生的攻击。\n8. 终结动作包含命中、对手的物理反应、主角卸力和明确结果；不在命中瞬间直接跳到胜利姿势。\n\n### 武戏输出要求\n\n最终回复只输出一份完整H3自然语言提示词正文，图片引用遵循全局前缀规则，正文从“生成一段10秒……”开始，并包含双方与场景锁定、0—10秒高速动作时间线、动作密度与速度规则、摄影原则、视觉材质、声音节拍和结果落地。\n\n## 六、流程3：九宫格模式\n\n### 核心目标\n\n九宫格不是九张无关海报，也不默认代表一镜到底。它是九个清晰可辨的关键画面，可用于展示九个镜头、九个动作峰值或同一主体的九个演化状态。连续感通过稳定主体、核心物件、材质继承、运动方向、色彩发展或构图匹配建立；允许硬切。\n\n### 阶段A：生成九宫格\n\n1. 从故事或图片中提取一个稳定主体和一条10秒视觉发展线。\n2. 把发展线拆成从左到右、从上到下的1—9格，每格承担不同任务，不重复同一种构图。\n3. 九格应覆盖：建立、触发、升级、第一次变化、中段主体状态、第二次升级、高潮形成、接近完成、最终画面。武戏题材可改为九个动作峰值，文戏题材可改为九个关系与表演节点。\n4. 生成一张整体16:9、2048×1152的3×3故事板，九个等大宽银幕画格，使用细而整洁的中性分隔线。\n5. 同一人物或主体的身份、服装、装备、材质和关键配色贯穿九格；镜位、景别、姿态和动作必须明显变化。\n6. 如果具备图像生成工具，直接生成图片并保存到用户可访问的位置；如果没有工具，只输出可以直接用于图像模型的完整九宫格提示词，不声称已经生成。\n\n### 阶段B：依据实际成图生成H3提示词\n\n九宫格生成完成后，必须先观察实际输出，再撰写视频提示词。逐格记录实际画面中的主体姿态、镜位、道具、空间状态、颜色和可见差异。最终H3提示词以实际九宫格为准，不沿用生成前已经发生偏差的旧分镜。\n\n1. 明确说明九宫格按从左到右、从上到下对应1—9镜或1—9状态。\n2. 为九格分配无缺口的0—10秒时间段。九格按1—3格进入、4—6格核心变化、7—9格高潮与结果组织，每格获得约0.8—1.3秒的可辨认状态并完整进入成片。\n3. 每一格写出“进入方式、画面中的主动作、离开方式”，并让前后格通过动作方向、形状、颜色、道具、遮挡或声音关联。\n4. 九格可以硬切，不把“连续”误写成强制一镜到底；如果用户明确要求一镜到底，再将九格改写为状态图谱和连续摄影路径。\n5. 精确文字容易失真时，九宫格先表达字体造型和空间关系，最终可读文案交由后期覆盖，并明确标记需要后期替换的文字层。\n\n### 九宫格输出要求\n\n默认交付两项：\n\n1. 生成并展示九宫格图片，或在无图像工具时提供完整九宫格出图提示词。\n2. 根据实际九宫格生成一份对应的MiniMax H3自然语言视频提示词。\n\n如果用户明确说“只要九宫格”或“先看图”，完成阶段A后暂停，等待用户确认再进入阶段B。\n\n## 七、修改规则\n\n用户要求修改任何角色、动作、台词、语言、节奏、受伤结果、转场或画面时，先判断问题属于人物锁定、时间预算、动作因果、关系变化、九格映射还是输出格式。修正上游结构后，重新输出一份结构统一、可以直接使用的完整成品提示词。\n\n如果用户说“连续”，默认理解为叙事、动作或视觉关联，允许使用有关联的硬切。用户明确说“长镜头”“无剪辑”或“一镜到底”时，再改用连续长镜头结构。\n\n## 八、交付前自检\n\n生成前逐项检查：\n\n- 是否已经确定文戏、武戏或九宫格流程。\n- 是否复用了用户已经给出的故事或图片，没有要求重复发送。\n- 是否保持人物、服装、装备、主体和场景一致。\n- 时间段是否无缺口覆盖0—10秒。\n- 文戏是否只有一次清楚的关系变化，对白语言和口型是否明确。\n- 武戏是否达到动作密度，每次接触是否有受力和后续结果。\n- 九宫格是否九格全部不同，并依据实际成图撰写视频提示词。\n- 连续性是否来自可见锚点，而不是被错误强制成一镜到底。\n- 输出是否为MiniMax H3可直接复制的自然语言提示词，而不是JSON或其他平台模板。\n- 有图片时是否在绝对开头按实际提交顺序完整输出`@图片1作为XX@图片2作为XX`，随后换行进入“生成一段10秒……”正文；没有图片时是否直接从“生成一段10秒……”开始。\n- 所有约束是否已经转化为正向的人物锁定、动作因果、摄影规则与结果定义。\n\n---\n\n模板结束。\n"
+   },
+   "color": "#233",
+   "bgcolor": "#355"
+  },
+  {
+   "id": 258,
+   "type": "LoadImage",
+   "pos": [
+    -4098.512526126198,
+    5270.944085927082
+   ],
+   "size": [
+    288.9223327636719,
+    326
+   ],
+   "flags": {},
+   "order": 39,
+   "mode": 4,
+   "inputs": [
+    {
+     "label": "image",
+     "name": "image",
+     "type": "COMBO",
+     "widget": {
+      "name": "image"
+     }
+    },
+    {
+     "label": "upload",
+     "name": "upload",
+     "type": "IMAGEUPLOAD",
+     "widget": {
+      "name": "upload"
+     }
+    }
+   ],
+   "outputs": [
+    {
+     "label": "IMAGE",
+     "name": "IMAGE",
+     "type": "IMAGE",
+     "links": []
+    },
+    {
+     "label": "MASK",
+     "name": "MASK",
+     "type": "MASK"
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "LoadImage",
+    "cnr_id": "comfy-core",
+    "ver": "0.30.0",
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.5.2"
+    },
+    "widget_ue_connectable": {}
+   },
+   "widgets_values": [
+    "Codex 图像 2026年9月11日 21_04_23.png",
+    "image"
+   ],
+   "widgets_values_named": {
+    "image": "Codex 图像 2026年9月11日 21_04_23.png",
+    "upload": "image"
+   },
+   "color": "#233",
+   "bgcolor": "#355"
+  },
+  {
+   "id": 325,
+   "type": "LoadAudio",
+   "pos": [
+    -3803.162748587599,
+    4664.453010733906
+   ],
+   "size": [
+    270,
+    136
+   ],
+   "flags": {},
+   "order": 40,
+   "mode": 4,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "AUDIO",
+     "type": "AUDIO",
+     "links": []
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "LoadAudio",
+    "cnr_id": "comfy-core",
+    "ver": "0.34.1",
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.8"
+    }
+   },
+   "widgets_values": [
+    "佩利卡语音.mp3",
+    null,
+    null
+   ],
+   "widgets_values_named": {
+    "audio": "佩利卡语音.mp3",
+    "upload": null
+   }
+  },
+  {
+   "id": 139,
+   "type": "LoadImage",
+   "pos": [
+    -4092.039259722661,
+    4886.018969895861
+   ],
+   "size": [
+    271.2914123535156,
+    326
+   ],
+   "flags": {},
+   "order": 41,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "image",
+     "name": "image",
+     "type": "COMBO",
+     "widget": {
+      "name": "image"
+     }
+    },
+    {
+     "label": "upload",
+     "name": "upload",
+     "type": "IMAGEUPLOAD",
+     "widget": {
+      "name": "upload"
+     }
+    }
+   ],
+   "outputs": [
+    {
+     "label": "IMAGE",
+     "name": "IMAGE",
+     "type": "IMAGE",
+     "links": [
+      282
+     ]
+    },
+    {
+     "label": "MASK",
+     "name": "MASK",
+     "type": "MASK"
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "LoadImage",
+    "cnr_id": "comfy-core",
+    "ver": "0.30.0",
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.5.2"
+    },
+    "widget_ue_connectable": {}
+   },
+   "widgets_values": [
+    "comfy-split-test.png",
+    "image"
+   ],
+   "widgets_values_named": {
+    "image": "Codex 图像 2026年9月13日 01_55_53.png",
+    "upload": "image"
+   },
+   "color": "#233",
+   "bgcolor": "#355"
+  },
+  {
+   "id": 256,
+   "type": "LoadImage",
+   "pos": [
+    -3793.1278418814068,
+    4882.338678212239
+   ],
+   "size": [
+    288.9223327636719,
+    326
+   ],
+   "flags": {},
+   "order": 42,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "image",
+     "name": "image",
+     "type": "COMBO",
+     "widget": {
+      "name": "image"
+     }
+    },
+    {
+     "label": "upload",
+     "name": "upload",
+     "type": "IMAGEUPLOAD",
+     "widget": {
+      "name": "upload"
+     }
+    }
+   ],
+   "outputs": [
+    {
+     "label": "IMAGE",
+     "name": "IMAGE",
+     "type": "IMAGE",
+     "links": []
+    },
+    {
+     "label": "MASK",
+     "name": "MASK",
+     "type": "MASK"
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "LoadImage",
+    "cnr_id": "comfy-core",
+    "ver": "0.30.0",
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.5.2"
+    },
+    "widget_ue_connectable": {}
+   },
+   "widgets_values": [
+    "佩利卡.png",
+    "image"
+   ],
+   "widgets_values_named": {
+    "image": "佩利卡.png",
+    "upload": "image"
+   },
+   "color": "#233",
+   "bgcolor": "#355"
+  },
+  {
+   "id": 257,
+   "type": "LoadImage",
+   "pos": [
+    -3482.85795028885,
+    4885.067743153644
+   ],
+   "size": [
+    288.9223327636719,
+    326
+   ],
+   "flags": {},
+   "order": 43,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "image",
+     "name": "image",
+     "type": "COMBO",
+     "widget": {
+      "name": "image"
+     }
+    },
+    {
+     "label": "upload",
+     "name": "upload",
+     "type": "IMAGEUPLOAD",
+     "widget": {
+      "name": "upload"
+     }
+    }
+   ],
+   "outputs": [
+    {
+     "label": "IMAGE",
+     "name": "IMAGE",
+     "type": "IMAGE",
+     "links": []
+    },
+    {
+     "label": "MASK",
+     "name": "MASK",
+     "type": "MASK"
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "LoadImage",
+    "cnr_id": "comfy-core",
+    "ver": "0.30.0",
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.5.2"
+    },
+    "widget_ue_connectable": {}
+   },
+   "widgets_values": [
+    "Codex 图像 2026年9月2日 09_12_35.png",
+    "image"
+   ],
+   "widgets_values_named": {
+    "image": "Codex 图像 2026年9月2日 09_12_35.png",
+    "upload": "image"
+   },
+   "color": "#233",
+   "bgcolor": "#355"
+  },
+  {
+   "id": 141,
+   "type": "ModelPreviewOverrideKJ",
+   "pos": [
+    -2185.9701900475893,
+    5673.658712284641
+   ],
+   "size": [
+    554.0032190441948,
+    466.98938136217566
+   ],
+   "flags": {},
+   "order": 59,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "model",
+     "name": "model",
+     "type": "MODEL",
+     "link": 412
+    },
+    {
+     "label": "vae",
+     "name": "vae",
+     "shape": 7,
+     "type": "VAE"
+    },
+    {
+     "label": "max_resolution",
+     "name": "max_resolution",
+     "type": "INT",
+     "widget": {
+      "name": "max_resolution"
+     }
+    },
+    {
+     "label": "jpeg_quality",
+     "name": "jpeg_quality",
+     "type": "INT",
+     "widget": {
+      "name": "jpeg_quality"
+     }
+    },
+    {
+     "label": "suppress_default_preview",
+     "name": "suppress_default_preview",
+     "type": "BOOLEAN",
+     "widget": {
+      "name": "suppress_default_preview"
+     }
+    },
+    {
+     "label": "preview_frames",
+     "name": "preview_frames",
+     "type": "INT",
+     "widget": {
+      "name": "preview_frames"
+     },
+     "link": 283
+    },
+    {
+     "label": "preview_fps",
+     "name": "preview_fps",
+     "type": "INT",
+     "widget": {
+      "name": "preview_fps"
+     }
+    }
+   ],
+   "outputs": [
+    {
+     "label": "MODEL",
+     "name": "MODEL",
+     "type": "MODEL",
+     "links": [
+      410
+     ]
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "ModelPreviewOverrideKJ",
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.5.2"
+    },
+    "widget_ue_connectable": {
+     "preview_frames": true
+    },
+    "kjPovPanelH": 140,
+    "models": [
+     {
+      "directory": "vae_approx",
+      "name": "taeh3.safetensors",
+      "url": "https://huggingface.co/OzzyGT/taeh3/resolve/main/taeh3.safetensors"
+     }
+    ]
+   },
+   "widgets_values": [
+    1024,
+    80,
+    true,
+    1,
+    12,
+    "taeh3.safetensors",
+    ""
+   ],
+   "widgets_values_named": {
+    "max_resolution": 1024,
+    "jpeg_quality": 80,
+    "suppress_default_preview": true,
+    "preview_frames": 1,
+    "preview_fps": 12,
+    "tiny_vae": "taeh3.safetensors",
+    "preview": ""
+   },
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 328,
+   "type": "VHS_LoadVideo",
+   "pos": [
+    -4636.23348019619,
+    5350.076266541906
+   ],
+   "size": [
+    261.6533203125,
+    459.80517174586777
+   ],
+   "flags": {},
+   "order": 44,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "meta_batch",
+     "shape": 7,
+     "type": "VHS_BatchManager",
+     "link": null
+    },
+    {
+     "name": "vae",
+     "shape": 7,
+     "type": "VAE",
+     "link": null
+    }
+   ],
+   "outputs": [
+    {
+     "name": "IMAGE",
+     "type": "IMAGE",
+     "links": []
+    },
+    {
+     "name": "frame_count",
+     "type": "INT",
+     "links": null
+    },
+    {
+     "name": "audio",
+     "type": "AUDIO",
+     "links": []
+    },
+    {
+     "name": "video_info",
+     "type": "VHS_VIDEOINFO",
+     "links": null
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "VHS_LoadVideo"
+   },
+   "widgets_values": {
+    "video": "9月1日 (1)(1).mp4",
+    "force_rate": 24,
+    "custom_width": 0,
+    "custom_height": 0,
+    "frame_load_cap": 0,
+    "skip_first_frames": 0,
+    "select_every_nth": 1,
+    "format": "AnimateDiff",
+    "videopreview": {
+     "hidden": false,
+     "paused": false,
+     "params": {
+      "filename": "9月1日 (1)(1).mp4",
+      "type": "input",
+      "format": "video/mp4",
+      "force_rate": 24,
+      "custom_width": 0,
+      "custom_height": 0,
+      "frame_load_cap": 0,
+      "skip_first_frames": 0,
+      "select_every_nth": 1
+     }
+    }
+   },
+   "widgets_values_named": {
+    "video": "9月1日 (1)(1).mp4",
+    "force_rate": 24,
+    "custom_width": 0,
+    "custom_height": 0,
+    "frame_load_cap": 0,
+    "skip_first_frames": 0,
+    "select_every_nth": 1,
+    "format": "AnimateDiff",
+    "choose video to upload": null,
+    "videopreview": {
+     "hidden": false,
+     "paused": false,
+     "params": {
+      "filename": "9月1日 (1)(1).mp4",
+      "type": "input",
+      "format": "video/mp4",
+      "force_rate": 24,
+      "custom_width": 0,
+      "custom_height": 0,
+      "frame_load_cap": 0,
+      "skip_first_frames": 0,
+      "select_every_nth": 1
+     }
+    }
+   }
+  },
+  {
+   "id": 132,
+   "type": "PrimitiveFloat",
+   "pos": [
+    -4149.216551869631,
+    4542.7789640087185
+   ],
+   "size": [
+    270,
+    70
+   ],
+   "flags": {},
+   "order": 45,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "value",
+     "name": "value",
+     "type": "FLOAT",
+     "widget": {
+      "name": "value"
+     }
+    }
+   ],
+   "outputs": [
+    {
+     "label": "FLOAT",
+     "name": "FLOAT",
+     "type": "FLOAT",
+     "links": [
+      261
+     ]
+    }
+   ],
+   "title": "Float (Duration)",
+   "properties": {
+    "Node name for S&R": "PrimitiveFloat",
+    "cnr_id": "comfy-core",
+    "ver": "0.30.0",
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.5.2"
+    },
+    "widget_ue_connectable": {}
+   },
+   "widgets_values": [
+    2.0
+   ],
+   "widgets_values_named": {
+    "value": 9
+   },
+   "color": "#233",
+   "bgcolor": "#355"
+  },
+  {
+   "id": 138,
+   "type": "PrimitiveStringMultiline",
+   "pos": [
+    -4024.497941387884,
+    5916.416157767766
+   ],
+   "size": [
+    695.2995419800263,
+    684.4129474544243
+   ],
+   "flags": {},
+   "order": 46,
+   "mode": 0,
+   "inputs": [
+    {
+     "label": "value",
+     "name": "value",
+     "type": "STRING",
+     "widget": {
+      "name": "value"
+     }
+    }
+   ],
+   "outputs": [
+    {
+     "label": "STRING",
+     "name": "STRING",
+     "type": "STRING",
+     "links": [
+      279
+     ]
+    }
+   ],
+   "title": "Input Text (Prompt)",
+   "properties": {
+    "Node name for S&R": "PrimitiveStringMultiline",
+    "cnr_id": "comfy-core",
+    "ver": "0.30.0",
+    "ue_properties": {
+     "widget_ue_connectable": {},
+     "input_ue_unconnectable": {},
+     "version": "7.5.2"
+    },
+    "widget_ue_connectable": {}
+   },
+   "widgets_values": [
+    "A simple test scene: a red cube slowly rotating on a wooden table, soft studio light, no people, no text."
+   ],
+   "widgets_values_named": {
+    "value": "subject_definitions:\n\\<Subject 1>是\\<Picture 1>中的黑衣面罩成年女性。完整保持女性脸型、短款深灰黑色头发、整齐刘海、侧面金属发饰、覆盖眼睛和上半张脸的深色机械面罩、宽松黑色短袖T恤、黑色短裤、裸露双手、裸露双腿和赤脚。她是目标视频中唯一的主动角色。\n\n\\<Subject 2>是\\<Picture 2>中的佩利卡，成年女性。完整保持蓝色眼睛、浅金色长发、两侧大型羽毛状耳朵、白色发饰、白色无袖短裙、黑色高领、蓝黑色腰带与垂落皮带、黑色半透明连裤袜和黑色高跟鞋。她是目标视频中唯一的躺卧角色。\n\n\\<Subject 3>是\\<Picture 3>中的高级未来科技接待空间。完整保持黑色金属结构、深色光滑地面、宽大的未来接待台、暖黄色悬挂灯泡、隐藏式暖色灯带，以及由岩石、苔藓、绿色植物、蓝色小花和冷蓝色光束构成的生态景观墙。\n\n\\<Subject 4>是从\\<Video 1>中提取的无身份动作模板。它只包含两名人物的骨骼动作、身体朝向、相对位置、肢体接触点、动作速度、表情变化时机、双腿下降路径和双手移动路径，不包含原视频人物的脸、性别、头发、服装、配饰、颜色或身体材质。\n\n\\<Video 1>是持续9.540秒的摄影与时间轴参考。它只定义0.000–5.500秒的面部特写构图、5.500秒附近的硬切，以及5.500–9.540秒的低位侧向腿部特写机位。原视频人物只是动作占位体，不是目标角色。\n\nsummary:\n[reference generation] 生成9:16竖屏、持续准确9.540秒的参考生成视频。\\<Picture 1>与\\<Picture 2>是两名角色唯一且最高优先级的身份和外观来源，\\<Picture 3>是唯一场景来源。使用\\<Subject 4>完整复现动作，并使用\\<Video 1>参考摄影机与切镜时间。必须从第一帧开始彻底删除原视频人物的视觉身份，画面中始终只能出现\\<Subject 1>和\\<Subject 2>。\n\nretention_analysis:\n\\<Subject 1>（全部镜头中的主动角色）：fully_preserved - 从第一帧至最后一帧完整保持\\<Picture 1>中黑衣面罩成年女性的女性身份、面罩、短发、黑色T恤、黑色短裤和裸手，不得变成原视频人物。\n\n\\<Subject 2>（全部镜头中的躺卧角色）：fully_preserved - 从第一帧至最后一帧完整保持\\<Picture 2>中佩利卡的脸、蓝色眼睛、浅金长发、羽毛状耳朵、白色短裙和黑色连裤袜，不得变成原视频人物。\n\n\\<Subject 3>（全部背景）：fully_preserved - 完整使用\\<Picture 3>的未来科技接待空间，原视频背景完全消失。\n\n\\<Subject 4>（全部人物动作）：fully_preserved - 精确保持参考动作的姿势、朝向、接触关系、动作路径、速度、力度和首尾状态，但不携带任何原人物外观。\n\n\\<Video 1>（只提供摄影结构）：weak_reference - 只参考镜头位置、景别、透视、遮挡关系、切镜时间和动作节奏；不复制任何人物像素、人物身份、服装或背景。\n\ndetailed_description:\n高规格AAA二次元3D动作RPG游戏实机剧情过场。9:16竖屏，30 FPS，持续准确9.540秒。精致稳定的半写实三渲二人物模型，干净柔和的动画式面部阴影，高品质3D发丝、布料、金属面罩和半透明连裤袜材质。场景采用\\<Subject 3>的冷暖混合电影照明。\n\n参考优先级强制规定：\n第一优先级是\\<Picture 1>与\\<Picture 2>的人物身份和外观。\n第二优先级是\\<Picture 3>的场景外观。\n第三优先级才是\\<Subject 4>和\\<Video 1>提供的动作与摄影结构。\n\n生成前必须将\\<Video 1>中的两名原人物抽象成没有脸、没有性别、没有头发、没有服装、没有颜色、没有材质的透明骨骼动作代理。\n\n将原视频主动角色的骨骼动作映射给\\<Subject 1>，将原视频躺卧角色的骨骼动作映射给\\<Subject 2>。只保留动作数据，彻底丢弃原人物的视觉信息。\n\n严禁直接输出\\<Video 1>的原始画面。严禁在第一帧短暂出现原人物后再变身。人物替换必须在0.000秒之前已经完成。\n\n[Shot 1] 0.000–5.500秒：\n严格参考\\<Video 1>第一个镜头的贴近面部特写机位、透视关系、人物占屏比例和固定摄影机。\n\n\\<Subject 2>仰卧，脸部位于竖屏画面中央偏下，占据画面主体。她必须从第一帧开始就是\\<Picture 2>中的佩利卡：浅金色长发、蓝色眼睛和大型羽毛状耳朵清楚可见。不得出现原视频人物的白色卷发、金色头饰、黄色眼睛或黑金服装。\n\n\\<Subject 1>位于画面左上方近前景，始终面对\\<Subject 2>并缓慢俯身靠近。她必须从第一帧开始就是\\<Picture 1>中的黑衣面罩成年女性：机械面罩、短款深灰黑发和宽松黑色T恤保持稳定。不得出现原视频男性的面孔、黑发造型、黑金制服、金色肩部装饰或男性体型。\n\n0.000–1.500秒，\\<Subject 2>睁眼注视正在靠近的\\<Subject 1>，眼神紧张，嘴唇轻微张开。\\<Subject 1>按照\\<Subject 4>的运动轨迹缓慢降低头部和上半身。\n\n1.500–3.000秒，\\<Subject 2>按照参考动作抬起一只手，手指先自然张开，随后抓住\\<Subject 1>靠近摄影机一侧的上臂和黑色T恤衣料。手掌只能接触上臂，不接触脸、面罩、头发或颈部。\n\n3.000–5.500秒，\\<Subject 1>继续缓慢靠近。\\<Subject 2>逐渐眯起眼睛并闭眼，眉间轻微收紧，嘴唇保持微张，抓住对方上臂的手略微收紧。\n\n两人的面部距离、俯身幅度、头部角度、运动速度和最终姿势严格继承\\<Subject 4>。不添加接吻、撞击、摇头或新的肢体动作。\n\n摄影机固定，不推进、不拉远、不环绕、不升降。9:16适配只能通过竖屏取景完成，不得改变摄影机的物理位置和拍摄方向。\n\n[Shot 2] 5.500–9.540秒：\n在5.500秒直接硬切，严格参考\\<Video 1>第二个镜头的低位侧向腿部极近特写。\n\n摄影机位于\\<Subject 2>身体一侧的大腿和膝盖高度，离地约35厘米，镜头光轴接近水平，从侧面略微斜向横跨两条大腿。\n\n摄影机不得位于两腿中央，不得正对胯部，不得从\\<Subject 2>头部朝脚部拍摄，不得俯拍，不得移动到\\<Subject 1>背后。\n\n画面中只能出现属于\\<Subject 2>的一双腿。靠近摄影机的一条大腿横向占据画面下半部分，另一条弯曲大腿与膝盖位于后方和画面上半部分。两条腿均穿着\\<Subject 2>的黑色半透明连裤袜。\n\n\\<Subject 1>仍然位于\\<Subject 2>两腿之间并正面朝向她，但画面中只能看见\\<Subject 1>的两只前臂和两只裸手。她的机械面罩、头部、躯干、臀部、黑色短裤、双腿、膝盖和脚全部处于画外。\n\n5.500–6.400秒：\n\\<Subject 1>的左手贴住\\<Subject 2>左侧大腿内侧的中上段，右手贴住右侧大腿内侧的中上段。掌心平贴袜面，手指朝对应膝盖方向展开。两只手左右一一对应，不交叉、不叠放。\n\n6.400–8.200秒：\n\\<Subject 2>逐渐失去腿部支撑。她的两条大腿按照\\<Subject 4>的动作轨迹，在重力作用下缓慢向下降低，并自然向身体两侧展开。两个膝盖的高度连续、平稳地下降。\n\n这是\\<Subject 2>脱力造成的自然下滑，不是\\<Subject 1>用力推开双腿。\\<Subject 1>只保持轻柔接触，不主动向两侧施力。\n\n随着两条大腿降低，\\<Subject 1>的双手保持贴合袜面，并被动跟随双腿移动。左手顺着左大腿内侧滑向左膝，右手顺着右大腿内侧滑向右膝。\n\n双手只能沿大腿内侧从靠近髋部的中上段向膝盖方向移动。禁止朝臀部、身体后方或裙底方向移动。禁止抓握、揉捏、往返抚摸或反复推压。\n\n8.200–9.000秒：\n两条大腿逐渐到达较低的位置，运动速度减慢。\\<Subject 1>的两只手分别到达对应膝盖的内侧附近，手指逐渐放松，掌心接触压力减弱。\n\n9.000–9.540秒：\n\\<Subject 1>的两只手同时从左右膝盖内侧轻轻抬起，与袜面完全脱离，随后向画面上方退出。\n\n\\<Subject 2>的两条腿保持降低后的自然分开状态，不重新抬起、不突然合拢。最后一帧仍然保持\\<Video 1>末尾的侧向双腿构图，只将人物完全替换为\\<Subject 1>和\\<Subject 2>。\n\n人物身份强制排除：\n禁止出现参考视频中的原黑发男性、男性侧脸、男性颈部、男性躯干、黑金制服、白色内衬、领带、金色肩甲、金色袖口和黑色露指手套。\n\n禁止出现参考视频中的原白发女性、白色卷发、黄色眼睛、金色头饰、黑金白礼服、蓝色羽毛装饰或原人物面孔。\n\n\\<Subject 1>必须始终是戴机械面罩、穿黑色T恤和黑色短裤的成年女性。她的双手必须是裸手，不得继承原视频中的黑色手套。\n\n\\<Subject 2>必须始终是佩利卡，浅金长发、羽毛状耳朵、蓝色眼睛、白色短裙和黑色半透明连裤袜全部稳定存在。\n\n解剖结构强制规则：\n全片只有两名成年女性。第二个镜头只能出现\\<Subject 2>的两条腿、两个膝盖和两条小腿。\\<Subject 1>的可见腿部数量必须为零。\n\n禁止第三条腿、额外膝盖、多余脚部、多余手臂、多余手掌、六指、手指融合、腿部穿模、身体融合、人物交换身体部位或服装互换。\n\n禁止\\<Subject 1>的臀部进入第二个镜头；禁止黑色短裤或黑色臀部轮廓出现在两条腿之间；禁止向后抚摸；禁止触碰臀部；禁止强行掰腿；禁止人物交换位置或改变朝向。\n\n全程衣着完整，不暴露私密部位。禁止字幕、文字、播放器边框、播放进度条、界面元素、标志和水印。\n\noverall_soundscape:\n不复制\\<Video 1>的音频。全程只有安静的未来室内环境底噪、微弱通风声、自然呼吸声和克制的衣料摩擦声。无对白，不添加夸张人声。\n\nnon_diegetic_music:\nN/A"
+   },
+   "color": "#233",
+   "bgcolor": "#355"
+  },
+  {
+   "id": 902,
+   "type": "SaveLatent",
+   "pos": [
+    2780,
+    930
+   ],
+   "size": [
+    320,
+    110
+   ],
+   "flags": {},
+   "order": 75,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "samples",
+     "type": "LATENT",
+     "link": 910
+    }
+   ],
+   "outputs": [
+    {
+     "name": "samples",
+     "type": "LATENT",
+     "links": null
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "SaveLatent"
+   },
+   "widgets_values": [
+    "split/h3_video"
+   ]
+  },
+  {
+   "id": 903,
+   "type": "SaveLatent",
+   "pos": [
+    2780,
+    1040
+   ],
+   "size": [
+    320,
+    110
+   ],
+   "flags": {},
+   "order": 75,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "samples",
+     "type": "LATENT",
+     "link": 911
+    }
+   ],
+   "outputs": [
+    {
+     "name": "samples",
+     "type": "LATENT",
+     "links": null
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "SaveLatent"
+   },
+   "widgets_values": [
+    "split/h3_audio"
+   ]
+  },
+  {
+   "id": 901,
+   "type": "LTXVSeparateAVLatent",
+   "pos": [
+    2470,
+    820
+   ],
+   "size": [
+    260,
+    60
+   ],
+   "flags": {},
+   "order": 75,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "av_latent",
+     "type": "LATENT",
+     "link": 375
+    }
+   ],
+   "outputs": [
+    {
+     "name": "video_latent",
+     "type": "LATENT",
+     "links": [
+      910
+     ]
+    },
+    {
+     "name": "audio_latent",
+     "type": "LATENT",
+     "links": [
+      911
+     ]
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "LTXVSeparateAVLatent"
+   }
+  }
+ ],
+ "links": [
+  [
+   253,
+   129,
+   0,
+   125,
+   0,
+   "NOISE"
+  ],
+  [
+   254,
+   126,
+   0,
+   125,
+   1,
+   "GUIDER"
+  ],
+  [
+   255,
+   123,
+   0,
+   125,
+   2,
+   "SAMPLER"
+  ],
+  [
+   261,
+   132,
+   0,
+   131,
+   0,
+   "FLOAT"
+  ],
+  [
+   270,
+   136,
+   0,
+   126,
+   1,
+   "CONDITIONING"
+  ],
+  [
+   271,
+   136,
+   1,
+   125,
+   4,
+   "LATENT"
+  ],
+  [
+   272,
+   128,
+   0,
+   136,
+   0,
+   "CLIP"
+  ],
+  [
+   279,
+   138,
+   0,
+   136,
+   17,
+   "STRING"
+  ],
+  [
+   282,
+   139,
+   0,
+   136,
+   3,
+   "IMAGE"
+  ],
+  [
+   283,
+   131,
+   1,
+   141,
+   5,
+   "INT"
+  ],
+  [
+   295,
+   127,
+   0,
+   147,
+   0,
+   "MODEL"
+  ],
+  [
+   327,
+   147,
+   0,
+   149,
+   0,
+   "MODEL"
+  ],
+  [
+   354,
+   208,
+   0,
+   125,
+   3,
+   "SIGMAS"
+  ],
+  [
+   355,
+   129,
+   0,
+   209,
+   0,
+   "NOISE"
+  ],
+  [
+   363,
+   211,
+   1,
+   212,
+   1,
+   "LATENT"
+  ],
+  [
+   365,
+   212,
+   0,
+   209,
+   4,
+   "LATENT"
+  ],
+  [
+   375,
+   209,
+   0,
+   901,
+   0,
+   "LATENT"
+  ],
+  [
+   384,
+   125,
+   1,
+   211,
+   0,
+   "LATENT"
+  ],
+  [
+   386,
+   178,
+   0,
+   224,
+   0,
+   "MODEL"
+  ],
+  [
+   390,
+   120,
+   0,
+   226,
+   0,
+   "VAE"
+  ],
+  [
+   391,
+   119,
+   0,
+   227,
+   0,
+   "VAE"
+  ],
+  [
+   392,
+   131,
+   1,
+   228,
+   0,
+   "INT"
+  ],
+  [
+   393,
+   229,
+   0,
+   136,
+   20,
+   "INT"
+  ],
+  [
+   394,
+   115,
+   0,
+   230,
+   0,
+   "INT"
+  ],
+  [
+   395,
+   115,
+   1,
+   231,
+   0,
+   "INT"
+  ],
+  [
+   396,
+   232,
+   0,
+   136,
+   18,
+   "INT"
+  ],
+  [
+   397,
+   233,
+   0,
+   136,
+   19,
+   "INT"
+  ],
+  [
+   398,
+   234,
+   0,
+   136,
+   1,
+   "VAE"
+  ],
+  [
+   399,
+   235,
+   0,
+   136,
+   2,
+   "VAE"
+  ],
+  [
+   402,
+   208,
+   1,
+   239,
+   0,
+   "SIGMAS"
+  ],
+  [
+   403,
+   208,
+   0,
+   240,
+   0,
+   "SIGMAS"
+  ],
+  [
+   404,
+   123,
+   0,
+   241,
+   0,
+   "SAMPLER"
+  ],
+  [
+   405,
+   129,
+   0,
+   242,
+   0,
+   "NOISE"
+  ],
+  [
+   406,
+   244,
+   0,
+   209,
+   3,
+   "SIGMAS"
+  ],
+  [
+   407,
+   126,
+   0,
+   245,
+   0,
+   "GUIDER"
+  ],
+  [
+   408,
+   246,
+   0,
+   209,
+   1,
+   "GUIDER"
+  ],
+  [
+   409,
+   247,
+   0,
+   209,
+   2,
+   "SAMPLER"
+  ],
+  [
+   410,
+   141,
+   0,
+   248,
+   0,
+   "MODEL"
+  ],
+  [
+   412,
+   252,
+   0,
+   141,
+   0,
+   "MODEL"
+  ],
+  [
+   413,
+   253,
+   0,
+   126,
+   0,
+   "MODEL"
+  ],
+  [
+   414,
+   253,
+   0,
+   124,
+   0,
+   "MODEL"
+  ],
+  [
+   415,
+   124,
+   0,
+   254,
+   0,
+   "SIGMAS"
+  ],
+  [
+   416,
+   254,
+   0,
+   208,
+   0,
+   "SIGMAS"
+  ],
+  [
+   425,
+   149,
+   0,
+   178,
+   0,
+   "MODEL"
+  ],
+  [
+   489,
+   211,
+   0,
+   263,
+   0,
+   "LATENT"
+  ],
+  [
+   491,
+   263,
+   0,
+   212,
+   0,
+   "LATENT"
+  ],
+  [
+   910,
+   901,
+   0,
+   902,
+   0,
+   "LATENT"
+  ],
+  [
+   911,
+   901,
+   1,
+   903,
+   0,
+   "LATENT"
+  ]
+ ],
+ "groups": [
+  {
+   "id": 1,
+   "title": "模型加载",
+   "bounding": [
+    -2304.054118001402,
+    4853.273105418739,
+    877.3616935264458,
+    694.29431428921
+   ],
+   "color": "#444",
+   "flags": {}
+  },
+  {
+   "id": 2,
+   "title": "一采",
+   "bounding": [
+    -1088.457785750604,
+    4852.046456973715,
+    496.4094543457031,
+    693.90283203125
+   ],
+   "color": "#444",
+   "flags": {}
+  },
+  {
+   "id": 3,
+   "title": "条件",
+   "bounding": [
+    -1408.8219520103705,
+    4854.146554629966,
+    309.3993388078104,
+    691.0829519715908
+   ],
+   "color": "#444",
+   "flags": {}
+  },
+  {
+   "id": 4,
+   "title": "preview",
+   "bounding": [
+    -2297.6579958639927,
+    5577.325859161611,
+    606.8627174355729,
+    565.0195794642959
+   ],
+   "color": "#444",
+   "flags": {}
+  },
+  {
+   "id": 5,
+   "title": "输入区",
+   "bounding": [
+    -4121.439080488187,
+    4807.93290293012,
+    960.3846164279576,
+    815.049167209203
+   ],
+   "color": "#8AA",
+   "flags": {}
+  },
+  {
+   "id": 6,
+   "title": "二采",
+   "bounding": [
+    -1174.2043521612889,
+    5588.690778986463,
+    586.1980320690845,
+    539.2417525297369
+   ],
+   "color": "#444",
+   "flags": {}
+  },
+  {
+   "id": 7,
+   "title": "Latent放大",
+   "bounding": [
+    -1675.372054763309,
+    5584.69202258866,
+    490.4722066874724,
+    552.8501724451362
+   ],
+   "color": "#444",
+   "flags": {}
+  },
+  {
+   "id": 9,
+   "title": "提示词模版",
+   "bounding": [
+    -3205.957694409476,
+    5931.310281945334,
+    675.6684647657264,
+    755.9178152933819
+   ],
+   "color": "#8AA",
+   "flags": {}
+  },
+  {
+   "id": 20,
+   "title": "Group",
+   "bounding": [
+    -3110.5023141613524,
+    4809.837000965219,
+    739.877232865022,
+    810.0569779592643
+   ],
+   "color": "#8AA",
+   "flags": {}
+  },
+  {
+   "id": 21,
+   "title": "Group",
+   "bounding": [
+    -4112.97522093843,
+    5810.3235985397,
+    1748.7782444935938,
+    921.7219567039565
+   ],
+   "color": "#8AA",
+   "flags": {}
+  },
+  {
+   "id": 22,
+   "title": "Group",
+   "bounding": [
+    -2314.054118001402,
+    4812.046456973715,
+    1736.0477979091954,
+    1340.2989816521922
+   ],
+   "color": "#444",
+   "flags": {}
+  }
+ ],
+ "config": {},
+ "extra": {
+  "VHS_KeepIntermediate": true,
+  "links_added_by_ue": [],
+  "VHS_MetadataImage": true,
+  "ue_links": [],
+  "pixaromaGroups": [],
+  "0246.VERSION": [
+   0,
+   0,
+   4
+  ],
+  "VHS_latentpreviewrate": 0,
+  "frontendVersion": "1.49.6",
+  "VHS_latentpreview": false,
+  "ds": {
+   "scale": 0.6115909044841737,
+   "offset": [
+    4745.843207377738,
+    -4354.542578817598
+   ]
+  }
+ },
+ "version": 0.4
+}

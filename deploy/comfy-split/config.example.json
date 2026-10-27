@@ -1,0 +1,20 @@
+{
+ "watch_dir": "D:/ComfyUI/output/split",
+ "pattern": "h3_video_*.latent",
+ "out_dir": "D:/ComfyUI/output/split-final",
+ "tmp_dir": "D:/ComfyUI/output/split-final/.work",
+ "poll_seconds": 2,
+ "state_file": "orchestrator-state.json",
+ "video_helper": {
+  "url": "http://127.0.0.1:8190",
+  "token": "replace-with-a-long-random-token"
+ },
+ "audio_helper": {
+  "url": "http://127.0.0.1:8190",
+  "token": "replace-with-a-long-random-token"
+ },
+ "mux_helper": {
+  "url": "http://127.0.0.1:8191",
+  "token": "replace-with-a-long-random-token"
+ }
+}

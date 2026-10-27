@@ -11,6 +11,8 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -318,6 +320,7 @@ type Server struct {
 	limiter    *rateLimiter
 	secrets    *secretBox
 	gateway    *gatewayState
+	comfyHub   string // optional reverse-proxy target for the AI video share page
 }
 
 func NewServer(dataDir, baseURL string, st *store.Store, pol Policy) *Server {
@@ -337,6 +340,12 @@ func NewServer(dataDir, baseURL string, st *store.Store, pol Policy) *Server {
 	os.MkdirAll(filepath.Join(dataDir, "jobs"), 0o755)
 	s.restore()
 	return s
+}
+
+// SetComfyHubURL turns on the /comfy/ reverse proxy. The target is an internal
+// HTTP service (ComfyHub) that reuses this broker's session cookie.
+func (s *Server) SetComfyHubURL(u string) {
+	s.comfyHub = strings.TrimRight(strings.TrimSpace(u), "/")
 }
 
 // restore reloads yesterday's state so a broker restart is not a reset: known
@@ -570,6 +579,31 @@ func (s *Server) Handlers() http.Handler {
 	mux.HandleFunc("/v1/models", s.handleV1Models)
 	mux.HandleFunc("/v1/chat/completions", s.handleV1Chat)
 
+	if s.comfyHub != "" {
+		target, err := url.Parse(s.comfyHub)
+		if err != nil || target.Host == "" {
+			log.Printf("comfyhub: invalid URL %q, proxy disabled", s.comfyHub)
+		} else {
+			proxy := httputil.NewSingleHostReverseProxy(target)
+			director := proxy.Director
+			proxy.Director = func(req *http.Request) {
+				req.URL.Path = strings.TrimPrefix(req.URL.Path, "/comfy")
+				if req.URL.Path == "" {
+					req.URL.Path = "/"
+				}
+				director(req)
+				req.Host = target.Host
+			}
+			proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
+				log.Printf("comfyhub proxy: %v", err)
+				http.Error(w, "ComfyHub 暂不可用", http.StatusBadGateway)
+			}
+			mux.Handle("/comfy/", proxy)
+			mux.HandleFunc("/comfy", func(w http.ResponseWriter, r *http.Request) {
+				http.Redirect(w, r, "/comfy/", http.StatusPermanentRedirect)
+			})
+		}
+	}
 	mux.HandleFunc("/", handleIndex)
 	return logWrap(mux)
 }

@@ -1,0 +1,53 @@
+{
+ "1": {
+  "class_type": "LoadLatent",
+  "inputs": {
+   "latent": "LATENT_FILE"
+  }
+ },
+ "2": {
+  "class_type": "VAELoader",
+  "inputs": {
+   "vae_name": "minimax_h3_video_vae_fp16.safetensors"
+  }
+ },
+ "3": {
+  "class_type": "VAEDecodeTiled",
+  "inputs": {
+   "samples": [
+    "1",
+    0
+   ],
+   "vae": [
+    "2",
+    0
+   ],
+   "tile_size": 256,
+   "overlap": 64,
+   "temporal_size": 16,
+   "temporal_overlap": 4
+  }
+ },
+ "4": {
+  "class_type": "CreateVideo",
+  "inputs": {
+   "images": [
+    "3",
+    0
+   ],
+   "fps": 24.0
+  }
+ },
+ "5": {
+  "class_type": "SaveVideo",
+  "inputs": {
+   "video": [
+    "4",
+    0
+   ],
+   "filename_prefix": "split/video",
+   "format": "mp4",
+   "codec": "h264"
+  }
+ }
+}

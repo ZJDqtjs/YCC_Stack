@@ -1,0 +1,25 @@
+[Unit]
+Description=StarStack ComfyHub（AI 视频共享算力）
+After=network-online.target starstack.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=azureuser
+WorkingDirectory=/opt/comfyhub
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3 /opt/comfyhub/comfyhub.py \
+  --host 127.0.0.1 \
+  --port 8788 \
+  --data-dir /opt/comfyhub/data \
+  --static-dir /opt/comfyhub/static \
+  --agent-dir /opt/comfyhub/agents \
+  --broker http://127.0.0.1:8787
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ReadWritePaths=/opt/comfyhub/data
+
+[Install]
+WantedBy=multi-user.target
