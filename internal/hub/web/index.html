@@ -701,6 +701,8 @@ td .tag{margin:2px 4px 2px 0}
 
   <div class="card" id="vm-sell" style="margin-top:18px">
     <h2><span class="kicker">Sell</span>发布我的虚拟机配置</h2>
+    <div class="empty" id="vm-sell-empty" style="display:none"></div>
+    <div id="vm-form">
     <div class="hint" style="margin-top:0">
       Agent 需要以 <code>--vm</code> 启动，并装好 <code>qemu-system-x86_64</code> 与 <code>qemu-img</code>。
       发布时使用节点当前上报的 IPv6；slirp 模式跨平台可用，routed 模式需要 Linux 网桥（<code>--vm-bridge</code>）。
@@ -745,6 +747,7 @@ td .tag{margin:2px 4px 2px 0}
     </div>
     <button class="btn" id="vpublish" style="margin-top:18px">发布配置</button>
     <div id="vmmsg" class="hint"></div>
+    </div>
   </div>
 
   <div class="card" id="vm-mine-card" style="margin-top:18px">
@@ -1480,8 +1483,14 @@ function renderVMLists(){
 }
 function syncVMNodes(){
   const owned=POOL.filter(w=>w.mine && w.vm);
-  const sell=$('#vm-sell');
-  if(sell) sell.style.display=owned.length?'':'none';
+  // 没有可用节点时别把整块藏掉：用户会以为功能不存在，也不知道缺的是什么前提。
+  const form=$('#vm-form'), empty=$('#vm-sell-empty');
+  if(form) form.style.display=owned.length?'':'none';
+  if(empty){
+    empty.style.display=owned.length?'none':'';
+    if(!owned.length) empty.innerHTML='还没有支持虚拟机的节点。用 <code>--vm</code> 启动 Agent'+
+      '（并装好 <code>qemu-system-x86_64</code> 与 <code>qemu-img</code>），节点上线后这里会出现发布表单。';
+  }
   const nodes=owned.filter(w=>w.online);
   const sig=nodes.map(n=>n.id+':'+(n.ipv6||[]).join(',')).join('|');
   if(sig!==VM_NODE_SIG){
@@ -1489,7 +1498,7 @@ function syncVMNodes(){
     const sel=$('#vnode'), cur=sel.value;
     sel.innerHTML=nodes.length?nodes.map(w=>`<option value="${esc(w.id)}">${esc(w.name)} ·
       ${w.cpus} 核 / ${Math.round(w.mem_mb/1024)} GB · ${esc(w.vm.accel||'')}</option>`).join('')
-      :'<option value="">（没有带 --vm 的在线节点）</option>';
+      :'<option value="">（没有在线的 --vm 节点）</option>';
     if(cur && nodes.some(w=>w.id===cur)) sel.value=cur;
     else if(nodes.length) sel.value=nodes[0].id;
     syncVMHosts();
