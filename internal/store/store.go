@@ -216,6 +216,38 @@ CREATE INDEX IF NOT EXISTS idx_vmoffer_node ON vm_offers(node_id);
 CREATE INDEX IF NOT EXISTS idx_vmoffer_owner ON vm_offers(owner_id);
 CREATE INDEX IF NOT EXISTS idx_vminst_buyer ON vm_instances(buyer_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_vminst_node ON vm_instances(node_id, created_at);
+
+CREATE TABLE IF NOT EXISTS user_settings(
+  user_id  TEXT PRIMARY KEY,
+  advanced INTEGER NOT NULL DEFAULT 0);
+
+CREATE TABLE IF NOT EXISTS forum_posts(
+  id         TEXT PRIMARY KEY,
+  user_id    TEXT NOT NULL,
+  title      TEXT NOT NULL,
+  body       TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_forum_post_ts ON forum_posts(created_at);
+
+CREATE TABLE IF NOT EXISTS forum_comments(
+  id         TEXT PRIMARY KEY,
+  post_id    TEXT NOT NULL,
+  user_id    TEXT NOT NULL,
+  body       TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_forum_comment_post ON forum_comments(post_id, created_at);
+
+CREATE TABLE IF NOT EXISTS forum_media(
+  id         TEXT PRIMARY KEY,
+  post_id    TEXT NOT NULL DEFAULT '',
+  comment_id TEXT NOT NULL DEFAULT '',
+  kind       TEXT NOT NULL,
+  name       TEXT NOT NULL,
+  mime       TEXT NOT NULL,
+  size       INTEGER NOT NULL,
+  created_at INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_forum_media_post ON forum_media(post_id);
+CREATE INDEX IF NOT EXISTS idx_forum_media_comment ON forum_media(comment_id);
 `
 
 // Column additions for databases written by an earlier build. SQLite has no

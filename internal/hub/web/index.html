@@ -129,6 +129,22 @@ nav button.on{color:var(--ink);font-weight:500;background:var(--soft)}
 @media(max-width:1080px){.grid,.split{grid-template-columns:1fr}.sticky{position:static}
   .who .uname{display:none}}
 
+/* ---------- 论坛 / 个人资料 ---------- */
+.val{font-size:14px;color:var(--ink);font-family:var(--mono)}
+.postitem{padding:12px 4px;border-bottom:1px solid var(--hair);cursor:pointer}
+.postitem:last-child{border-bottom:0}
+.postitem:hover{background:var(--soft)}
+.postitem h3{margin:0 0 4px;font-size:14px;font-weight:600;color:var(--ink)}
+.postmeta{font:400 11.5px/1.6 var(--mono);color:var(--mute)}
+.postbody{white-space:pre-wrap;line-height:1.7;margin:10px 0;color:var(--ink-2)}
+.media{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.media img,.media video{max-width:240px;max-height:180px;border:1px solid var(--hair);
+  border-radius:6px;display:block;background:var(--soft)}
+.media img{cursor:zoom-in}
+.comment{padding:10px 0;border-bottom:1px solid var(--hair)}
+.comment:last-of-type{border-bottom:0}
+.comment .who2{font-size:12.5px;font-weight:500;color:var(--ink)}
+
 /* ---------- type ---------- */
 .hint{color:var(--mute);font-size:12.5px;line-height:1.65;margin-top:10px}
 .hint.warn,.warn{color:var(--warn)}
@@ -335,10 +351,12 @@ td .tag{margin:2px 4px 2px 0}
     <button data-v="submit" class="on">提交任务</button>
     <button data-v="jobs">我的任务</button>
     <button data-v="vm">云主机</button>
+    <button data-v="forum">论坛</button>
     <button data-v="api">模型 API</button>
     <button data-v="market">算力市场</button>
     <button data-v="nodes">我的节点</button>
     <button data-v="bill">账单</button>
+    <button data-v="me">个人资料</button>
     <a class="navlink" href="/comfy/" target="_blank" rel="noreferrer">AI 视频</a>
   </nav>
 
@@ -385,26 +403,34 @@ td .tag{margin:2px 4px 2px 0}
 <section class="view" id="v-submit">
   <div class="viewhead">
     <h1>提交任务</h1>
-    <p>上传源视频，设定编码参数与硬约束；右侧实时估算预扣，并列出所有可派发的在线节点。</p>
   </div>
   <div class="grid">
     <div class="card">
-      <h2><span class="kicker">Task</span>任务参数</h2>
       <form id="f">
         <div class="row">
           <div><label>任务类型</label><select name="jobkind" id="jobkind">
-            <option value="transcode" selected>视频转码（按秒切片）</option>
-            <option value="blender">Blender 工程渲染（按帧切片）</option>
-            <option value="pr">PR / FCP 时间线渲染（按秒切片）</option>
+            <option value="transcode" selected>视频转码</option>
+            <option value="blender">Blender 动画渲染</option>
+            <option value="pr">剪辑时间线渲染</option>
           </select></div>
-          <div><label>切分片数</label><input name="segs" value="4" inputmode="numeric"></div>
+          <div id="qualitybox"><label>画质</label><select id="quality">
+            <option value="fast">快速</option>
+            <option value="balanced" selected>均衡（推荐）</option>
+            <option value="high">高质量</option>
+          </select></div>
         </div>
 
-        <label>上传文件</label>
+        <label>选择文件</label>
         <input type="file" name="file" id="fileinput" accept="video/*,audio/*">
+
+        <div id="adv-only" style="display:none">
         <div id="pathbox">
-        <label>…或使用服务端本机路径（同机演示更快）</label>
+        <label>…或使用服务端本机路径</label>
         <input name="path" placeholder="D:/videos/input.mp4">
+        </div>
+        <div class="row">
+          <div><label>切分片数</label><input name="segs" value="4" inputmode="numeric"></div>
+          <div></div>
         </div>
 
         <div id="render-blender" style="display:none">
@@ -428,14 +454,13 @@ td .tag{margin:2px 4px 2px 0}
             </div>
             <div class="row">
               <div><label>分辨率百分比（0=场景设置）</label><input name="percent" value="0" inputmode="numeric"></div>
-              <div class="hint">把 .blend 连同贴图、缓存打成 zip 最稳；也可直接传 .blend。节点需安装 Blender，并在 PATH 中或用 --blender 指定。</div>
+              <div class="hint">把 .blend 和贴图、缓存打成 zip 上传更稳。</div>
             </div>
           </fieldset>
         </div>
 
         <div id="render-pr" style="display:none" class="hint">
-          上传 zip：Premiere「文件 → 导出 → Final Cut Pro XML」得到的 XML（或 FCPXML）＋所有素材，素材按文件名匹配。
-          .prproj 不能直接渲染；效果、转场、多轨合成不在交换格式里，分发渲染会按剪辑点与入出点原样还原时间线。
+          上传 zip：从 Premiere 导出 Final Cut Pro XML（或 FCPXML），连同所有素材一起打包。
         </div>
 
         <fieldset class="fieldset" id="transcode-fields">
@@ -460,7 +485,7 @@ td .tag{margin:2px 4px 2px 0}
         </fieldset>
 
         <fieldset class="fieldset">
-          <legend>硬件与运行时要求（硬约束过滤）</legend>
+          <legend>硬件要求（可选）</legend>
           <div class="row">
             <div><label>需要独显</label><select name="need_gpu"><option value="0">不限</option><option value="1">必须有 GPU</option></select></div>
             <div><label>最小显存 MB</label><input name="min_gpu_mem" value="0" inputmode="numeric" placeholder="0=不限"></div>
@@ -487,10 +512,11 @@ td .tag{margin:2px 4px 2px 0}
 
         <label class="check" id="baselinebox">
           <input type="checkbox" name="baseline" value="1" checked style="width:auto">
-          同时跑单机基线（真实加速比的可测量依据；基线用 broker 本机算力，不结算给任何节点）
+          同时跑单机基线（用于真实加速比对比）
         </label>
+        </div>
         <div class="formfoot">
-          <button type="submit" class="btn auto" id="submitbtn">提交任务</button>
+          <button type="submit" class="btn auto" id="submitbtn">开始处理</button>
           <div id="msg" class="hint"></div>
         </div>
       </form>
@@ -498,16 +524,13 @@ td .tag{margin:2px 4px 2px 0}
 
     <div class="sticky">
       <div class="card">
-        <h2><span class="kicker">Estimate</span>报价与可调度算力</h2>
+        <h2><span class="kicker">报价</span>预计花费</h2>
         <div id="quote" class="quote">选择文件后自动估算</div>
-      </div>
-      <div class="card">
-        <h2><span class="kicker">Billing</span>计价规则</h2>
-        <div class="hint" style="margin-top:0">
-          预扣 = 视频总时长 ×「满足全部硬约束的最贵在线节点」单价：宁可多扣，也不让任务中途故障转移
-          到更贵机器时平台倒贴。实际按每个分片「视频秒数 × 派发时锁定的单价」结算，差额在完成或失败时退还。
-        </div>
         <div id="deadlinenote" class="hint"></div>
+      </div>
+      <div class="card" id="tipcard">
+        <h2><span class="kicker">提示</span>想要更多控制？</h2>
+        <p class="hint" style="margin:0">到「个人资料」打开高级选项，可以自选编码器、硬件要求和分片数。</p>
       </div>
     </div>
   </div>
@@ -598,11 +621,7 @@ td .tag{margin:2px 4px 2px 0}
         <div class="tablewrap"><table id="cat"><thead><tr>
           <th>模型</th><th>上游数</th><th>最低输入单价</th><th>上下文</th><th>能力</th>
         </tr></thead><tbody><tr><td colspan="5" class="empty">加载中…</td></tr></tbody></table></div>
-        <div class="hint">路由先按请求需要的上下文与能力过滤，再挑最便宜且健康的上游；
-          同一会话（<code>X-Starstack-Session</code> 或 <code>prompt_cache_key</code>）在 30 分钟内粘回原上游，
-          命中前缀缓存时按缓存价结算。买家实付 = 未缓存输入 / 缓存输入 / 输出三段之和，
-          提供方获得 90%，平台留 10% 撮合费。连续失败的上游冷却 20 秒并自动切到下一家。
-          余额不足会返回 402，不会产生欠费。</div>
+        <div class="hint">按上下文与能力过滤后挑最便宜的健康上游；余额不足返回 402。</div>
       </div>
 
       <div class="card">
@@ -610,21 +629,15 @@ td .tag{margin:2px 4px 2px 0}
         <label style="margin-top:0">模型</label>
         <select id="apimodel"><option value="">（先登记一个模型）</option></select>
         <pre id="curlsnippet"></pre>
-        <div class="hint">任何 OpenAI SDK 都能把 <code>base_url</code> 指到
-          <code id="apibase"></code>；流式请求加 <code>"stream": true</code>，
-          Broker 会透传 SSE，并按上游 usage 或实际输出估算 token 结算。
-          需要多轮复用缓存时带上 <code>X-Starstack-Session</code>；
-          需要可复现输出时传 <code>"starstack_deterministic": true</code>，
-          平台会把请求固定到声明了确定性采样的上游并返回
-          <code>X-Starstack-Output-SHA256</code>。</div>
+        <div class="hint">任意 OpenAI SDK 把 <code>base_url</code> 指到 <code id="apibase"></code> 即可。</div>
       </div>
 
       <div class="card">
         <h2><span class="kicker">MoE</span>分布式 / MoE 部署</h2>
         <div class="hint" style="margin-top:0">
-          MoE 的专家权重远大于单卡显存，常见做法是把专家放在 CPU 内存、注意力层留在 GPU：
-          llama.cpp 的 <code>--n-cpu-moe N</code> 控制放进 CPU 的专家层数。多机则每台跑
-          <code>rpc-server</code>，主节点用 <code>--rpc</code> 聚合显存，对平台仍是一个标准端点。
+          专家权重放 CPU：llama.cpp 用 <code>--n-cpu-moe</code>；多机用 <code>rpc-server</code> 聚合显存。
+          脚本见 <code>deploy/models/</code>。
+        </div>
           vLLM 多卡用 <code>--tensor-parallel-size</code>；Ollama 监听 <code>0.0.0.0</code> 后直接填地址。
         </div>
         <pre id="moesnippet"></pre>
@@ -654,8 +667,7 @@ td .tag{margin:2px 4px 2px 0}
     <div class="tablewrap"><table id="market"><thead><tr>
       <th>编码能力</th><th>在线节点</th><th>空闲槽位</th><th>单价区间</th><th>实测吞吐</th><th>最强独显</th>
     </tr></thead><tbody><tr><td colspan="6" class="empty">尚无在线算力</td></tr></tbody></table></div>
-    <div class="hint">同一台机器可同时提供多种编码能力，因此按能力分桶后节点数会重复计数；
-      真实可用并行度看「空闲槽位」。</div>
+    <div class="hint">一台机器可出现在多行；真实并发看「空闲槽位」。</div>
   </div>
   <div class="card">
     <h2><span class="kicker">Nodes</span>全部在线节点</h2>
@@ -791,7 +803,7 @@ td .tag{margin:2px 4px 2px 0}
       <details style="margin-top:18px">
         <summary class="hint" style="cursor:pointer">高级用法：手动运行 Provider Agent</summary>
         <pre id="agentcmd"></pre>
-        <div class="hint">启动后 Agent 会打印一个一次性配对码，输入后即可把这机器挂到你的账户下并开始获得收益。</div>
+        <div class="hint">Agent 启动后会打印一次性配对码，输入即可把机器挂到你的账户下。</div>
         <label>配对码</label>
         <div style="display:flex;gap:8px">
           <input id="code" placeholder="例如 A1B2C3" style="text-transform:uppercase">
@@ -831,9 +843,67 @@ td .tag{margin:2px 4px 2px 0}
       <h2><span class="kicker">Earnings</span>我的节点收益</h2>
       <div class="tablewrap"><table id="earn"><thead><tr><th>时间</th><th>节点</th><th>算力点</th><th>说明</th></tr></thead>
       <tbody><tr><td colspan="4" class="empty">暂无收益</td></tr></tbody></table></div>
-      <div class="hint">收益只在「节点自报哈希 == broker 重算哈希」的分片上发放：
-        这是半可信平台敢于付钱的前提。</div>
+      <div class="hint">收益只在「节点自报哈希 == broker 重算哈希」的分片上发放。</div>
     </div>
+  </div>
+</section>
+
+<!-- ---------- 论坛 ---------- -->
+<section class="view" id="v-forum">
+  <div class="viewhead">
+    <h1>论坛</h1>
+  </div>
+  <div id="forum-main">
+    <div class="card">
+      <h2><span class="kicker">发帖</span>说点什么</h2>
+      <input id="fp-title" placeholder="标题" maxlength="120">
+      <textarea id="fp-body" rows="4" placeholder="分享经验、提问或吐槽"></textarea>
+      <label>图片或视频（最多 6 张图 + 1 个视频）</label>
+      <input type="file" id="fp-files" accept="image/*,video/*" multiple>
+      <div class="formfoot">
+        <button class="btn auto" id="fp-send">发布</button>
+        <div id="fp-msg" class="hint"></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2><span class="kicker">帖子</span>最新讨论</h2>
+      <div id="forum-list" class="empty">加载中…</div>
+    </div>
+  </div>
+
+  <div id="forum-detail" style="display:none">
+    <button class="ghost" id="forum-back" style="margin-bottom:14px">← 返回列表</button>
+    <div class="card" id="fd-post"></div>
+    <div class="card">
+      <h2><span class="kicker">评论</span>回复</h2>
+      <div id="fd-comments"></div>
+      <textarea id="fd-body" rows="3" placeholder="写下你的看法"></textarea>
+      <label>附图（可选）</label>
+      <input type="file" id="fd-image" accept="image/*">
+      <div class="formfoot">
+        <button class="btn auto" id="fd-send">发表评论</button>
+        <div id="fd-msg" class="hint"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ---------- 个人资料 ---------- -->
+<section class="view" id="v-me">
+  <div class="viewhead">
+    <h1>个人资料</h1>
+  </div>
+  <div class="card">
+    <div class="row">
+      <div><label>用户名</label><div id="me-name" class="val">—</div></div>
+      <div><label>余额</label><div id="me-credits" class="val">—</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2><span class="kicker">设置</span>界面</h2>
+    <label class="check"><input type="checkbox" id="advtoggle" style="width:auto">
+      显示高级选项（编码器、硬件要求、分片数、服务端路径）</label>
+    <div id="advhint" class="hint"></div>
   </div>
 </section>
 </main>
@@ -918,6 +988,7 @@ function enter(){
   $('#wallet').innerHTML=`余额 <b>${f2(ME.credits)}</b> 算力点`;
   $('#who').innerHTML=`<span class="avatar">${esc(ME.name.slice(0,1).toUpperCase())}</span>`+
     `<span class="uname">${esc(ME.name)}</span>`;
+  loadSettings();
   refresh();
 }
 
@@ -994,6 +1065,8 @@ function paint(){
   if(v==='jobs') paintJobs();
   if(v==='bill') paintBill();
   if(v==='api') paintApi();
+  if(v==='forum') paintForum();
+  if(v==='me') paintMe();
   if(v==='submit') quote();
 }
 
@@ -1177,6 +1250,7 @@ function syncKind(){
   $('#baselinebox').style.display=k==='transcode'?'':'none';
   $('#durbox').style.display=k==='transcode'?'':'none';
   $('#fileinput').accept=k==='blender'?'.blend,.zip':k==='pr'?'.zip':'video/*,audio/*';
+  applyMode();
   quote();
 }
 jobkind.addEventListener('change',syncKind);
@@ -1784,6 +1858,133 @@ $('#dochARGE').onclick=async()=>{
   if(!(a>0))return;
   try{await post('/api/me/recharge',{amount:a});refresh();paintBill()}
   catch(e){alert('充值失败：'+e)}
+};
+
+/* ---------------- 简洁 / 高级模式 ---------------- */
+let ADV=false;
+const QUALITY={fast:{vcodec:'libx264',preset:'ultrafast',q:'28'},
+  balanced:{vcodec:'libx264',preset:'fast',q:'26'},
+  high:{vcodec:'libx264',preset:'slow',q:'20'}};
+function applyQuality(){
+  const m=QUALITY[$('#quality').value]||QUALITY.balanced;
+  for(const k in m){const el=$('#f [name='+k+']'); if(el) el.value=m[k]}
+}
+$('#quality').addEventListener('change',()=>{applyQuality();quote()});
+function applyMode(){
+  const render=$('#jobkind').value!=='transcode';
+  $('#adv-only').style.display=(ADV||render)?'':'none';
+  $('#qualitybox').style.display=(!ADV&&!render)?'':'none';
+  $('#tipcard').style.display=ADV?'none':'';
+  if(!ADV) applyQuality();
+  $('#advtoggle').checked=ADV;
+  $('#advhint').textContent=ADV
+    ? '高级选项已显示在提交任务页。'
+    : '简洁模式只保留文件、任务类型和画质；渲染任务仍会展开必要参数。';
+}
+async function loadSettings(){
+  try{ADV=!!(await api('/api/me/settings')).advanced}catch(e){ADV=false}
+  applyMode();
+}
+function paintMe(){
+  if(!ME) return;
+  $('#me-name').textContent=ME.name;
+  $('#me-credits').textContent=f2(ME.credits)+' 算力点';
+  $('#advtoggle').checked=ADV;
+}
+$('#advtoggle').addEventListener('change',async e=>{
+  const on=e.target.checked;
+  try{
+    const r=await api('/api/me/settings',{method:'PUT',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({advanced:on})});
+    ADV=!!r.advanced;
+  }catch(err){e.target.checked=!on;$('#advhint').textContent='保存失败：'+err;return}
+  applyMode(); quote();
+});
+
+/* ---------------- 论坛 ---------------- */
+const mediaURL=id=>BASE+'/api/forum/media/'+id;
+const fts=v=>new Date(v*1000).toLocaleString('zh-CN',{hour12:false});
+function mediaHTML(list){
+  if(!list||!list.length) return '';
+  return '<div class="media">'+list.map(f=>f.kind==='video'
+    ? `<video controls preload="metadata" src="${mediaURL(f.id)}"></video>`
+    : `<img src="${mediaURL(f.id)}" alt="${esc(f.name)}" onclick="window.open(this.src,'_blank')">`).join('')+'</div>';
+}
+function postItem(p){
+  return `<div class="postitem" onclick="openPost('${esc(p.id)}')">
+    <h3>${esc(p.title)}</h3>
+    <div class="postmeta">${esc(p.author)} · ${fts(p.created_at)} · ${p.comments} 评论 · ${p.media_count} 附件</div>
+  </div>`;
+}
+let FORUM_POSTS=[], FORUM_CURRENT=null;
+async function paintForum(){
+  try{
+    const d=await api('/api/forum/posts');
+    FORUM_POSTS=d.posts||[];
+    $('#forum-list').className=FORUM_POSTS.length?'':'empty';
+    $('#forum-list').innerHTML=FORUM_POSTS.length?FORUM_POSTS.map(postItem).join(''):'还没有帖子，来发第一个吧';
+  }catch(e){$('#forum-list').textContent='读取失败：'+e}
+}
+$('#fp-send').onclick=async()=>{
+  const title=$('#fp-title').value.trim();
+  if(!title){$('#fp-msg').textContent='标题不能为空';return}
+  const fd=new FormData();
+  fd.set('title',title);
+  fd.set('body',$('#fp-body').value.trim());
+  const files=$('#fp-files').files;
+  for(let i=0;i<files.length;i++) fd.append('files',files[i]);
+  $('#fp-send').disabled=true;$('#fp-msg').textContent='发布中…';
+  try{
+    const r=await fetch('/api/forum/posts',{method:'POST',body:fd});
+    const t=await r.text();let d=null;try{d=JSON.parse(t)}catch(e){}
+    if(!r.ok) throw (d&&d.error)||t;
+    $('#fp-title').value='';$('#fp-body').value='';$('#fp-files').value='';
+    $('#fp-msg').textContent='已发布';
+    paintForum();
+  }catch(e){$('#fp-msg').textContent='失败：'+e}
+  finally{$('#fp-send').disabled=false}
+};
+async function openPost(id){
+  $('#forum-main').style.display='none';
+  $('#forum-detail').style.display='';
+  $('#fd-post').innerHTML='<div class="empty">加载中…</div>';
+  try{
+    const d=await api('/api/forum/posts/'+id);
+    FORUM_CURRENT=d;
+    $('#fd-post').innerHTML=`<h2 style="margin-bottom:2px">${esc(d.post.title)}</h2>
+      <div class="postmeta">${esc(d.post.author)} · ${fts(d.post.created_at)}</div>
+      ${d.post.body?`<div class="postbody">${esc(d.post.body)}</div>`:''}
+      ${mediaHTML(d.media)}`;
+    $('#fd-comments').innerHTML=(d.comments||[]).length?d.comments.map(c=>`
+      <div class="comment">
+        <div class="who2">${esc(c.author)} <span class="postmeta">${fts(c.created_at)}</span></div>
+        ${c.body?`<div class="postbody" style="margin:4px 0">${esc(c.body)}</div>`:''}
+        ${mediaHTML(c.media)}
+      </div>`).join(''):'<div class="empty">还没有评论</div>';
+  }catch(e){$('#fd-post').textContent='读取失败：'+e}
+}
+$('#forum-back').onclick=()=>{
+  $('#forum-detail').style.display='none';
+  $('#forum-main').style.display='';
+  paintForum();
+};
+$('#fd-send').onclick=async()=>{
+  if(!FORUM_CURRENT) return;
+  const body=$('#fd-body').value.trim();
+  const img=$('#fd-image').files[0];
+  if(!body&&!img){$('#fd-msg').textContent='写点内容或选张图';return}
+  const fd=new FormData();
+  fd.set('body',body);
+  if(img) fd.append('image',img);
+  $('#fd-send').disabled=true;$('#fd-msg').textContent='发送中…';
+  try{
+    const r=await fetch('/api/forum/posts/'+FORUM_CURRENT.post.id+'/comments',{method:'POST',body:fd});
+    const t=await r.text();let d=null;try{d=JSON.parse(t)}catch(e){}
+    if(!r.ok) throw (d&&d.error)||t;
+    $('#fd-body').value='';$('#fd-image').value='';$('#fd-msg').textContent='';
+    openPost(FORUM_CURRENT.post.id);
+  }catch(e){$('#fd-msg').textContent='失败：'+e}
+  finally{$('#fd-send').disabled=false}
 };
 
 /* ---------------- 启动 ---------------- */

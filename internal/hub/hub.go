@@ -590,6 +590,12 @@ func (s *Server) Handlers() http.Handler {
 	mux.HandleFunc("/api/market", s.handleMarket)
 	mux.HandleFunc("/api/ledger", s.handleLedger)
 
+	// Console preference (simple vs. advanced task form) and the community board.
+	mux.HandleFunc("/api/me/settings", s.handleMySettings)
+	mux.HandleFunc("/api/forum/posts", s.handleForumPosts)
+	mux.HandleFunc("/api/forum/posts/", s.handleForumPost)
+	mux.HandleFunc("/api/forum/media/", s.handleForumMedia)
+
 	// IPv6 cloud hosts: buyer/seller console APIs, and the agent's own channel.
 	mux.HandleFunc("/api/vm/offers", s.handleVMOffers)
 	mux.HandleFunc("/api/vm/offers/", s.handleVMOfferOp)
