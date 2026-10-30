@@ -108,15 +108,15 @@ func (b *secretBox) open(enc string) (string, error) {
 	}
 	raw, err := base64.RawStdEncoding.DecodeString(enc)
 	if err != nil {
-		return "", errors.New("上游密钥格式损坏")
+		return "", errors.New("加密凭据格式损坏")
 	}
 	n := b.aead.NonceSize()
 	if len(raw) <= n {
-		return "", errors.New("上游密钥格式损坏")
+		return "", errors.New("加密凭据格式损坏")
 	}
 	plain, err := b.aead.Open(nil, raw[:n], raw[n:], nil)
 	if err != nil {
-		return "", errors.New("上游密钥无法解密（gateway.key 可能已被更换）")
+		return "", errors.New("凭据无法解密（gateway.key 可能已被更换）")
 	}
 	return string(plain), nil
 }

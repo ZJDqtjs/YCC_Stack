@@ -25,6 +25,7 @@ import (
 	"starstack/internal/ffx"
 	"starstack/internal/hub"
 	"starstack/internal/render"
+	"starstack/internal/vmhost"
 )
 
 func main() {
@@ -42,6 +43,13 @@ func main() {
 	launch := flag.String("launch", "", "one-use launch code from the web console; "+
 		"the node is bound to the account that generated it and no token is needed")
 	cacheGB := flag.Float64("cache-gb", 20, "keep cached source files under this much disk")
+	vmOn := flag.Bool("vm", false, "host IPv6 virtual machines for the 云主机 market (requires qemu-system-x86_64 and qemu-img)")
+	qemu := flag.String("qemu", "qemu-system-x86_64", "qemu system emulator binary")
+	qemuImg := flag.String("qemu-img", "qemu-img", "qemu-img binary")
+	vmBridge := flag.String("vm-bridge", "", "Linux bridge for routed IPv6 guests (e.g. br0); empty means slirp only")
+	vmUplink := flag.String("vm-uplink", "", "uplink interface for IPv6 NDP proxy (default: the bridge's uplink)")
+	vmMax := flag.Int("vm-max", 2, "maximum concurrent VMs this machine will host")
+	vmDir := flag.String("vm-dir", "", "VM disk/image directory (default <work>/vms)")
 	flag.Parse()
 
 	ffx.Ffmpeg, ffx.Ffprobe = *ffmpeg, *ffprobe
@@ -65,6 +73,23 @@ func main() {
 	info := ffx.Detect(ctx, *work)
 	if *force != "" {
 		info.Encoders = []string{*force}
+	}
+	if *vmOn {
+		caps, err := ffx.DetectVM(ctx, *qemu, *qemuImg, *vmBridge, *vmUplink, *vmMax)
+		if err != nil {
+			log.Printf("云主机功能未启用：%v", err)
+		} else {
+			info.VM = caps
+			if *vmDir == "" {
+				*vmDir = filepath.Join(*work, "vms")
+			}
+			os.MkdirAll(*vmDir, 0o700)
+			log.Printf("云主机可出租：qemu %s accel=%s bridge=%q max=%d ipv6=%v",
+				caps.Version, caps.Accel, caps.Bridge, caps.MaxVMs, info.IPv6)
+			if len(info.IPv6) == 0 {
+				log.Printf("警告：没有检测到公网 IPv6，控制台不会允许在这台机器上发布云主机")
+			}
+		}
 	}
 	nv := 0
 	for _, g := range info.GPUs {
@@ -118,6 +143,13 @@ func main() {
 	}
 	go a.reannounce()
 	go a.janitor(*cacheGB)
+	if info.VM != nil {
+		host := vmhost.New(*vmDir, *qemu, *qemuImg, *vmBridge, *vmUplink, info.VM.Accel, *vmMax)
+		va := newVMAgent(a, host, *vmMax)
+		go va.loop()
+		go va.heartbeat()
+		go va.janitor()
+	}
 
 	sem := make(chan struct{}, *slots)
 

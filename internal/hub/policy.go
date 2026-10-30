@@ -49,6 +49,7 @@ type Policy struct {
 	MaxSegs        int   // slices per job
 	MaxSlots       int   // server-side ceiling on self-reported concurrency
 	MaxActiveJobs  int   // live jobs per account
+	MaxActiveVMs   int   // rented VMs per account, so one buyer cannot pin a seller's whole machine
 	LoginPerMinute int   // auth attempts per client IP
 
 	// CostWeight prices the quote inside the soft score: the candidate's rate is
@@ -69,7 +70,7 @@ func DefaultPolicy() Policy {
 		AgentToken: "", AllowLocalPath: true, ShowPending: true, Recharge: true,
 		SignupCredit:   100.0,
 		MaxUploadBytes: 4 << 30, MemoryBuffer: 32 << 20,
-		MaxSegs: 64, MaxSlots: 16, MaxActiveJobs: 8,
+		MaxSegs: 64, MaxSlots: 16, MaxActiveJobs: 8, MaxActiveVMs: 6,
 		LoginPerMinute: 30,
 		CostWeight:     0.5,
 		JobSlowFactor:  60, MinJobDeadline: 30 * time.Minute,
@@ -84,7 +85,7 @@ func PublicPolicy() Policy {
 		AllowLocalPath: false, ShowPending: false, Recharge: false,
 		SignupCredit:   20.0,
 		MaxUploadBytes: 512 << 20, MemoryBuffer: 8 << 20,
-		MaxSegs: 32, MaxSlots: 8, MaxActiveJobs: 3,
+		MaxSegs: 32, MaxSlots: 8, MaxActiveJobs: 3, MaxActiveVMs: 3,
 		LoginPerMinute: 10,
 		// A stranger's machine must not pin a stranger's credits, and the market
 		// is only honest about price if price actually moves the choice.
@@ -101,7 +102,8 @@ func (s *Server) policyView() map[string]any {
 		"local_path": s.policy.AllowLocalPath, "pending": s.policy.ShowPending,
 		"signup_credit": s.policy.SignupCredit, "signup_invite_required": s.policy.SignupInvite != "",
 		"max_segs":        s.policy.MaxSegs,
-		"max_active_jobs": s.policy.MaxActiveJobs, "cost_weight": s.policy.CostWeight,
+		"max_active_jobs": s.policy.MaxActiveJobs, "max_active_vms": s.policy.MaxActiveVMs,
+		"cost_weight":          s.policy.CostWeight,
 		"min_job_deadline_sec": int(s.policy.MinJobDeadline / time.Second),
 		"job_slow_factor":      s.policy.JobSlowFactor,
 		"max_slots":            s.policy.MaxSlots,

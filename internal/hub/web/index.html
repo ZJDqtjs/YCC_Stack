@@ -167,12 +167,13 @@ button.tiny{height:26px;padding:0 9px;font-size:11.5px}
 
 /* ---------- forms ---------- */
 label{display:block;font-size:12px;font-weight:500;color:var(--body);margin:16px 0 6px;letter-spacing:-.1px}
-input,select{width:100%;height:38px;padding:0 11px;border-radius:6px;border:1px solid var(--hair-2);
+input,select,textarea{width:100%;height:38px;padding:0 11px;border-radius:6px;border:1px solid var(--hair-2);
   background:var(--card);color:var(--ink);font:inherit;font-size:13.5px;
   transition:border-color .14s,box-shadow .14s}
-input::placeholder{color:var(--faint)}
-input:hover,select:hover{border-color:var(--faint)}
-input:focus,select:focus{outline:none;border-color:var(--ink);box-shadow:0 0 0 3px var(--focus)}
+textarea{height:auto;min-height:56px;padding:8px 11px;resize:vertical;font:12px/1.5 var(--mono)}
+input::placeholder,textarea::placeholder{color:var(--faint)}
+input:hover,select:hover,textarea:hover{border-color:var(--faint)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink);box-shadow:0 0 0 3px var(--focus)}
 select{appearance:none;padding-right:30px;background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);
   background-position:calc(100% - 15px) 17px,calc(100% - 10px) 17px;background-size:5px 5px,5px 5px;
   background-repeat:no-repeat}
@@ -332,6 +333,7 @@ td .tag{margin:2px 4px 2px 0}
   <nav id="nav" style="display:none">
     <button data-v="submit" class="on">提交任务</button>
     <button data-v="jobs">我的任务</button>
+    <button data-v="vm">云主机</button>
     <button data-v="api">模型 API</button>
     <button data-v="market">算力市场</button>
     <button data-v="nodes">我的节点</button>
@@ -659,6 +661,94 @@ td .tag{margin:2px 4px 2px 0}
   </div>
 </section>
 
+<!-- ---------- 云主机 ---------- -->
+<section class="view" id="v-vm">
+  <div class="viewhead">
+    <h1>云主机</h1>
+    <p>卖方发布虚拟机配置，买方下单后卖方机器自动用 QEMU 拉起系统镜像。访问走卖方的公网 IPv6：
+      slirp 模式由 Agent 在 <code>[::]</code> 上监听端口并转发进虚拟机，routed 模式则直接给虚拟机分配公网 IPv6。</p>
+  </div>
+
+  <div class="split">
+    <div class="card">
+      <h2><span class="kicker">Market</span>可租用的配置</h2>
+      <div id="vm-order" style="display:none" class="quote">
+        <div>下单：<b id="vo-name"></b> <span id="vo-meta" class="sub-line"></span></div>
+        <div class="row" style="margin-top:10px">
+          <div><label>主机名称</label><input id="vo-hostname" placeholder="例如 论文实验机"></div>
+          <div><label>租期（小时）</label><input id="vo-hours" type="number" min="1" value="1"></div>
+        </div>
+        <label>SSH 公钥（留空则平台生成，私钥只显示一次）</label>
+        <textarea id="vo-key" rows="2" placeholder="ssh-ed25519 AAAA... 留空由平台生成"></textarea>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn auto" id="vo-submit">确认租用</button>
+          <button class="ghost" id="vo-cancel" style="height:38px">取消</button>
+        </div>
+        <div id="vo-msg" class="hint"></div>
+      </div>
+      <pre id="vo-result" style="display:none;white-space:pre-wrap"></pre>
+      <div id="vm-offers"><div class="empty">加载中…</div></div>
+    </div>
+    <div class="card">
+      <h2><span class="kicker">Mine</span>我的云主机</h2>
+      <div id="vm-instances"><div class="empty">还没有租用记录</div></div>
+    </div>
+  </div>
+
+  <div class="card" id="vm-sell" style="margin-top:18px">
+    <h2><span class="kicker">Sell</span>发布我的虚拟机配置</h2>
+    <div class="hint" style="margin-top:0">
+      Agent 需要以 <code>--vm</code> 启动，并装好 <code>qemu-system-x86_64</code> 与 <code>qemu-img</code>。
+      发布时使用节点当前上报的 IPv6；slirp 模式跨平台可用，routed 模式需要 Linux 网桥（<code>--vm-bridge</code>）。
+    </div>
+    <div class="row">
+      <div><label>出租节点</label><select id="vnode"><option value="">（先让带 --vm 的节点上线）</option></select></div>
+      <div><label>配置名称</label><input id="vname" placeholder="例如 2C2G · Ubuntu 24.04"></div>
+    </div>
+    <label>系统镜像 URL</label>
+    <input id="vimage" placeholder="https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img">
+    <div class="row">
+      <div><label>镜像格式</label><select id="vfmt">
+        <option value="qcow2">qcow2</option><option value="raw">raw</option>
+        <option value="iso">iso（安装器，需在 VNC 里完成安装）</option></select></div>
+      <div><label>SHA-256（可选，建议填）</label><input id="vsha" placeholder="64 位十六进制"></div>
+    </div>
+    <div class="row3">
+      <div><label>系统</label><input id="vos" value="ubuntu 24.04"></div>
+      <div><label>vCPU</label><input id="vcpus" type="number" min="1" value="2"></div>
+      <div><label>内存 MiB</label><input id="vmem" type="number" min="256" step="256" value="2048"></div>
+    </div>
+    <div class="row">
+      <div><label>磁盘 GiB</label><input id="vdisk" type="number" min="1" value="20"></div>
+      <div><label>卖方公网 IPv6</label><select id="vhost6"><option value="">（选择节点后加载）</option></select></div>
+    </div>
+    <div class="row">
+      <div><label>网络模式</label><select id="vnet">
+        <option value="slirp">slirp · Agent 做 IPv6 端口转发（推荐）</option>
+        <option value="routed">routed · 虚拟机直接持有公网 IPv6</option></select></div>
+      <div><label>端口映射 host:guest（逗号分隔，可加 /udp）</label>
+        <input id="vports" placeholder="2200:22, 8080:80；留空只开 SSH"></div>
+    </div>
+    <div id="vrouted" style="display:none">
+      <div class="row">
+        <div><label>IPv6 前缀（/48 ~ /64）</label><input id="vprefix" placeholder="2001:db8:42::/64"></div>
+        <div><label>IPv6 网关</label><input id="vgateway" placeholder="2001:db8:42::1"></div>
+      </div>
+    </div>
+    <div class="row">
+      <div><label>价格（算力点 / 小时）</label><input id="vprice" type="number" min="0.01" step="0.5" value="1"></div>
+      <div><label>最长租期（小时）</label><input id="vmaxh" type="number" min="1" max="720" value="24"></div>
+    </div>
+    <button class="btn" id="vpublish" style="margin-top:18px">发布配置</button>
+    <div id="vmmsg" class="hint"></div>
+  </div>
+
+  <div class="card" id="vm-mine-card" style="margin-top:18px">
+    <h2><span class="kicker">My Offers</span>我发布的配置</h2>
+    <div id="vm-offers-mine"><div class="empty">还没有发布配置</div></div>
+  </div>
+</section>
+
 <!-- ---------- 我的节点 ---------- -->
 <section class="view" id="v-nodes">
   <div class="viewhead">
@@ -892,6 +982,7 @@ function activeView(){return $$('#nav button[data-v]').find(b=>b.classList.conta
 function paint(){
   const v=activeView();
   if(v==='market') paintMarket();
+  if(v==='vm') paintVM();
   if(v==='nodes') paintNodes();
   if(v==='jobs') paintJobs();
   if(v==='bill') paintBill();
@@ -1269,6 +1360,247 @@ async function paintJobs(){
     const jobs=d.jobs||[];
     $('#jobs').innerHTML=jobs.length? jobs.map(jobHTML).join(''):'<div class="empty">还没有任务</div>';
   }catch(e){$('#jobs').innerHTML='<div class="empty">'+esc(e)+'</div>'}
+}
+
+/* ---------------- 云主机 ---------------- */
+const VM_ST={queued:'排队中',provisioning:'启动中',running:'运行中',unreachable:'失联',
+  stopping:'停机中',stopped:'已停机',failed:'失败'};
+let VM_OFFERS=[], VM_INSTANCES=[], VM_OFFER=null, VM_LAST=0, VM_NODE_SIG='';
+const vmTS=t=>t?new Date(t*1000).toLocaleString('zh-CN',{hour12:false}):'—';
+function fmtSecs(s){
+  s=Math.max(0,Math.floor(s||0));
+  const h=Math.floor(s/3600), m=Math.floor(s%3600/60), x=s%60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(x).padStart(2,'0')}`;
+}
+function vmStatusTag(st){
+  const cls=st==='running'?'on':['failed','stopped'].includes(st)?'off':'';
+  return `<span class="tag ${cls}">${VM_ST[st]||esc(st)}</span>`;
+}
+function parseVMPorts(s){
+  const out=[];
+  for(const raw of String(s||'').split(',').map(x=>x.trim()).filter(Boolean)){
+    let proto='tcp', t=raw;
+    if(/\/udp$/i.test(t)){proto='udp';t=t.replace(/\/udp$/i,'')}
+    const m=t.match(/^(\d+):(\d+)$/);
+    if(!m) throw new Error('端口映射格式应为 host:guest，例如 2200:22');
+    const hp=+m[1], gp=+m[2];
+    if(hp<0||hp>65535||gp<1||gp>65535) throw new Error('端口超出 1~65535 范围');
+    out.push({proto,host_port:hp,guest_port:gp});
+  }
+  return out;
+}
+function paintVM(force){
+  syncVMNodes();
+  const now=Date.now();
+  if(!force && now-VM_LAST<4000){ renderVMLists(); return }
+  VM_LAST=now;
+  loadVM();
+}
+async function loadVM(){
+  try{
+    const [o,i]=await Promise.all([api('/api/vm/offers'),api('/api/vm/instances')]);
+    VM_OFFERS=o.offers||[]; VM_INSTANCES=i.instances||[];
+    renderVMLists();
+  }catch(e){$('#vm-offers').innerHTML=`<div class="empty">读取失败：${esc(e)}</div>`}
+}
+function vmOffersMineHTML(list){
+  if(!list.length) return '<div class="empty">还没有发布配置</div>';
+  return list.map(o=>{
+    const ports=(o.ports||[]).map(p=>`${p.host_port?p.host_port:'自动'}:${p.guest_port}${p.proto==='udp'?'/udp':''}`).join(' · ')||'仅 SSH';
+    return `<div class="job" style="margin-bottom:10px">
+    <h3>${esc(o.name)} ${o.enabled?'<span class="tag on">已上架</span>':'<span class="tag off">已下架</span>'}
+      <span class="tag">${o.cpus}C / ${Math.round(o.mem_mb/1024*10)/10}G / ${o.disk_gb}G</span>
+      <span class="tag">${esc(o.net_mode)}</span>
+      <span class="tag">${f2(o.price_hour)} 点/小时 · 最长 ${o.max_hours}h</span>
+      <button class="ghost tiny" onclick="vmToggleOffer('${esc(o.id)}',${!o.enabled})">${o.enabled?'下架':'重新上架'}</button>
+      <button class="ghost tiny" onclick="vmDeleteOffer('${esc(o.id)}')">删除</button></h3>
+    <div class="note">${esc(o.node_name||o.node_id)} · ${esc(o.os)} · ${esc(o.image_format)} · ${o.available?'节点在线':'节点离线'}</div>
+    <div class="hint" style="margin:4px 0 0">IPv6 <code>${esc(o.host_ipv6)}</code> · 端口 ${esc(ports)}
+      ${o.net_mode==='routed'?` · 前缀 <code>${esc(o.ipv6_prefix)}</code> · 网关 <code>${esc(o.ipv6_gateway)}</code>`:''}</div>
+  </div>`}).join('');
+}
+function vmOfferCard(o){
+  const ports=(o.ports||[]).map(p=>`${p.host_port?p.host_port:'自动'}:${p.guest_port}${p.proto==='udp'?'/udp':''}`).join(' · ')||'仅 SSH';
+  const avail=o.available;
+  return `<div class="job" style="margin-bottom:10px">
+    <h3>${esc(o.name)} ${avail?'<span class="tag on">可租用</span>':`<span class="tag off">${o.online?'已停用':'节点离线'}</span>`}
+      <span class="tag">${o.cpus}C / ${Math.round(o.mem_mb/1024*10)/10}G / ${o.disk_gb}G</span>
+      <span class="tag">${esc(o.net_mode)}</span>
+      <span class="tag">${f2(o.price_hour)} 点/小时</span>
+      <button class="ghost tiny" onclick="vmRent('${esc(o.id)}')" ${avail?'':'disabled'}>租用</button></h3>
+    <div class="note">${esc(o.os)} · ${esc(o.image_format)} · 卖方节点 ${esc(o.node_name||o.node_id)} · 最长 ${o.max_hours} 小时</div>
+    <div class="hint" style="margin:4px 0 0">IPv6 <code>${esc(o.host_ipv6)}</code>
+      ${o.net_mode==='routed'?` · 前缀 <code>${esc(o.ipv6_prefix)}</code>`:''} · 端口 ${esc(ports)}</div>
+  </div>`;
+}
+function vmInstanceCard(i){
+  const ep=i.endpoints||{};
+  const remain=i.remaining_sec>0?fmtSecs(i.remaining_sec):(i.status==='running'?'已到期':'—');
+  const pct=Math.max(2,Math.min(100,i.progress||0));
+  let actions='';
+  if(i.mine && ['queued','provisioning','running','unreachable'].includes(i.status))
+    actions+=`<button class="ghost tiny" onclick="vmExtend('${esc(i.id)}',${i.price_hour})">续费</button>`;
+  if((i.mine||i.seller_mine) && !['stopped','failed'].includes(i.status))
+    actions+=`<button class="ghost tiny" onclick="vmStop('${esc(i.id)}')">${i.mine?'停机':'强制停机'}</button>`;
+  const ssh=ep.ssh?`<code>${esc((ep.ssh_user||i.ssh_user)+'@'+ep.ssh)}</code>`:'—';
+  return `<div class="job" style="margin-bottom:10px">
+    <h3>${esc(i.name)} ${vmStatusTag(i.status)}
+      <span class="tag">${i.cpus}C / ${Math.round(i.mem_mb/1024*10)/10}G / ${i.disk_gb}G</span>
+      <span class="tag">${esc(i.net_mode)}</span>
+      ${i.seller_mine?'<span class="tag mine">卖方视角</span>':''}
+      ${actions}</h3>
+    <div class="note">${esc(i.node_name||i.node_id)} · ${esc(i.os)} · ${f2(i.price_hour)} 点/小时 ·
+      预扣 ${f2(i.hold)} · 已用 ${f2(i.spent)}</div>
+    ${i.status==='provisioning'||i.status==='queued'
+      ?`<div class="prog"><div class="bar" style="flex:1"><i style="width:${pct}%"></i></div>
+         <span class="sub-line">${Math.round(pct)}%</span></div>`:''}
+    <div class="hint" style="margin:6px 0 0">SSH ${ssh}
+      ${ep.ipv6?` · IPv6 <code>${esc(ep.ipv6)}</code>`:''}
+      ${ep.vnc?` · 控制台 <code>${esc(ep.vnc)}</code>`:''}</div>
+    ${(ep.forwards||[]).length?`<div class="hint" style="margin:2px 0 0">端口
+      ${ep.forwards.map(f=>`<code>${esc(f.listen)}</code> → ${f.guest_port}/${esc(f.proto)}`).join(' · ')}</div>`:''}
+    <div class="hint" style="margin:2px 0 0">剩余 <b>${remain}</b> · 到期 ${vmTS(i.expires_at)}
+      ${i.note?' · '+esc(i.note):''}${i.err?` · <span style="color:var(--bad)">${esc(i.err)}</span>`:''}</div>
+  </div>`;
+}
+function renderVMLists(){
+  const others=VM_OFFERS.filter(o=>!o.mine && o.enabled);
+  $('#vm-offers').innerHTML=others.length?others.map(vmOfferCard).join('')
+    :'<div class="empty">还没有可租用的云主机配置</div>';
+  const mineOffers=VM_OFFERS.filter(o=>o.mine);
+  const mineCard=$('#vm-mine-card');
+  if(mineCard) mineCard.style.display=mineOffers.length?'':'none';
+  $('#vm-offers-mine').innerHTML=vmOffersMineHTML(mineOffers);
+  $('#vm-instances').innerHTML=VM_INSTANCES.length?VM_INSTANCES.map(vmInstanceCard).join('')
+    :'<div class="empty">还没有租用记录</div>';
+}
+function syncVMNodes(){
+  const owned=POOL.filter(w=>w.mine && w.vm);
+  const sell=$('#vm-sell');
+  if(sell) sell.style.display=owned.length?'':'none';
+  const nodes=owned.filter(w=>w.online);
+  const sig=nodes.map(n=>n.id+':'+(n.ipv6||[]).join(',')).join('|');
+  if(sig!==VM_NODE_SIG){
+    VM_NODE_SIG=sig;
+    const sel=$('#vnode'), cur=sel.value;
+    sel.innerHTML=nodes.length?nodes.map(w=>`<option value="${esc(w.id)}">${esc(w.name)} ·
+      ${w.cpus} 核 / ${Math.round(w.mem_mb/1024)} GB · ${esc(w.vm.accel||'')}</option>`).join('')
+      :'<option value="">（没有带 --vm 的在线节点）</option>';
+    if(cur && nodes.some(w=>w.id===cur)) sel.value=cur;
+    else if(nodes.length) sel.value=nodes[0].id;
+    syncVMHosts();
+  }
+  $('#vpublish').disabled=!$('#vnode').value;
+  const w=POOL.find(x=>x.id===$('#vnode').value);
+  if(w) $('#vnode').title=`bridge=${w.vm.bridge||'—'} uplink=${w.vm.uplink||'—'} accel=${w.vm.accel||'—'}`;
+}
+function syncVMHosts(){
+  const w=POOL.find(x=>x.id===$('#vnode').value);
+  const sel=$('#vhost6'), cur=sel.value;
+  const ips=(w&&w.ipv6)||[];
+  sel.innerHTML=ips.length?ips.map(ip=>`<option value="${esc(ip)}">${esc(ip)}</option>`).join('')
+    :'<option value="">（该节点没有上报公网 IPv6）</option>';
+  if(ips.includes(cur)) sel.value=cur;
+}
+$('#vnode')?.addEventListener('change',syncVMHosts);
+$('#vnet')?.addEventListener('change',()=>{
+  const routed=$('#vnet').value==='routed';
+  $('#vrouted').style.display=routed?'':'none';
+  $('#vports').disabled=routed;
+  if(routed) $('#vports').value='';
+});
+function vmRent(id){
+  const o=VM_OFFERS.find(x=>x.id===id);
+  if(!o||!o.available) return;
+  VM_OFFER=o;
+  $('#vo-name').textContent=o.name;
+  $('#vo-meta').textContent=`${o.cpus}C / ${Math.round(o.mem_mb/1024*10)/10}G / ${o.disk_gb}G · ${f2(o.price_hour)} 点/小时 · ${o.net_mode}`;
+  $('#vo-hostname').value=o.name;
+  $('#vo-hours').value=1;
+  $('#vo-hours').max=o.max_hours;
+  $('#vo-key').value='';
+  $('#vo-msg').textContent='';
+  $('#vo-result').style.display='none';
+  $('#vm-order').style.display='block';
+  $('#vm-order').scrollIntoView({behavior:'smooth',block:'center'});
+}
+$('#vo-cancel')?.addEventListener('click',()=>{$('#vm-order').style.display='none';VM_OFFER=null});
+$('#vo-submit')?.addEventListener('click',async()=>{
+  if(!VM_OFFER) return;
+  const btn=$('#vo-submit'); btn.disabled=true; $('#vo-msg').textContent='正在预扣并下发启动指令…';
+  try{
+    const r=await post('/api/vm/orders',{
+      offer_id:VM_OFFER.id, name:$('#vo-hostname').value.trim(),
+      hours:+$('#vo-hours').value||1, ssh_public_key:$('#vo-key').value.trim()});
+    const ins=r.instance;
+    const lines=[
+      `主机：${ins.name}（${ins.id}）`,
+      `状态：${VM_ST[ins.status]||ins.status} · 预扣 ${f2(ins.hold)} 点 · 最长 ${VM_OFFER.max_hours} 小时`,
+      `SSH 用户：${r.ssh_user}`,
+      `SSH 公钥：${r.ssh_public_key}`,
+      r.ssh_private_key?`SSH 私钥：\n${r.ssh_private_key}`:'SSH：使用你填写的公钥登录',
+      `root 口令：${r.root_password}`,
+      `VNC 口令：${r.vnc_password}`,
+      `启动完成后在「我的云主机」里查看 IPv6 / SSH 地址。`,
+    ];
+    $('#vo-result').textContent=r.warning+'\n\n'+lines.join('\n\n');
+    $('#vo-result').style.display='block';
+    $('#vo-msg').textContent='下单成功，等待卖方机器启动虚拟机。';
+    $('#vm-order').style.display='none';
+    VM_OFFER=null;
+    loadVM();
+    setTimeout(()=>loadVM(),4000);
+  }catch(e){$('#vo-msg').textContent='失败：'+e}
+  finally{btn.disabled=false}
+});
+$('#vpublish')?.addEventListener('click',async()=>{
+  const btn=$('#vpublish'); btn.disabled=true; $('#vmmsg').textContent='正在发布…';
+  try{
+    const body={
+      node_id:$('#vnode').value, name:$('#vname').value.trim(),
+      image_url:$('#vimage').value.trim(), image_sha256:$('#vsha').value.trim(),
+      image_format:$('#vfmt').value, os:$('#vos').value.trim(),
+      cpus:+$('#vcpus').value, mem_mb:+$('#vmem').value, disk_gb:+$('#vdisk').value,
+      net_mode:$('#vnet').value, host_ipv6:$('#vhost6').value,
+      ports:parseVMPorts($('#vports').value),
+      price_hour:+$('#vprice').value, max_hours:+$('#vmaxh').value,
+    };
+    if(body.net_mode==='routed'){
+      body.ipv6_prefix=$('#vprefix').value.trim();
+      body.ipv6_gateway=$('#vgateway').value.trim();
+    }
+    if(!body.image_url) throw new Error('请填写镜像 URL');
+    await post('/api/vm/offers',body);
+    $('#vmmsg').textContent='已发布，买方现在可以下单。';
+    $('#vname').value=''; $('#vsha').value='';
+    loadVM(true);
+  }catch(e){$('#vmmsg').textContent='发布失败：'+e}
+  finally{btn.disabled=false}
+});
+async function vmToggleOffer(id,enabled){
+  try{
+    await api('/api/vm/offers/'+encodeURIComponent(id),
+      {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled})});
+    loadVM(true);
+  }catch(e){alert('操作失败：'+e)}
+}
+async function vmDeleteOffer(id){
+  if(!confirm('删除后这个配置立即下架；已经租出的云主机按订单快照继续运行。确定？')) return;
+  try{ await api('/api/vm/offers/'+encodeURIComponent(id),{method:'DELETE'}); loadVM(true) }
+  catch(e){alert('删除失败：'+e)}
+}
+async function vmStop(id){
+  if(!confirm('确定停机？剩余预扣会按实际运行秒数结算后退回。')) return;
+  try{ await post('/api/vm/instances/'+encodeURIComponent(id)+'/stop',{}); loadVM(true) }
+  catch(e){alert('停机失败：'+e)}
+}
+async function vmExtend(id,price){
+  const h=prompt('续费小时数（当前单价 '+f2(price)+' 点/小时）','1');
+  if(h===null) return;
+  const hours=+h;
+  if(!(hours>0)){alert('请输入大于 0 的小时数');return}
+  try{ await post('/api/vm/instances/'+encodeURIComponent(id)+'/extend',{hours}); loadVM(true) }
+  catch(e){alert('续费失败：'+e)}
 }
 
 /* ---------------- 算力市场 ---------------- */

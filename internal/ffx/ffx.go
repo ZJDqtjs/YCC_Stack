@@ -590,6 +590,11 @@ type Inventory struct {
 	Encoders   []string    `json:"encoders"`
 	Runtimes   []Runtime   `json:"runtimes"`
 	FFmpegVer  string      `json:"ffmpeg_version"`
+	// IPv6 is the machine's global unicast addresses; VM is present only when
+	// the agent was started with --vm and found a usable hypervisor. The broker
+	// will not let a seller publish a VM offer without the latter.
+	IPv6 []string     `json:"ipv6,omitempty"`
+	VM   *VMInventory `json:"vm,omitempty"`
 }
 
 type GPUDetail struct {
@@ -631,6 +636,7 @@ func Detect(ctx context.Context, workDir string) Inventory {
 		Encoders:   encs,
 		Runtimes:   rt,
 		FFmpegVer:  ver,
+		IPv6:       GlobalIPv6s(),
 	}
 }
 

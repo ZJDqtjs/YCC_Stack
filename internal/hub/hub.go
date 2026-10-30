@@ -25,6 +25,7 @@ import (
 	"starstack/internal/ffx"
 	"starstack/internal/render"
 	"starstack/internal/store"
+	"starstack/internal/vm"
 )
 
 type Profile struct {
@@ -173,18 +174,20 @@ type Worker struct {
 	MemMB    uint64 `json:"mem_mb"`
 	// disk is what this machine had free at its last registration; it is
 	// deliberately not live data, so it can only be a coarse constraint
-	DiskFree uint64          `json:"disk_free_mb"`
-	GPUs     []ffx.GPUDetail `json:"gpus"`
-	Encoders []string        `json:"encoders"`
-	Runtimes []ffx.Runtime   `json:"runtimes"`
-	Price    float64         `json:"price"`
-	Slots    int             `json:"slots"`
-	Speed    float64         `json:"speed"`
-	OK       int             `json:"ok"`
-	Bad      int             `json:"bad"`
-	Billed   float64         `json:"seconds_billed"`
-	Earned   float64         `json:"earned"`
-	Address  string          `json:"address"`
+	DiskFree uint64           `json:"disk_free_mb"`
+	GPUs     []ffx.GPUDetail  `json:"gpus"`
+	Encoders []string         `json:"encoders"`
+	Runtimes []ffx.Runtime    `json:"runtimes"`
+	IPv6     []string         `json:"ipv6,omitempty"`
+	VM       *ffx.VMInventory `json:"vm,omitempty"`
+	Price    float64          `json:"price"`
+	Slots    int              `json:"slots"`
+	Speed    float64          `json:"speed"`
+	OK       int              `json:"ok"`
+	Bad      int              `json:"bad"`
+	Billed   float64          `json:"seconds_billed"`
+	Earned   float64          `json:"earned"`
+	Address  string           `json:"address"`
 	// Streak counts consecutive slice failures and CoolUntil parks the node:
 	// a machine that keeps dropping work stays in the market view but stops
 	// receiving new slices until it has proven itself again by coming back clean.
@@ -194,9 +197,10 @@ type Worker struct {
 	// keeps heartbeating, it is simply not promised any new slice.
 	Paused bool `json:"paused"`
 
-	seen  time.Time
-	inbox chan *Claim
-	pair  string // pending pairing code, stable until someone claims this node
+	seen    time.Time
+	inbox   chan *Claim
+	vminbox chan *vm.Command
+	pair    string // pending pairing code, stable until someone claims this node
 }
 
 func (w *Worker) online() bool { return time.Since(w.seen) < 25*time.Second }
@@ -321,6 +325,11 @@ type Server struct {
 	secrets    *secretBox
 	gateway    *gatewayState
 	comfyHub   string // optional reverse-proxy target for the AI video share page
+	// Cloud hosts are a second market on the same nodes: offers are snapshots
+	// published by sellers, instances are prepaid rentals that keep their own
+	// lifecycle and billing clock.
+	voffers map[string]*vm.Offer
+	vms     map[string]*vm.Instance
 }
 
 func NewServer(dataDir, baseURL string, st *store.Store, pol Policy) *Server {
@@ -331,6 +340,7 @@ func NewServer(dataDir, baseURL string, st *store.Store, pol Policy) *Server {
 		launches: map[string]*launchTicket{},
 		policy:   pol, key: loadAgentKey(dataDir), limiter: newRateLimiter(),
 		secrets: loadSecretBox(dataDir), gateway: newGatewayState(),
+		voffers: map[string]*vm.Offer{}, vms: map[string]*vm.Instance{},
 	}
 	// A broker reached over HTTPS must not send its session cookie in the clear
 	// on the next plaintext request.
@@ -358,15 +368,23 @@ func (s *Server) restore() {
 		log.Printf("restore nodes: %v", err)
 	}
 	for _, n := range nodes {
+		var caps *ffx.VMInventory
+		if n.VM != "" {
+			var c ffx.VMInventory
+			if json.Unmarshal([]byte(n.VM), &c) == nil {
+				caps = &c
+			}
+		}
 		s.workers[n.ID] = &Worker{
 			ID: n.ID, Name: n.Name, OwnerID: n.OwnerID, Hostname: n.Hostname,
 			OS: n.OS, Arch: n.Arch, CPUs: n.CPUs, MemMB: uint64(n.MemMB),
 			DiskFree: uint64(n.DiskFreeMB), GPUs: fromStoreGPUs(n.GPUs),
 			Encoders: n.Encoders, Runtimes: fromStoreRuntimes(n.Runtimes),
+			IPv6: n.IPv6, VM: caps,
 			Price: n.Price, Slots: n.Slots, Speed: n.Speed, OK: n.OK, Bad: n.Bad,
 			Billed: n.SecondsBilled, Earned: n.Earned, Paused: n.Paused,
 			seen:  time.Unix(n.LastSeen, 0),
-			inbox: make(chan *Claim, 64),
+			inbox: make(chan *Claim, 64), vminbox: make(chan *vm.Command, 16),
 		}
 	}
 	jobs, err := s.st.LoadResumable()
@@ -406,8 +424,10 @@ func (s *Server) restore() {
 	for _, id := range rerun {
 		go s.runBaseline(id)
 	}
-	if len(nodes) > 0 || len(jobs) > 0 {
-		log.Printf("restored %d node(s), %d unfinished job(s)", len(nodes), len(jobs))
+	s.restoreVM()
+	if len(nodes) > 0 || len(jobs) > 0 || len(s.vms) > 0 {
+		log.Printf("restored %d node(s), %d unfinished job(s), %d vm offer(s), %d vm instance(s)",
+			len(nodes), len(jobs), len(s.voffers), len(s.vms))
 	}
 }
 
@@ -570,6 +590,15 @@ func (s *Server) Handlers() http.Handler {
 	mux.HandleFunc("/api/market", s.handleMarket)
 	mux.HandleFunc("/api/ledger", s.handleLedger)
 
+	// IPv6 cloud hosts: buyer/seller console APIs, and the agent's own channel.
+	mux.HandleFunc("/api/vm/offers", s.handleVMOffers)
+	mux.HandleFunc("/api/vm/offers/", s.handleVMOfferOp)
+	mux.HandleFunc("/api/vm/orders", s.handleVMOrder)
+	mux.HandleFunc("/api/vm/instances", s.handleVMInstances)
+	mux.HandleFunc("/api/vm/instances/", s.handleVMInstanceOp)
+	mux.HandleFunc("/api/vm/claim", s.handleVMClaim)
+	mux.HandleFunc("/api/vm/report", s.handleVMReport)
+
 	// Model gateway: console management on /api, buyer API on /v1.
 	mux.HandleFunc("/api/keys", s.handleAPIKeys)
 	mux.HandleFunc("/api/keys/", s.handleAPIKeyOp)
@@ -611,7 +640,8 @@ func (s *Server) Handlers() http.Handler {
 // chatter are the agent's heartbeat paths: they fire every few seconds per
 // node, so the handlers log the events that matter (a node coming online, a
 // segment finishing) instead of the poll itself.
-var chatter = map[string]bool{"/api/state": true, "/api/worker/hello": true, "/api/report": true}
+var chatter = map[string]bool{"/api/state": true, "/api/worker/hello": true, "/api/report": true,
+	"/api/vm/claim": true, "/api/vm/report": true}
 
 func logWrap(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -684,8 +714,11 @@ func (s *Server) handleHello(w http.ResponseWriter, r *http.Request) {
 	wd := s.workers[info.ID]
 	fresh := wd == nil || !wd.online()
 	if wd == nil {
-		wd = &Worker{ID: info.ID, inbox: make(chan *Claim, 64)}
+		wd = &Worker{ID: info.ID, inbox: make(chan *Claim, 64), vminbox: make(chan *vm.Command, 16)}
 		s.workers[info.ID] = wd
+	}
+	if wd.vminbox == nil {
+		wd.vminbox = make(chan *vm.Command, 16)
 	}
 	if !info.NameSet && wd.Name != "" {
 		// a machine the platform already labelled - from a launcher ticket, or from
@@ -697,6 +730,7 @@ func (s *Server) handleHello(w http.ResponseWriter, r *http.Request) {
 	wd.Name, wd.Hostname, wd.OS, wd.Arch = info.Name, info.Hostname, info.OS, info.Arch
 	wd.CPUs, wd.MemMB, wd.DiskFree = info.CPUs, info.MemMB, info.DiskFreeMB
 	wd.GPUs, wd.Encoders, wd.Runtimes = info.GPUs, info.Encoders, info.Runtimes
+	wd.IPv6, wd.VM = info.IPv6, info.VM
 	wd.Slots = info.Slots
 	wd.seen, wd.Address = time.Now(), r.RemoteAddr
 	if wd.Price <= 0 {
@@ -736,6 +770,7 @@ func (s *Server) handleHello(w http.ResponseWriter, r *http.Request) {
 		OS: wd.OS, Arch: wd.Arch, CPUs: wd.CPUs, MemMB: int(wd.MemMB),
 		DiskFreeMB: int64(wd.DiskFree), GPUs: toStoreGPUs(wd.GPUs),
 		Encoders: wd.Encoders, Runtimes: toStoreRuntimes(wd.Runtimes),
+		IPv6: wd.IPv6, VM: vmCapsJSON(wd.VM),
 		Price: wd.Price, Slots: wd.Slots, Speed: wd.Speed, OK: wd.OK, Bad: wd.Bad,
 		RegisteredAt: time.Now().Unix(), LastSeen: time.Now().Unix(),
 	}
@@ -745,6 +780,12 @@ func (s *Server) handleHello(w http.ResponseWriter, r *http.Request) {
 	if err := s.st.RegisterNode(row); err != nil {
 		log.Printf("register node %s: %v", wd.ID, err)
 	}
+	// A machine coming back is the moment to resume its VM commands: a start
+	// that was queued while it was offline, or a stop for an instance the
+	// broker already settled and wants destroyed.
+	s.mu.Lock()
+	s.vmWakeNodeLocked(wd.ID, time.Now())
+	s.mu.Unlock()
 	if fresh {
 		// the agent re-announces every few seconds as a heartbeat; logging each
 		// one would bury the scheduling events that actually matter
@@ -1030,6 +1071,9 @@ func (s *Server) tick() {
 			s.saveSegLocked(seg)
 		}
 	}
+	// The VM market has its own clock: prepaid runtime, heartbeats and stop
+	// commands. It piggybacks on this tick so there is one scheduler goroutine.
+	s.vmTickLocked(now)
 }
 
 // dispatchBudgetLocked is how many slices one job may claim per tick. It spreads
@@ -1872,6 +1916,9 @@ func (s *Server) handleState(w http.ResponseWriter, r *http.Request) {
 			// who a node belongs to is private; whether it belongs to anyone at all
 			// is what tells the console to keep it out of the 待认领 list
 			"claimed": wd.OwnerID != "",
+			// hypervisor capability is shown to everyone (it is what the VM market
+			// is selling); the interface addresses only to their owner
+			"vm": wd.VM,
 		}
 		if wd.cooling() {
 			view["parked_sec"] = int(time.Until(wd.CoolUntil).Seconds()) + 1
@@ -1881,6 +1928,7 @@ func (s *Server) handleState(w http.ResponseWriter, r *http.Request) {
 		if mine {
 			view["hostname"] = wd.Hostname
 			view["address"] = wd.Address
+			view["ipv6"] = wd.IPv6
 			view["disk_free_mb"] = wd.DiskFree
 			view["earned"] = wd.Earned
 			view["seconds_billed"] = wd.Billed

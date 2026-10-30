@@ -56,6 +56,8 @@ CREATE TABLE IF NOT EXISTS nodes(
   seconds_billed REAL NOT NULL DEFAULT 0,
   earned         REAL NOT NULL DEFAULT 0,
   paused         INTEGER NOT NULL DEFAULT 0,
+  ipv6           TEXT NOT NULL DEFAULT '',
+  vm             TEXT NOT NULL DEFAULT '',
   registered_at  INTEGER NOT NULL,
   last_seen      INTEGER NOT NULL);
 
@@ -139,12 +141,81 @@ CREATE TABLE IF NOT EXISTS upstreams(
   enabled     INTEGER NOT NULL DEFAULT 1,
   created_at  INTEGER NOT NULL);
 
+CREATE TABLE IF NOT EXISTS vm_offers(
+  id           TEXT PRIMARY KEY,
+  node_id      TEXT NOT NULL,
+  owner_id     TEXT NOT NULL,
+  name         TEXT NOT NULL,
+  image_url    TEXT NOT NULL,
+  image_sha256 TEXT NOT NULL DEFAULT '',
+  image_format TEXT NOT NULL DEFAULT 'qcow2',
+  os           TEXT NOT NULL DEFAULT 'linux',
+  cpus         INTEGER NOT NULL,
+  mem_mb       INTEGER NOT NULL,
+  disk_gb      INTEGER NOT NULL,
+  net_mode     TEXT NOT NULL DEFAULT 'slirp',
+  ipv6_prefix  TEXT NOT NULL DEFAULT '',
+  ipv6_gateway TEXT NOT NULL DEFAULT '',
+  host_ipv6    TEXT NOT NULL,
+  ports        TEXT NOT NULL DEFAULT '[]',
+  price_hour   REAL NOT NULL,
+  max_hours    INTEGER NOT NULL DEFAULT 24,
+  enabled      INTEGER NOT NULL DEFAULT 1,
+  created_at   INTEGER NOT NULL);
+
+CREATE TABLE IF NOT EXISTS vm_instances(
+  id               TEXT PRIMARY KEY,
+  offer_id         TEXT NOT NULL,
+  node_id          TEXT NOT NULL,
+  buyer_id         TEXT,
+  seller_id        TEXT,
+  name             TEXT NOT NULL,
+  status           TEXT NOT NULL,
+  cpus             INTEGER NOT NULL,
+  mem_mb           INTEGER NOT NULL,
+  disk_gb          INTEGER NOT NULL,
+  image_url        TEXT NOT NULL,
+  image_sha256     TEXT NOT NULL DEFAULT '',
+  image_format     TEXT NOT NULL DEFAULT 'qcow2',
+  os               TEXT NOT NULL DEFAULT 'linux',
+  net_mode         TEXT NOT NULL DEFAULT 'slirp',
+  guest_ipv6       TEXT NOT NULL DEFAULT '',
+  prefix_len       INTEGER NOT NULL DEFAULT 0,
+  gateway          TEXT NOT NULL DEFAULT '',
+  host_ipv6        TEXT NOT NULL,
+  ports            TEXT NOT NULL DEFAULT '[]',
+  ssh_user         TEXT NOT NULL DEFAULT 'starstack',
+  ssh_port         INTEGER NOT NULL DEFAULT 22,
+  console_port     INTEGER NOT NULL DEFAULT 0,
+  ssh_public_key   TEXT NOT NULL DEFAULT '',
+  root_password_enc TEXT NOT NULL DEFAULT '',
+  vnc_password_enc  TEXT NOT NULL DEFAULT '',
+  price_hour       REAL NOT NULL,
+  hold             REAL NOT NULL,
+  spent            REAL NOT NULL DEFAULT 0,
+  max_hours        INTEGER NOT NULL DEFAULT 24,
+  progress         REAL NOT NULL DEFAULT 0,
+  endpoints        TEXT NOT NULL DEFAULT '',
+  note             TEXT NOT NULL DEFAULT '',
+  err              TEXT NOT NULL DEFAULT '',
+  cleanup          INTEGER NOT NULL DEFAULT 0,
+  created_at       INTEGER NOT NULL,
+  started_at       INTEGER NOT NULL DEFAULT 0,
+  stopped_at       INTEGER NOT NULL DEFAULT 0,
+  last_seen        INTEGER NOT NULL DEFAULT 0,
+  expires_at       INTEGER NOT NULL DEFAULT 0,
+  stopping_at      INTEGER NOT NULL DEFAULT 0);
+
 CREATE INDEX IF NOT EXISTS idx_seg_job ON segments(job_id);
 CREATE INDEX IF NOT EXISTS idx_led_user ON ledger(user_id, ts);
 CREATE INDEX IF NOT EXISTS idx_led_node ON ledger(node_id, ts);
 CREATE INDEX IF NOT EXISTS idx_sess_user ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_key_user ON api_keys(user_id);
 CREATE INDEX IF NOT EXISTS idx_up_owner ON upstreams(owner_id);
+CREATE INDEX IF NOT EXISTS idx_vmoffer_node ON vm_offers(node_id);
+CREATE INDEX IF NOT EXISTS idx_vmoffer_owner ON vm_offers(owner_id);
+CREATE INDEX IF NOT EXISTS idx_vminst_buyer ON vm_instances(buyer_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_vminst_node ON vm_instances(node_id, created_at);
 `
 
 // Column additions for databases written by an earlier build. SQLite has no
@@ -153,6 +224,9 @@ const columnMigrations = `
 ALTER TABLE segments ADD COLUMN price REAL NOT NULL DEFAULT 0;
 ALTER TABLE segments ADD COLUMN excluded TEXT NOT NULL DEFAULT '';
 ALTER TABLE nodes ADD COLUMN paused INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE nodes ADD COLUMN ipv6 TEXT NOT NULL DEFAULT '';
+ALTER TABLE nodes ADD COLUMN vm TEXT NOT NULL DEFAULT '';
+ALTER TABLE vm_instances ADD COLUMN stopping_at INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE jobs ADD COLUMN kind TEXT NOT NULL DEFAULT 'transcode';
 ALTER TABLE jobs ADD COLUMN plan TEXT NOT NULL DEFAULT '';
 ALTER TABLE upstreams ADD COLUMN max_context INTEGER NOT NULL DEFAULT 32768;
@@ -320,7 +394,12 @@ type NodeRow struct {
 	Earned         float64
 	// Paused is the owner's own switch: the machine stays online and visible,
 	// it just stops being promised new slices.
-	Paused       bool
+	Paused bool
+	// IPv6 is the machine's own global address list and VM is its JSON
+	// hypervisor capability (empty when the agent was not started with --vm).
+	// Both are what the cloud-host market can promise a buyer.
+	IPv6         []string
+	VM           string
 	RegisteredAt int64
 	LastSeen     int64
 }
@@ -329,16 +408,17 @@ type NodeRow struct {
 // ownership and lifetime totals across agent restarts.
 func (s *Store) RegisterNode(n *NodeRow) error {
 	_, err := s.db.Exec(`INSERT INTO nodes(id,owner_id,name,hostname,os,arch,cpus,mem_mb,disk_free_mb,
-			gpus,encoders,runtimes,price,slots,speed,ok,bad,registered_at,last_seen)
-		VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+			gpus,encoders,runtimes,price,slots,speed,ok,bad,ipv6,vm,registered_at,last_seen)
+		VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 		ON CONFLICT(id) DO UPDATE SET owner_id=COALESCE(excluded.owner_id, nodes.owner_id),
 			name=excluded.name, hostname=excluded.hostname, os=excluded.os, arch=excluded.arch,
 			cpus=excluded.cpus, mem_mb=excluded.mem_mb, disk_free_mb=excluded.disk_free_mb,
 			gpus=excluded.gpus, encoders=excluded.encoders, runtimes=excluded.runtimes,
+			ipv6=excluded.ipv6, vm=excluded.vm,
 			price=nodes.price, slots=excluded.slots, last_seen=excluded.last_seen`,
 		n.ID, nullStr(n.OwnerID), n.Name, n.Hostname, n.OS, n.Arch, n.CPUs, n.MemMB, n.DiskFreeMB,
 		enc(n.GPUs), enc(n.Encoders), enc(n.Runtimes), n.Price, n.Slots, n.Speed, n.OK, n.Bad,
-		n.RegisteredAt, n.LastSeen)
+		enc(n.IPv6), n.VM, n.RegisteredAt, n.LastSeen)
 	return err
 }
 
@@ -377,7 +457,7 @@ func (s *Store) TouchNode(id string, speed float64, ok, bad int) error {
 
 func (s *Store) Nodes() ([]*NodeRow, error) {
 	rows, err := s.db.Query(`SELECT id,owner_id,name,hostname,os,arch,cpus,mem_mb,disk_free_mb,gpus,encoders,
-		runtimes,price,slots,speed,ok,bad,seconds_billed,earned,paused,registered_at,last_seen FROM nodes ORDER BY registered_at`)
+		runtimes,price,slots,speed,ok,bad,seconds_billed,earned,paused,ipv6,vm,registered_at,last_seen FROM nodes ORDER BY registered_at`)
 	if err != nil {
 		return nil, err
 	}
@@ -385,18 +465,20 @@ func (s *Store) Nodes() ([]*NodeRow, error) {
 	var out []*NodeRow
 	for rows.Next() {
 		n := &NodeRow{}
-		var owner, g, e, r sql.NullString
+		var owner, g, e, r, ipv6, vmCaps sql.NullString
 		var paused int
 		if err := rows.Scan(&n.ID, &owner, &n.Name, &n.Hostname, &n.OS, &n.Arch, &n.CPUs, &n.MemMB,
 			&n.DiskFreeMB, &g, &e, &r, &n.Price, &n.Slots, &n.Speed, &n.OK, &n.Bad, &n.SecondsBilled,
-			&n.Earned, &paused, &n.RegisteredAt, &n.LastSeen); err != nil {
+			&n.Earned, &paused, &ipv6, &vmCaps, &n.RegisteredAt, &n.LastSeen); err != nil {
 			return nil, err
 		}
 		n.OwnerID = owner.String
 		n.Paused = paused != 0
+		n.VM = vmCaps.String
 		dec(g, &n.GPUs)
 		dec(e, &n.Encoders)
 		dec(r, &n.Runtimes)
+		dec(ipv6, &n.IPv6)
 		out = append(out, n)
 	}
 	return out, rows.Err()

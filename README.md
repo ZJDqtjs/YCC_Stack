@@ -7,6 +7,10 @@
 这条链路是整个毕设里工程风险最低、演示效果最直接的一条：输入输出都是人眼可验证的视频，
 而调度、租约、校验、结算这些平台层要做的事，一个都绕不过去。
 
+第二条落地链路是 **IPv6 云主机共享**：卖方发布虚拟机配置，买方下单后卖方机器上的 Agent
+自动用 QEMU 拉起系统镜像、生成 cloud-init 配置、按 IPv6/端口映射接入；预扣、按秒结算、
+失联冻结和自动停机复用同一套账本与节点通道（见下文「IPv6 云主机共享」）。
+
 ## 技术栈与选型理由
 
 | 层 | 选择 | 为什么 |
@@ -247,6 +251,143 @@ curl http://BROKER/v1/chat/completions \
        "messages":[{"role":"user","content":"你好"}]}'
 ```
 
+## IPv6 云主机共享
+
+转码市场卖的是"切片算力"，云主机市场卖的是**一段独占的虚拟机租期**。两者共用同一套账户、节点归属、
+预扣/结算账本和控制台，但生命周期完全独立：卖方发布配置，买方下单后 Broker 通过节点自己的长轮询
+通道把一条 `start` 指令送到卖方机器，Agent 用 QEMU 拉镜像、建差量盘、生成 cloud-init 种子盘、
+分配 IPv6/端口，然后把 `running` 和连接端点回报给 Broker。
+
+### 卖方：发布配置
+
+控制台「云主机 → 发布我的虚拟机配置」填：节点、镜像 URL/格式/SHA-256、vCPU/内存/磁盘、
+网络模式、IPv6、端口映射、每小时单价和最长租期。发布时 Broker 会核对：
+
+- 节点属于当前账户，且以 `--vm` 启动、在线、上报了 `qemu` 能力；
+- 卖方填的公网 IPv6 **确实在这台机器当前上报的地址列表里**（只接受 GUA，拒绝 ULA/链路本地/回环）；
+- vCPU/内存/磁盘不超过这台机器上报的物理容量；
+- `routed` 模式必须同时给 `/48 ~ /64` 前缀和网关，且 Agent 配置了 `--vm-bridge`。
+
+Agent 侧启动参数：
+
+```bash
+./starstack-worker --id dorm-pc --server http://broker:8787 \
+  --vm --qemu qemu-system-x86_64 --qemu-img qemu-img \
+  --vm-max 2 --vm-dir /var/lib/starstack-vms \
+  --vm-bridge br0 --vm-uplink eth0      # 只有 routed 模式需要后两个
+```
+
+`--vm` 会让 Agent 探测 qemu 版本、硬件加速器（KVM/WHPX/HVF，找不到就退回 TCG）和全局 IPv6，
+并把它作为节点能力上报。没有安装 qemu 时 Agent 仍然可以正常做转码，只是控制台不会给它发布入口。
+
+### 买方：下单与计费
+
+`POST /api/vm/orders` 传 `offer_id`、可选主机名、租期小时数和 SSH 公钥。Broker 在锁内完成：
+
+1. 校验配置/节点在线、不能租自己的机器、单账户在租数量上限；
+2. 按**活跃实例**（不是已发布配置）核算节点剩余的 vCPU/内存/磁盘；
+3. 分配资源：`slirp` 模式从 20000-29999 选空闲宿主机端口（SSH 22 自动补一条映射），
+   `routed` 模式在前缀里选一个未占用的 guest `/128`；VNC 从 5900-5999 分配；
+4. 按"单价 × 小时数"预扣，余额不足 402；
+5. 生成 RSA 2048 SSH 密钥对（买方给了公钥就用买方的）、root 口令、VNC 口令，
+   前两个用 `gateway.key` 做 AES-GCM 加密后入库；**私钥/口令只在响应里返回一次**；
+6. 写入实例并投递 `start` 指令。
+
+计费与转码同构：预扣先扣，按**实际 running 秒数**结算，`spent = min(预扣, 单价 × 秒数 / 3600)`，
+停机时退还 `预扣 - spent`，卖方拿 90%、平台留 10%。预扣同时是运行时长的硬上限：
+到 `ExpiresAt`（`started_at + 预扣/单价`）Broker 自动下发 `stop`。买方可以在到期前 `extend`，
+按增量再次预扣；已到期则拒绝，不再扣钱。运行中控制台展示的"已用"是按同一公式实时估算的，不是冻结值。
+
+状态机：`queued → provisioning → running → stopping → stopped`，失败走 `failed`。
+节点 90 秒没有心跳转 `unreachable`（计费按最后心跳冻结），离线超过 5 分钟按最后心跳结算并退还剩余预扣；
+Agent 重新上线时 Broker 会把漏掉的 `start/stop` 重新投递。Agent 回报 `stopped/failed` 后清理标记置位，
+不会无限重发停机命令。
+
+### 两种 IPv6 接入方式
+
+**slirp（推荐，跨平台）**：QEMU 用户态网络给虚拟机 10.0.2.15 + IPv4 NAT，hostfwd 只绑
+`127.0.0.1:<port>`；Agent 另起一个 **IPv6 专用转发代理**监听 `[::]:<port>`，把买方的
+`[卖方 GUA]:port` 连接转发到 QEMU 的 IPv4 回环映射。TCP 双向拷贝，UDP 按客户端做 60 秒会话表。
+控制台 VNC 也走同一个代理（QMP 设在 `127.0.0.1`，VNC 只绑回环并设口令）。
+这样做是因为 slirp 的入站 hostfwd 在多数 QEMU 构建里只支持 IPv4，依赖它会把"公网 IPv6 可达"变成版本彩票。
+
+**routed（Linux，虚拟机直接拿 GUA）**：Agent 创建 tap、挂到 `--vm-bridge` 指定的网桥，
+`ip -6 route replace <guest>/128 dev tap`；如果 `--vm-uplink` 非空，再开 `proxy_ndp` 并注册
+`ip -6 neigh proxy`，让上游路由器/交换机把邻居发现代答给宿主机。虚拟机通过 cloud-init 的
+network-config v2 静态配置地址、网关和 DNS。`routed` 模式不需要端口转发，虚拟机自己的 22/80 端口就是
+对外端口，前提是卖方防火墙放行。它需要 root/`CAP_NET_ADMIN` 和预先配置好的网桥。
+
+### Agent 侧自动装机
+
+- 镜像按 URL + SHA-256 缓存到 `<vm-dir>/images`，同一基础镜像只下载一次，32 GiB 上限，7 天清理；
+  SHA-256 不匹配直接失败（镜像一旦被换掉，买方拿到的就不是卖方描述的系统）。
+- cloud 镜像用 `qemu-img create -f qcow2 -F <fmt> -b <base>` 生成差量盘，磁盘大小按配置；
+- 内置一个最小 ISO9660 + Joliet 写入器生成 NoCloud 种子盘（卷标 `cidata`，含 `user-data`/
+  `meta-data`/`network-config`），不依赖 `genisoimage`/`cloud-localds`，单个 Agent 二进制即可跑；
+- `user-data` 创建 `starstack` 用户（sudo 免密 + 买方公钥）、写入 root/用户口令、关闭 SSH 密码登录；
+  控制台仍可用 root + 一次性口令通过 VNC 登录；
+- QEMU 参数：q35、`-accel kvm|whpx|hvf|tcg`、virtio 磁盘/网卡、`-daemonize` 的等价 detach（Unix 用 Setsid，
+  Windows 用 detached process + taskkill），`-vnc 127.0.0.1:<display>,password=on`，QMP 走
+  `127.0.0.1:<随机端口>`，串口日志落 `console.log`；
+- QMP 在启动后设置 VNC 口令；没有口令就拒绝启动，避免开一个无认证控制台；
+- 每个实例目录有 `state.json`（plan/PID/QMP 端口/tap/端点）。Agent 重启后按 state + QMP
+  `query-status` 重新认领正在跑的虚拟机，并重建 IPv6 转发代理，不重复下载/建盘；
+- 停机走 QMP `system_powerdown`，20 秒内没关就 `quit`/kill，然后删 tap/路由/NDP 代理和实例目录
+  （买方数据不留在卖方磁盘上）。镜像缓存单独保留。
+
+### 云主机 API
+
+```
+GET    /api/vm/offers                 卖方自己的 + 所有可租配置
+POST   /api/vm/offers                 发布（必须是自己在线且带 --vm 的节点）
+PUT    /api/vm/offers/{id}            上架/下架 {"enabled":true|false}
+DELETE /api/vm/offers/{id}            删除（已租实例按订单快照继续）
+POST   /api/vm/orders                 下单 {offer_id,name,hours,ssh_public_key}
+GET    /api/vm/instances              买方/卖方可见的实例
+POST   /api/vm/instances/{id}/stop    买方停机 / 卖方强制停机
+POST   /api/vm/instances/{id}/extend  续费 {hours}
+GET    /api/vm/claim?worker=...       Agent 长轮询（节点凭据）
+POST   /api/vm/report                 Agent 回报 downloading/provisioning/running/stopping/stopped/failed
+```
+
+### 验证
+
+Broker 的不依赖 QEMU 部分有端到端单测：发布 → 下单 → 预扣 → Agent 渲染 `running` → 按 30 分钟
+结算 → 退款与 90% 分成，另有 routed 地址分配、端口冲突、余额不足、自租拦截：
+
+```bash
+go test ./internal/hub -run TestVM -v
+go test ./internal/vm ./internal/vmhost -v
+```
+
+控制台的云主机视图用 Playwright 在真实浏览器里跑过卖方/买方 × 浅色/深色 × 宽屏/窄屏，
+页面无 JS 错误、无横向溢出；发布表单、租用表单、端点展示、续费/停机按钮均可用。
+**QEMU 真机开虚拟机没有在本机跑过**（开发机未安装 qemu），这一段的正确性由 seed ISO 的
+pycdlib 解析、转发代理的 IPv6 回环测试和 QMP 参数构造支撑；到有 KVM/WHPX 的机器上应先
+用一台 Ubuntu cloud image 做一次冒烟。
+
+### 已知限制（云主机部分）
+
+1. **ISO 安装不是全自动的。** `image_format=iso` 会挂安装器和 NoCloud 种子盘，但发行版安装器
+   的自动化协议各不相同；当前需要买方在 VNC 里点完安装。qcow2/raw 的 cloud image 才是"下单即用"。
+2. **slirp 模式下虚拟机本身没有公网 IPv6**，公网 IPv6 落在卖方宿主机到虚拟机的端口映射上。
+   需要虚拟机自己持有 GUA（比如跑需要主动入站 IPv6 的服务）时用 routed 模式。
+3. **routed 模式需要卖方自己准备网桥、路由和防火墙。** 平台只做 tap/路由/NDP 代理，
+   不接管整机网络配置；`proxy_ndp` 通过写 `/proc` 完成，非 root 会失败。
+4. **IPv6 地址变化会使已发布配置失效。** 发布时校验的是"当前上报地址"，运营商重新前缀委派后
+   卖方需要下架重发；已租实例的连接地址也不会跟着变。
+5. **没有浏览器内控制台。** 返回的是 `vnc://host:port` + 一次性口令，需要 VNC 客户端；
+   没做 noVNC/WebSocket 网关。
+6. **没有快照、迁移和 GPU 直通。** 停机即删盘；虚拟机跑在卖方单机上，节点掉线只能按最后心跳结算。
+7. **没有 guest agent。** 优雅关机依赖 ACPI；不响应 ACPI 的镜像会被 20 秒后强杀。
+8. **镜像下载在 Agent 端。** 大镜像会占用卖方上行带宽，Broker 只负责把 URL 和校验值放进指令；
+   下载进度会回报，但 Broker 的启动总时限是 25 分钟。
+9. **端口转发是 Agent 进程内的用户态代理。** Agent 挂掉期间虚拟机还在跑但不可达；重启后会重建代理。
+   它也不做 TLS 终止/访问控制，虚拟机里该开防火墙还是要开。VNC 本身是明文协议、口令认证只有
+   8 位 DES 强度，公网使用建议买方自己走 SSH 隧道或 `ssh -L`。
+10. **镜像 URL 不能内嵌账号口令。** 需要私有镜像时先在卖方机器上把镜像放到可匿名拉取的地址，
+    或后续接对象存储的预签名 URL；当前 Agent 不做鉴权下载。
+
 ## 代码结构
 
 ```
@@ -256,13 +397,20 @@ internal/hub/    Broker：节点注册、两阶段匹配调度、租约回收、
                  + users.go：账户/会话/口令哈希、节点认领、报价、预扣与结算、账单流水
                  + render.go：Blender/时间线渲染的登记、切片分发与合并
                  + gateway.go：OpenAI 兼容网关、能力/上下文路由、三段计费、会话粘性、结构化输出校验
+                 + vm.go：云主机配置发布、下单、IPv6/端口分配、Agent 指令通道、按秒结算与自动停机
                  + policy.go：演示/公网两套部署档位、Agent 凭证与签名源地址、登录限流、提交护栏
                  + launch.go：启动码、按平台生成的 .cmd/.sh 启动器、/dl/ 下发节点程序、暂停派活
                  + scheduler_test.go：调度与结算核心逻辑的单元测试（不需要 ffmpeg）
 internal/render/ Blender 帧范围与 FCP XML/FCPXML 时间线解析、按帧/按秒的纯函数规划
-internal/store/  SQLite 持久化：users / sessions / nodes / jobs / segments / ledger / api_keys / upstreams
+internal/vm/     云主机领域契约：IPv6 GUA/前缀校验、guest 地址与宿主机端口分配、按秒计费、
+                 cloud-init NoCloud seed ISO（内置 ISO9660/Joliet 写入器）
+internal/vmhost/ Agent 侧 QEMU：镜像缓存与校验、差量盘、cloud-init seed、QMP 控制、VNC 口令、
+                 IPv6 TCP/UDP 转发代理、Linux tap/routed + NDP 代理、实例状态与重启认领
+internal/store/  SQLite 持久化：users / sessions / nodes / jobs / segments / ledger / api_keys /
+                 upstreams / vm_offers / vm_instances
 cmd/server/      平台服务端（--public / --agent-token / --cookie-path / --trust-proxy / --base-url）
 cmd/worker/      算力节点 Provider Agent（硬件发现、能力上报、取任务、转码/渲染、回传）
+                 + vm.go：云主机指令轮询、启动/停机执行、运行心跳与失败回报
 internal/hub/web 前端单页控制台（登录 + 提交任务/我的任务/模型 API/算力市场/我的节点/账单 六视图）
 deploy/          服务器部署件：systemd 单元、nginx 反代片段、env 模板、deploy.sh / enable-nginx.sh
 deploy/models/   MoE/分布式推理部署：llama.cpp rpc-server、--n-cpu-moe、vLLM TP、Ollama
