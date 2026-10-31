@@ -12,7 +12,8 @@
     "postcss": true,
     "minified": true,
     "coverView": true,
-    "showShadowRootInWxmlPanel": true
+    "showShadowRootInWxmlPanel": true,
+    "minifyWXML": true
   },
   "condition": {}
 }
