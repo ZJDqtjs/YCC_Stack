@@ -566,4 +566,5 @@ func (a *agent) finish(c *hub.Claim, path string, wall, speed float64) {
 		"speed": speed, "sha": sha, "bytes": size, "wall": wall,
 	}, true)
 	log.Printf("seg %s done in %.1fs (%.2f units/s, %.1f MiB)", c.SegID, wall, speed, float64(size)/(1<<20))
+	a.commNote("done", "seg="+c.SegID, "wall="+strconv.FormatFloat(wall, 'f', 1, 64)+"s", "bytes="+strconv.FormatInt(size, 10))
 }

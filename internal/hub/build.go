@@ -170,7 +170,9 @@ func (s *Server) handleCreateBuild(w http.ResponseWriter, r *http.Request) {
 	s.jobs[id] = job
 	s.order = append(s.order, id)
 	s.mu.Unlock()
-
+	s.commLog(&store.CommEntry{JobID: id, BuyerID: u.ID, Actor: "buyer", Event: "job.created",
+		Detail: commDetail(map[string]any{"kind": "build", "name": name, "hold": hold,
+			"timeout": timeout, "command": command})})
 	log.Printf("build job %s queued by %s: %.1f MiB source, timeout %ds, hold=%.3f points",
 		id, u.Name, float64(n)/(1<<20), timeout, hold)
 	writeJSON(w, map[string]any{"ok": true, "id": id, "kind": render.KindBuild,

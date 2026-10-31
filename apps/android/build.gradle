@@ -3,6 +3,10 @@
 buildscript {
     
     repositories {
+        // 国内构建机直连 Maven Central / Google Maven 经常超时，镜像优先。
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        maven { url 'https://maven.aliyun.com/repository/public' }
+        maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
         google()
         mavenCentral()
     }
@@ -19,6 +23,10 @@ apply from: "variables.gradle"
 
 allprojects {
     repositories {
+        // 国内构建机直连 Maven Central / Google Maven 经常超时，镜像优先。
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        maven { url 'https://maven.aliyun.com/repository/public' }
+        maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
         google()
         mavenCentral()
     }

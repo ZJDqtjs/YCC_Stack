@@ -438,6 +438,12 @@ func (s *Server) handlePending(w http.ResponseWriter, r *http.Request) {
 // handleNodeOp is PUT /api/nodes/{id} with {"price": 0.8}: a provider re-prices
 // its own machine, and the new rate applies to segments matched from now on.
 func (s *Server) handleNodeOp(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		if id, ok := commNodeSuffix(r.URL.Path); ok {
+			s.handleNodeLogs(w, r, id)
+			return
+		}
+	}
 	if strings.HasSuffix(r.URL.Path, "/pause") {
 		s.handleNodePause(w, r)
 		return
@@ -684,6 +690,8 @@ func (s *Server) settleSegment(j *Job, seg *Seg, wd *Worker) {
 		wd.Earned = round4(wd.Earned + cost)
 		wd.Billed += billed
 	}
+	s.segComm(seg, wd.ID, "server", "seg.settled", map[string]any{
+		"cost": cost, "price": price, "billed": billed, "note": note})
 }
 
 // releaseHold refunds whatever a completed job did not consume. Hold itself is

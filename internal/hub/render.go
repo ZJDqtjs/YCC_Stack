@@ -202,6 +202,9 @@ func (s *Server) handleCreateRender(w http.ResponseWriter, r *http.Request) {
 	log.Printf("render job %s (%s) queued by %s: %d pieces, %.1f %s, hold=%.3f points",
 		id, kind, u.Name, len(job.Segs), job.Duration, job.Spec.Unit(), hold)
 	s.mu.Unlock()
+	s.commLog(&store.CommEntry{JobID: id, BuyerID: u.ID, Actor: "buyer", Event: "job.created",
+		Detail: commDetail(map[string]any{"kind": kind, "name": job.Name, "hold": hold,
+			"pieces": len(job.Segs), "units": job.Duration, "unit": job.Spec.Unit()})})
 	writeJSON(w, map[string]any{"ok": true, "id": id, "kind": kind, "note": job.Note,
 		"pieces": len(job.Segs), "hold": hold, "units": job.Duration, "unit": job.Spec.Unit()})
 }

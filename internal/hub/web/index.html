@@ -966,6 +966,14 @@ td .tag{margin:2px 4px 2px 0}
 </main>
 </div>
 
+<div id="commpanel" style="display:none;position:fixed;inset:0;z-index:75;background:rgba(0,0,0,.45);padding:16px">
+  <div class="card" style="max-width:720px;margin:6vh auto;max-height:82vh;overflow:auto">
+    <h2 id="cp-title" style="margin-bottom:8px"></h2>
+    <div id="cp-body"></div>
+    <div style="margin-top:12px"><button class="ghost" id="cp-close">关闭</button></div>
+  </div>
+</div>
+
 <div id="nodepanel" style="display:none;position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.42);padding:16px">
   <div class="card" style="max-width:620px;margin:8vh auto;max-height:78vh;overflow:auto">
     <h2 id="np-title" style="margin-bottom:6px"></h2>
@@ -973,6 +981,7 @@ td .tag{margin:2px 4px 2px 0}
     <div style="display:flex;gap:10px;margin-top:16px">
       <button class="btn auto" id="np-assign">派任务给这台节点</button>
       <button class="ghost" id="np-close">关闭</button>
+      <button class="ghost" id="np-logs" style="display:none">通讯日志</button>
     </div>
   </div>
 </div>
@@ -1526,6 +1535,8 @@ function jobHTML(j){
       <span class="tag">预扣 ${f2(j.credits_hold||0)} 点</span>
       ${j.resumed?'<span class="tag gpu">跨 Broker 重启恢复</span>':''}
       ${rq.length?`<span class="tag gpu">硬约束：${rq.join(' / ')}</span>`:''}
+      <button class="ghost" onclick="openJobLogs('${j.id}')">通讯日志</button>
+      ${(j.status==='queued'||j.status==='running')?`<button class="ghost" onclick="cancelJob('${j.id}')">取消任务</button>`:''}
       ${j.status==='done'?`<button class="ghost" onclick="location='${BASE}/download/${j.id}'">下载产物</button>`:''}
       ${(j.baseline&&j.baseline.status==='done')?`<button class="ghost" onclick="location='${BASE}/download/${j.id}?which=baseline'">下载基线</button>`:''}
     </h3>
@@ -1536,6 +1547,67 @@ function jobHTML(j){
     <div class="stats">${st}</div>
     ${j.err?`<div class="err">错误：${esc(j.err)}</div>`:''}
   </div>`;
+}
+const COMM_EVENT={'job.created':'任务创建','job.done':'任务完成','job.failed':'任务失败','job.cancelled':'任务取消',
+  'seg.dispatched':'派发给节点','seg.fetching':'节点取源','seg.running':'节点开始执行','seg.uploading':'节点回传',
+  'seg.done':'分片完成','seg.failed':'分片失败','seg.settled':'结算'};
+const COMM_ACTOR={buyer:'买方',seller:'卖方',server:'平台'};
+function commDetail(e){
+  try{
+    const d=JSON.parse(e.detail||'{}'), p=[];
+    if(d.kind) p.push('类型 '+d.kind);
+    if(d.name) p.push(String(d.name).slice(0,40));
+    if(d.hold!==undefined) p.push('预扣 '+f2(d.hold)+' 点');
+    if(d.index!==undefined) p.push('#'+d.index);
+    if(d.dur) p.push(f1(d.dur)+' 秒');
+    if(d.price) p.push(f2(d.price)+' 点/单位');
+    if(d.wall!==undefined) p.push('耗时 '+f1(d.wall)+' 秒');
+    if(d.match!==undefined) p.push(d.match?'哈希一致':'哈希不一致');
+    if(d.cost!==undefined) p.push('结算 '+f2(d.cost)+' 点');
+    if(d.spent!==undefined) p.push('实结算 '+f2(d.spent)+' 点');
+    if(d.refunded!==undefined) p.push('退还 '+f2(d.refunded)+' 点');
+    if(d.attempt) p.push('第 '+d.attempt+' 次');
+    if(d.err) p.push(String(d.err).slice(0,160));
+    return p.join(' · ');
+  }catch(x){ return e.detail||'' }
+}
+function commTimeline(logs,role){
+  if(!logs.length) return '<div class="empty">暂无通讯记录</div>';
+  return '<div class="list">'+logs.map(e=>{
+    const tone=e.actor==='buyer'?'mine':e.actor==='seller'?'gpu':'';
+    return '<div class="listrow" style="display:block">'+
+      '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+
+      '<b>'+esc(COMM_EVENT[e.event]||e.event)+'</b>'+
+      '<span class="tag '+tone+'">'+esc(COMM_ACTOR[e.actor]||e.actor)+'</span>'+
+      (e.node_id?'<span class="tag">'+esc(e.node_id)+'</span>':'')+
+      (e.seg_id?'<span class="tag">'+esc(e.seg_id)+'</span>':'')+'</div>'+
+      '<div class="hint" style="margin-top:4px">'+esc(apiTS(e.ts))+'</div>'+
+      (commDetail(e)?'<div class="hint" style="margin-top:2px">'+esc(commDetail(e))+'</div>':'')+
+      '</div>';
+  }).join('')+'</div>';
+}
+async function openJobLogs(id){
+  $('#cp-title').textContent='通讯日志 · '+id;
+  $('#cp-body').innerHTML='<div class="empty">加载中…</div>';
+  $('#commpanel').style.display='block';
+  try{ const d=await api('/api/jobs/'+encodeURIComponent(id)+'/logs');
+    $('#cp-body').innerHTML=commTimeline(d.logs||[], d.role);
+  }catch(e){ $('#cp-body').innerHTML='<div class="err">读取失败：'+esc(e)+'</div>' }
+}
+async function openNodeLogs(id){
+  $('#cp-title').textContent='通讯日志 · '+id;
+  $('#cp-body').innerHTML='<div class="empty">加载中…</div>';
+  $('#commpanel').style.display='block';
+  try{ const d=await api('/api/nodes/'+encodeURIComponent(id)+'/logs');
+    $('#cp-body').innerHTML=commTimeline(d.logs||[], d.role);
+  }catch(e){ $('#cp-body').innerHTML='<div class="err">读取失败：'+esc(e)+'</div>' }
+}
+$('#cp-close').onclick=()=>{$('#commpanel').style.display='none'};
+
+async function cancelJob(id){
+  if(!confirm('取消任务？未使用的预扣会立即退还。')) return;
+  try{ await api('/api/jobs/'+encodeURIComponent(id)+'/cancel',{method:'POST'}); paintJobs(); refresh(); }
+  catch(e){ alert('取消失败：'+e) }
 }
 async function paintJobs(){
   try{
@@ -1887,6 +1959,9 @@ function openNode(id){
     '<div class="hint" style="margin-top:10px">指定后任务只会派给这台节点；它离线时会排队等待上线。</div>'+
     '<div class="hint mono" style="margin-top:6px">编号 '+esc(w.id)+'</div>';
   $('#nodepanel').style.display='block';
+  const logsBtn=$('#np-logs');
+  logsBtn.style.display=w.mine?'':'none';
+  logsBtn.onclick=()=>{$('#nodepanel').style.display='none';openNodeLogs(w.id)};
 }
 $('#np-close').onclick=()=>{$('#nodepanel').style.display='none'};
 $('#np-assign').onclick=()=>{$('#nodepanel').style.display='none';showView('submit');updateTargetChip()};

@@ -179,6 +179,7 @@ func main() {
 		// on the claim endpoint afterwards only hides that from the provider.
 		log.Fatalf("接入被拒绝: %v", err)
 	}
+	a.commNote("hello", "node="+*id)
 	log.Printf("node %s online: %s/%s cpus=%d mem=%dMB gpus=%v slots=%d price=%.2f encoders=%v",
 		*id, info.OS, info.Arch, info.CPUs, info.MemMB, info.GPUs, *slots, *price, info.Encoders)
 	if a.nodeSecret() == "" {
@@ -416,6 +417,7 @@ func (a *agent) idle() {
 }
 
 func (a *agent) run(c *hub.Claim) {
+	a.commNote("claim", "job="+c.JobID, "seg="+c.SegID, "kind="+c.Kind)
 	switch c.Kind {
 	case render.KindBlender:
 		a.runBlender(c)
@@ -473,6 +475,7 @@ func (a *agent) runTranscode(c *hub.Claim) {
 
 func (a *agent) fail(c *hub.Claim, msg string) {
 	log.Printf("seg %s FAILED: %s", c.SegID, msg)
+	a.commNote("failed", "seg="+c.SegID, "err="+strings.ReplaceAll(msg, "\n", " "))
 	a.post(a.server+"/api/report", map[string]any{
 		"worker": a.id, "seg": c.SegID, "state": "failed", "err": msg}, true)
 }

@@ -4,6 +4,7 @@ import { useApp } from '../ctx'
 import { Bar, Btn, Card, Empty, Loader, Stats, Tag } from '../ui'
 import { f1, f2, shortId } from '../../../shared/index.js'
 import { INFLIGHT, JOB_ST, toneOf } from '../../../shared/constants.js'
+import { CommSheet } from './CommLog'
 
 function Segment({ s, kind }: any) {
   const cls = s.status === 'done' ? 'done' : s.status === 'failed' ? 'failed' : INFLIGHT.includes(s.status) ? 'running' : 'pending'
@@ -23,8 +24,9 @@ function Segment({ s, kind }: any) {
   )
 }
 
-function JobCard({ j }: any) {
+function JobCard({ j, onLog }: any) {
   const { api, showToast } = useApp()
+  const [cancelling, setCancelling] = useState(false)
   const segs = j.segs || []
   const done = segs.filter((s: any) => s.status === 'done').length
   const verified = segs.filter((s: any) => s.match).length
@@ -38,6 +40,19 @@ function JobCard({ j }: any) {
   if (req.min_gpu_mem_mb) rq.push('显存≥' + req.min_gpu_mem_mb + 'MB')
   if (req.runtime) rq.push('需 ' + req.runtime)
   if (req.max_price) rq.push('≤' + f2(req.max_price) + ' 点/秒')
+
+  const cancel = async () => {
+    if (!window.confirm('取消任务 ' + j.name + '？未使用的预扣会立即退还。')) return
+    setCancelling(true)
+    try {
+      await api.cancelJob(j.id)
+      showToast('任务已取消，预扣已退还')
+    } catch (e: any) {
+      showToast('取消失败：' + (e.message || e), 'bad')
+    } finally {
+      setCancelling(false)
+    }
+  }
 
   const save = async (jobId: string, which: string) => {
     const ext = j.kind === 'build' || j.kind === 'blender' ? 'zip' : j.kind === 'pr' ? 'mkv' : 'mp4'
@@ -125,6 +140,14 @@ function JobCard({ j }: any) {
       <Stats items={j.kind === 'build' ? buildStats : stats} />
       {j.err && <div className="err" style={{ marginTop: 10 }}>错误：{j.err}</div>}
       <div className="btnrow">
+        <Btn variant="ghost" tiny onClick={() => onLog(j)}>
+          通讯日志
+        </Btn>
+        {(j.status === 'queued' || j.status === 'running') && (
+          <Btn variant="ghost" tiny onClick={cancel} disabled={cancelling}>
+            {cancelling ? '取消中…' : '取消任务'}
+          </Btn>
+        )}
         {(j.status === 'done' || (j.baseline && j.baseline.status === 'done')) && (
           <>
             {j.status === 'done' && (
@@ -149,6 +172,7 @@ export default function Jobs() {
   const { api } = useApp()
   const [list, setList] = useState<any[] | null>(null)
   const [err, setErr] = useState('')
+  const [logJob, setLogJob] = useState<any>(null)
 
   useEffect(() => {
     let alive = true
@@ -175,7 +199,7 @@ export default function Jobs() {
     if (!list) return <Loader />
     if (err) return <Card><div className="err">{err}</div></Card>
     if (!list.length) return <Card><Empty>还没有任务</Empty></Card>
-    return list.map((j) => <JobCard key={j.id} j={j} />)
+    return list.map((j) => <JobCard key={j.id} j={j} onLog={setLogJob} />)
   }, [list, err])
 
   return (
@@ -185,6 +209,7 @@ export default function Jobs() {
         <p>分片去向、进度、哈希校验与结算都在这里；跨 Broker 重启恢复的任务不计量加速比。</p>
       </div>
       {body}
+      <CommSheet open={!!logJob} title={'通讯日志 · ' + (logJob?.name || '')} loader={() => api.jobLogs(logJob.id)} onClose={() => setLogJob(null)} />
     </div>
   )
 }

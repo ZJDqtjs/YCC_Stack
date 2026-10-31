@@ -956,6 +956,8 @@ func (s *Server) dispatchLocked(seg *Seg, wd *Worker) bool {
 	}
 	select {
 	case wd.inbox <- claim:
+		s.segComm(seg, wd.ID, "server", "seg.dispatched", map[string]any{
+			"index": seg.Index, "dur": seg.Dur, "price": wd.Price})
 		return true
 	default:
 		seg.Status, seg.Worker = "pending", ""
@@ -1286,6 +1288,8 @@ func (s *Server) failJobLocked(j *Job) {
 	// settled, so the unused part of the hold goes back
 	s.releaseHold(j, "任务失败，未使用的预扣已退还")
 	s.saveJobLocked(j)
+	s.commLog(&store.CommEntry{JobID: j.ID, BuyerID: j.OwnerID, Actor: "server", Event: "job.failed",
+		Detail: commDetail(map[string]any{"err": j.Err, "spent": j.Spent, "hold": j.Hold})})
 }
 
 func (s *Server) maybeFinishLocked(j *Job) {
@@ -1372,6 +1376,8 @@ func (s *Server) merge(j *Job) {
 	// providers are paid only for what actually ran; the rest of the hold comes back
 	s.releaseHold(j, "任务完成，预扣差额退还")
 	s.saveJobLocked(j)
+	s.commLog(&store.CommEntry{JobID: j.ID, BuyerID: j.OwnerID, Actor: "server", Event: "job.done",
+		Detail: commDetail(map[string]any{"wall": j.Wall, "spent": j.Spent, "hold": j.Hold})})
 	if j.Resumed {
 		// wall contains the outage window, so this ratio says nothing about the
 		// scheduler; print the raw numbers and refuse the speedup
@@ -1474,13 +1480,18 @@ func (s *Server) handleReport(w http.ResponseWriter, r *http.Request) {
 		// The node has the slice and is still pulling the source. This is not a
 		// transcoding percentage: pct is how much of the file has landed, so the
 		// console can show "取源 43%" instead of a slice that looks stuck at 0%.
+		was := seg.Status
 		seg.Status = "fetching"
 		seg.Worker = rep.Worker
 		seg.Err = ""
 		seg.Pct = rep.Pct
 		seg.lease = time.Now().Add(s.leaseBase + time.Duration(seg.Dur*2*float64(time.Second)))
 		s.saveSegLocked(seg)
+		if was != "fetching" {
+			s.segComm(seg, rep.Worker, "seller", "seg.fetching", map[string]any{"pct": rep.Pct})
+		}
 	case "running":
+		was := seg.Status
 		seg.Status = "running"
 		seg.Worker = rep.Worker
 		seg.Err = ""
@@ -1488,7 +1499,11 @@ func (s *Server) handleReport(w http.ResponseWriter, r *http.Request) {
 		seg.Speed = rep.Speed
 		seg.lease = time.Now().Add(s.leaseBase + time.Duration(seg.Dur*2*float64(time.Second)))
 		s.saveSegLocked(seg)
+		if was != "running" {
+			s.segComm(seg, rep.Worker, "seller", "seg.running", map[string]any{"pct": rep.Pct})
+		}
 	case "uploading":
+		was := seg.Status
 		seg.Status = "uploading"
 		seg.Worker = rep.Worker
 		seg.Pct = 100
@@ -1496,6 +1511,9 @@ func (s *Server) handleReport(w http.ResponseWriter, r *http.Request) {
 		// a lease sized by the clip's duration, and reclaiming it burns the work
 		seg.lease = time.Now().Add(s.leaseBase + time.Duration(seg.Dur*2*float64(time.Second)))
 		s.saveSegLocked(seg)
+		if was != "uploading" {
+			s.segComm(seg, rep.Worker, "seller", "seg.uploading", map[string]any{"pct": 100})
+		}
 	case "done":
 		j := s.jobs[seg.JobID]
 		if seg.path == "" {
@@ -1523,6 +1541,8 @@ func (s *Server) handleReport(w http.ResponseWriter, r *http.Request) {
 			}
 			s.st.TouchNode(wd.ID, wd.Speed, wd.OK, wd.Bad)
 		}
+		s.segComm(seg, rep.Worker, "seller", "seg.done", map[string]any{
+			"wall": seg.Wall, "sha": rep.SHA, "bytes": rep.Bytes, "match": seg.Match})
 		if j != nil && wd != nil && seg.Match {
 			// only a verified result earns money
 			s.settleSegment(j, seg, wd)
@@ -1546,6 +1566,7 @@ func (s *Server) handleReport(w http.ResponseWriter, r *http.Request) {
 		seg.Err = why
 		seg.exclude(rep.Worker)
 		s.punishLocked(s.workers[rep.Worker])
+		s.segComm(seg, rep.Worker, "seller", "seg.failed", map[string]any{"attempt": seg.Attempt, "err": why})
 		if j := s.jobs[seg.JobID]; j != nil && seg.Attempt < 3 {
 			seg.Status, seg.Worker, seg.Pct, seg.Err = "pending", "", 0, ""
 			if j.Status == "failed" {
@@ -1856,6 +1877,9 @@ func (s *Server) handleCreateJob(w http.ResponseWriter, r *http.Request) {
 	log.Printf("job %s queued by %s: %s pieces, profile=%+v req=%+v hold=%.3f points",
 		id, u.Name, job.Note, prof, req, hold)
 	s.mu.Unlock()
+	s.commLog(&store.CommEntry{JobID: id, BuyerID: u.ID, Actor: "buyer", Event: "job.created",
+		Detail: commDetail(map[string]any{"kind": "transcode", "name": job.Name,
+			"hold": hold, "duration": job.Duration, "pieces": len(job.Segs)})})
 	writeJSON(w, map[string]any{"ok": true, "id": id, "note": job.Note,
 		"pieces": len(job.Segs), "hold": hold})
 }
@@ -1901,6 +1925,44 @@ func (s *Server) handleJobFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch parts[3] {
+	case "logs":
+		if r.Method != http.MethodGet {
+			http.Error(w, "GET only", http.StatusMethodNotAllowed)
+			return
+		}
+		s.handleJobLogs(w, r, parts[2])
+	case "cancel":
+		// A failed placement can leave the hold locked until the job's deadline;
+		// the buyer needs a way out that refunds immediately.
+		if r.Method != http.MethodPost {
+			http.Error(w, "POST only", http.StatusMethodNotAllowed)
+			return
+		}
+		owner := s.currentUser(r)
+		if owner == nil || owner.ID != j.OwnerID {
+			http.NotFound(w, r)
+			return
+		}
+		s.mu.Lock()
+		if j.Status == "done" || j.Status == "failed" || j.Status == "merging" {
+			s.mu.Unlock()
+			http.Error(w, jsonErr("任务已结束，无法取消"), http.StatusConflict)
+			return
+		}
+		j.Status, j.Err, j.Finished = "failed", "任务已取消", time.Now()
+		for _, seg := range j.Segs {
+			if seg.Status != "done" {
+				seg.Status, seg.Worker, seg.Err = "failed", "", "任务已取消"
+				s.saveSegLocked(seg)
+			}
+		}
+		s.releaseHold(j, "任务已取消，预扣已退还")
+		s.saveJobLocked(j)
+		s.commLog(&store.CommEntry{JobID: j.ID, BuyerID: owner.ID, Actor: "buyer", Event: "job.cancelled",
+			Detail: commDetail(map[string]any{"refunded": round4(j.Hold - j.Spent)})})
+		s.mu.Unlock()
+		log.Printf("job %s cancelled by %s", j.ID, owner.Name)
+		writeJSON(w, map[string]any{"ok": true, "id": j.ID})
 	case "source":
 		// This used to be a bare ServeFile: anyone who learned a 10-hex job id
 		// could pull another user's footage, and in broker-local-path mode the

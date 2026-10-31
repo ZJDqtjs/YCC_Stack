@@ -77,6 +77,9 @@ export function createApi({ baseUrl, getToken, request, upload }) {
     submitTranscode: (form) => uploadTo('/api/jobs', form),
     submitRender: (form) => uploadTo('/api/jobs/render', form),
     submitBuild: (form) => uploadTo('/api/jobs/build', form),
+    cancelJob: (id) => post('/api/jobs/' + enc(id) + '/cancel', {}),
+    jobLogs: (id) => get('/api/jobs/' + enc(id) + '/logs'),
+    nodeLogs: (id) => get('/api/nodes/' + enc(id) + '/logs'),
 
     // billing
     ledger: () => get('/api/ledger'),

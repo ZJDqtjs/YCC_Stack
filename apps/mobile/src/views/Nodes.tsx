@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { openExternal } from '../api'
 import { useApp } from '../ctx'
 import { Btn, Card, CopyBlock, Empty, Field, Loader, Sheet, Stats, Tag } from '../ui'
+import { CommSheet } from './CommLog'
 import { f1, f2, memGB } from '../../../shared/index.js'
 
 const ua = (navigator.userAgent || '').toLowerCase()
@@ -18,6 +19,7 @@ export default function Nodes() {
   const [code, setCode] = useState('')
   const [editing, setEditing] = useState<any>(null)
   const [price, setPrice] = useState('')
+  const [logNode, setLogNode] = useState<any>(null)
   const set = (k: string, v: any) => setF((prev) => ({ ...prev, [k]: v }))
 
   const mine = (workers || []).filter((w: any) => w.mine)
@@ -195,6 +197,9 @@ export default function Nodes() {
                 {w.hostname || ''} · {w.os} · {w.cpus} 核 · {memGB(w.mem_mb)} · 空闲磁盘 {w.disk_free_mb ? memGB(w.disk_free_mb) : '未知'}
               </div>
               <div className="btnrow">
+                <Btn variant="ghost" tiny onClick={() => setLogNode(w)}>
+                  通讯日志
+                </Btn>
                 <Btn variant="ghost" tiny onClick={() => { setEditing(w); setPrice(String(w.price)) }}>
                   调整单价
                 </Btn>
@@ -216,6 +221,8 @@ export default function Nodes() {
           ))
         )}
       </Card>
+
+      <CommSheet open={!!logNode} title={'通讯日志 · ' + (logNode?.name || '')} loader={() => api.nodeLogs(logNode.id)} onClose={() => setLogNode(null)} />
 
       <Sheet open={!!editing} title="调整单价" onClose={() => setEditing(null)}>
         <div className="hint">{editing?.name || editing?.id} 当前 {f2(editing?.price)} 点/视频秒</div>

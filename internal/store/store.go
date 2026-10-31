@@ -248,6 +248,22 @@ CREATE TABLE IF NOT EXISTS forum_media(
   created_at INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS idx_forum_media_post ON forum_media(post_id);
 CREATE INDEX IF NOT EXISTS idx_forum_media_comment ON forum_media(comment_id);
+
+CREATE TABLE IF NOT EXISTS comm_logs(
+  id        INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts        INTEGER NOT NULL,
+  job_id    TEXT NOT NULL DEFAULT '',
+  seg_id    TEXT NOT NULL DEFAULT '',
+  node_id   TEXT NOT NULL DEFAULT '',
+  buyer_id  TEXT NOT NULL DEFAULT '',
+  seller_id TEXT NOT NULL DEFAULT '',
+  actor     TEXT NOT NULL,
+  event     TEXT NOT NULL,
+  detail    TEXT NOT NULL DEFAULT '');
+CREATE INDEX IF NOT EXISTS idx_comm_job ON comm_logs(job_id, ts);
+CREATE INDEX IF NOT EXISTS idx_comm_node ON comm_logs(node_id, ts);
+CREATE INDEX IF NOT EXISTS idx_comm_buyer ON comm_logs(buyer_id, ts);
+CREATE INDEX IF NOT EXISTS idx_comm_seller ON comm_logs(seller_id, ts);
 `
 
 // Column additions for databases written by an earlier build. SQLite has no
