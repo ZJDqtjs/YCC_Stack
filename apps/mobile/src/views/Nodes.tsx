@@ -12,6 +12,7 @@ export default function Nodes() {
   const { api, workers, policy, showToast } = useApp()
   const [f, setF] = useState({ name: '', price: '0.80', slots: '2', os: guessOS(), arch: guessArch() })
   const [msg, setMsg] = useState('')
+  const [scriptUrl, setScriptUrl] = useState('')
   const [busy, setBusy] = useState(false)
   const [pending, setPending] = useState<any[] | null>(null)
   const [code, setCode] = useState('')
@@ -37,9 +38,10 @@ export default function Nodes() {
     setMsg('正在生成启动码…')
     try {
       const d = await api.launchNode(body)
-      openExternal(api.launchScriptUrl(d.script))
+      openExternal(api.launchScriptUrl(d.bundle || d.script))
+      setScriptUrl(api.launchScriptUrl(d.script))
       const mins = Math.max(1, Math.round(d.expires_in_sec / 60))
-      setMsg(`脚本已开始下载（${d.node_id}，${mins} 分钟内有效）。拷到要提供算力的机器上运行，关掉窗口即停止。${d.ready ? '' : ' 注意：Broker 上还没有对应平台的 Agent 程序。'}`)
+      setMsg(`节点包已开始下载（${d.node_id}，${mins} 分钟内有效）。解压后直接双击 starstack-node.exe 即可加入，配置在包里，不需要 bat；关掉窗口即停止。${d.ready ? '' : ' 注意：Broker 上还没有对应平台的 Agent 程序。'}`)
       showToast('启动脚本已生成')
     } catch (e: any) {
       setMsg('生成失败：' + (e.message || e))
@@ -76,7 +78,7 @@ export default function Nodes() {
     <div className="stack">
       <div className="viewhead">
         <h1>我的节点</h1>
-        <p>把闲置机器接进来赚算力点：生成启动脚本、拷到目标机器运行即可，不需要手动装环境或复制令牌。</p>
+        <p>把闲置机器接进来赚算力点：下载节点包，解压后直接双击 exe；启动脚本作为备选。</p>
       </div>
 
       <Card kicker="Provider" title="一键提供算力">
@@ -108,10 +110,17 @@ export default function Nodes() {
         </div>
         <div className="btnrow">
           <Btn block onClick={launch} disabled={busy}>
-            {busy ? <span className="spin" /> : null} 生成启动脚本
+            {busy ? <span className="spin" /> : null} 下载节点包（exe + 配置）
           </Btn>
         </div>
         {msg && <div className="hint" style={{ marginTop: 8 }}>{msg}</div>}
+        {scriptUrl && (
+          <div className="btnrow">
+            <Btn variant="ghost" tiny onClick={() => openExternal(scriptUrl)}>
+              启动脚本（备选）
+            </Btn>
+          </div>
+        )}
         <div className="hint" style={{ marginTop: 10 }}>
           脚本一次有效、30 分钟内可用；Agent 会先检查 ffmpeg/blender 等运行时，再以你的账户身份加入算力池。
         </div>

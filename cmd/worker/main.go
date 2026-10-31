@@ -55,7 +55,46 @@ func main() {
 		"account you trust")
 	autoProvision := flag.Bool("auto-provision", false, "install missing toolchains automatically "+
 		"(currently the .NET SDK for build jobs) instead of failing the task")
+	configPath := flag.String("config", "", "node config JSON (default: starstack-node.json next to the executable)")
 	flag.Parse()
+
+	// The bundle drops starstack-node.json next to the exe, so double-clicking
+	// the worker is enough to join. Flags given on the command line win.
+	explicit := map[string]bool{}
+	flag.Visit(func(f *flag.Flag) { explicit[f.Name] = true })
+	if cfg, path := loadNodeConfig(*configPath, *work); cfg != nil {
+		if !explicit["server"] && cfg.Server != "" {
+			*server = cfg.Server
+		}
+		if !explicit["id"] && cfg.ID != "" {
+			*id = cfg.ID
+		}
+		if !explicit["name"] && cfg.Name != "" {
+			*name = cfg.Name
+		}
+		if !explicit["price"] && cfg.Price != nil {
+			*price = *cfg.Price
+		}
+		if !explicit["slots"] && cfg.Slots != nil {
+			*slots = *cfg.Slots
+		}
+		if !explicit["launch"] && cfg.Launch != "" {
+			*launch = cfg.Launch
+		}
+		if !explicit["token"] && cfg.Token != "" {
+			*token = cfg.Token
+		}
+		if !explicit["work"] && cfg.Work != "" {
+			*work = cfg.Work
+		}
+		if !explicit["allow-build"] && cfg.AllowBuild != nil {
+			*allowBuild = *cfg.AllowBuild
+		}
+		if !explicit["auto-provision"] && cfg.AutoProvision != nil {
+			*autoProvision = *cfg.AutoProvision
+		}
+		log.Printf("loaded node config: %s", path)
+	}
 	autoProvisionEnabled = *autoProvision
 
 	ffx.Ffmpeg, ffx.Ffprobe = *ffmpeg, *ffprobe

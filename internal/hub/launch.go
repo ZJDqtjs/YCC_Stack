@@ -1,6 +1,7 @@
 package hub
 
 import (
+	"archive/zip"
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/json"
@@ -291,6 +292,7 @@ func (s *Server) handleLaunchMint(w http.ResponseWriter, r *http.Request) {
 		"node_id": t.NodeID, "code": t.Code,
 		"expires_in_sec": int(launchTTL / time.Second),
 		"script":         "/launch/" + t.Code + "/" + t.OS + "/" + t.Arch,
+		"bundle":         "/launch/" + t.Code + "/" + t.OS + "/" + t.Arch + "?format=bundle",
 		"worker":         "/dl/" + bin, "ready": ready,
 		"vm": t.VM, "vm_max": t.VMMax,
 	})
@@ -324,11 +326,77 @@ func (s *Server) handleLaunchScript(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "这份脚本和生成的平台不一致", http.StatusBadRequest)
 		return
 	}
+	if r.URL.Query().Get("format") == "bundle" {
+		s.serveLaunchBundle(w, t)
+		return
+	}
 	body, ctype, fname := renderLauncher(t, s.baseURL, nodeBinName(t.OS, t.Arch))
 	w.Header().Set("Content-Type", ctype)
 	w.Header().Set("Content-Disposition", `attachment; filename="`+fname+`"`)
 	w.Header().Set("Cache-Control", "no-store")
 	io.WriteString(w, body)
+}
+
+// serveLaunchBundle packages the worker and its config into one zip. The
+// provider extracts it and double-clicks the exe; the bat launcher stays as the
+// fallback for machines that need QEMU or a different work directory.
+func (s *Server) serveLaunchBundle(w http.ResponseWriter, t *launchTicket) {
+	if s.nodeBinDir == "" {
+		http.Error(w, jsonErr("这台 Broker 没有配置 --node-bin-dir，无法打包节点程序"), http.StatusNotFound)
+		return
+	}
+	bin := nodeBinName(t.OS, t.Arch)
+	f, err := os.Open(filepath.Join(s.nodeBinDir, bin))
+	if err != nil {
+		http.Error(w, jsonErr("缺少节点程序 "+bin), http.StatusNotFound)
+		return
+	}
+	defer f.Close()
+
+	cfg, err := json.MarshalIndent(map[string]any{
+		"server":         strings.TrimRight(s.baseURL, "/"),
+		"id":             t.NodeID,
+		"name":           t.Name,
+		"price":          t.Price,
+		"slots":          t.Slots,
+		"launch":         t.Code,
+		"allow_build":    t.AllowBuild,
+		"auto_provision": t.AllowBuild,
+	}, "", "  ")
+	if err != nil {
+		http.Error(w, jsonErr("配置生成失败"), http.StatusInternalServerError)
+		return
+	}
+
+	bundleName := "starstack-node"
+	if t.OS == "windows" {
+		bundleName += ".exe"
+	}
+	w.Header().Set("Content-Type", "application/zip")
+	w.Header().Set("Content-Disposition", `attachment; filename="starstack-node-`+t.NodeID+`.zip"`)
+	w.Header().Set("Cache-Control", "no-store")
+
+	zw := zip.NewWriter(w)
+	hdr := &zip.FileHeader{Name: bundleName, Method: zip.Deflate}
+	hdr.SetMode(0o755)
+	hdr.Modified = time.Now()
+	dst, err := zw.CreateHeader(hdr)
+	if err == nil {
+		_, err = io.Copy(dst, f)
+	}
+	if err == nil {
+		var out io.Writer
+		out, err = zw.Create("starstack-node.json")
+		if err == nil {
+			_, err = out.Write(cfg)
+		}
+	}
+	if cerr := zw.Close(); err == nil {
+		err = cerr
+	}
+	if err != nil {
+		log.Printf("launch bundle %s: %v", t.NodeID, err)
+	}
 }
 
 func renderLauncher(t *launchTicket, baseURL, bin string) (string, string, string) {

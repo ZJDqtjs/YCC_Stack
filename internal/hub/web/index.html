@@ -828,13 +828,13 @@ td .tag{margin:2px 4px 2px 0}
 <section class="view" id="v-nodes">
   <div class="viewhead">
     <h1>我的节点</h1>
-    <p>把闲置机器接进来赚算力点：下载启动脚本、双击运行即可，不需要安装环境或复制令牌。</p>
+    <p>把闲置机器接进来赚算力点：下载节点包，解压后直接双击 exe 即可；启动脚本作为需要自定义参数时的备选。</p>
   </div>
   <div class="split">
     <div class="card">
       <h2><span class="kicker">Provider</span>一键提供算力</h2>
       <div class="hint" style="margin-top:0">
-        填好参数后下载启动脚本，在要贡献的那台机器上双击运行，这台机器就会以你的账户身份加入算力池并开始计收益。
+        填好参数后下载节点包，解压后双击其中的 exe，这台机器就会以你的账户身份加入算力池并开始计收益。
         关掉窗口即停止。
       </div>
       <label>机器名称</label>
@@ -853,7 +853,7 @@ td .tag{margin:2px 4px 2px 0}
           <select id="larch"><option value="amd64">x86_64 / Intel·AMD</option>
             <option value="arm64">arm64 / 苹果 M 系·麒麟</option></select></div>
       </div>
-      <button class="btn" id="launchbtn" style="margin-top:20px">下载启动脚本</button>
+      <button class="btn" id="launchbtn" style="margin-top:20px">下载节点包（exe + 配置）</button>
       <div id="launchmsg" class="hint"></div>
       <div id="launchwarn" class="hint warn"></div>
       <details style="margin-top:18px">
@@ -1909,13 +1909,14 @@ $('#launchbtn').onclick=async()=>{
   try{
     const d=await post('/api/nodes/launch',body);
     const a=document.createElement('a');
-    a.href=BASE+d.script;a.rel='noopener';document.body.appendChild(a);a.click();a.remove();
+    a.href=BASE+(d.bundle||d.script);a.rel='noopener';document.body.appendChild(a);a.click();a.remove();
     const mins=Math.max(1,Math.round(d.expires_in_sec/60));
-    msg.innerHTML=`脚本正在下载：拷到要提供算力的那台机器上双击运行即可（${esc(d.node_id)}，`+
-      `${mins} 分钟内有效，只能用一次）。它会自动挂到你的账户下，不需要配对码；`+
-      `关掉那个窗口就是停止提供算力，下次重新双击还会是这台机器。`+
+    msg.innerHTML=`节点包正在下载（${esc(d.node_id)}，${mins} 分钟内有效，只能用一次）。`+
+      `解压后直接双击里面的 starstack-node.exe 即可加入，配置已经在包里，不需要 bat；`+
+      `关掉窗口就是停止提供算力，下次重新双击还会是这台机器。`+
+      `<br><a href="${BASE+d.script}">启动脚本（备选）</a>：需要自定义 QEMU、工作目录或手动参数时再用。`+
       (d.ready?'':`<br><span class="warn">注意：这台 Broker 上还没有 ${esc(d.worker)}，`+
-        `脚本会在下载节点程序那一步失败，需要运维先把对应平台的二进制放到 --node-bin-dir。</span>`);
+        `节点包无法生成，需要运维先把对应平台的二进制放到 --node-bin-dir。</span>`);
     refresh();
   }catch(e){msg.textContent='生成失败：'+e}
   finally{btn.disabled=false}

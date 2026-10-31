@@ -97,3 +97,15 @@ cd apps && npx tsc --noEmit && npm run build
 - 产物：`GET /download/<job-id>`，zip 内含 `build.log`。
 
 本次桌面端就是用这条链路构建的：源码包 → 1145 节点 → `dotnet publish` → `result.zip` → 在本机安装。
+
+### 桌面端产物形态
+
+`desktop/build.cmd` 现在发布**自包含单文件**：
+
+```
+dotnet publish StarStack.Desktop.csproj -c Release -r win-x64 \
+  --self-contained true -p:PublishSingleFile=true \
+  -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true
+```
+
+产物目录里只有一个 `StarStack.Desktop.exe`（约 70–90 MB），**双击即可运行**，不需要预装 .NET 运行时，也不需要先解压一堆 DLL。`install.bat` / `install.ps1` 只在需要开始菜单快捷方式和固定安装目录时使用，属于备选。
