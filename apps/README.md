@@ -4,6 +4,7 @@
 
 - `mobile/` — React + Vite + Capacitor 的安卓 App，覆盖控制台全部 9 个视图。
 - `miniapp/` — 原生微信小程序，覆盖需求方的 5 个页面 + 登录。
+- `harmony/` — HarmonyOS NEXT（API 12+）ArkTS 壳，Web 组件加载同一份 React 构建产物。
 - `shared/` — 两个客户端共用的接口客户端、类型约定、状态文案与格式化函数。
 
 后端已支持 `Authorization: Bearer <session token>`（登录响应里新增 `token` 字段）与 `/api/*` 的 CORS 预检，浏览器 Cookie 会话保持原样。

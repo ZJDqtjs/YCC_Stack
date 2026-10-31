@@ -1,0 +1,11 @@
+{
+  "modelVersion": "5.0.0",
+  "name": "starstack-harmony",
+  "version": "1.0.0",
+  "description": "星栈算力鸿蒙客户端",
+  "main": "",
+  "author": "",
+  "license": "",
+  "dependencies": {},
+  "devDependencies": {}
+}

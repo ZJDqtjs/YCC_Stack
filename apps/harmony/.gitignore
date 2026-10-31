@@ -1,0 +1,7 @@
+# DevEco / hvigor build output
+build/
+.hvigor/
+oh_modules/
+local.properties
+*.hap
+*.hsp
