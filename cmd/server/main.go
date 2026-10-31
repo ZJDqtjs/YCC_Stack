@@ -40,6 +40,10 @@ func main() {
 		"served under /dl/ so the console can hand out a double-click launcher")
 	comfyhub := flag.String("comfyhub", "", "ComfyHub base URL to expose under /comfy/ (e.g. http://127.0.0.1:8788); "+
 		"prefer STARSTACK_COMFYHUB so the URL stays out of the process list")
+	allowBuild := flag.Bool("allow-build", false, "expose the compile/packaging job kind; "+
+		"a provider agent must also be started with --allow-build")
+	buildUsers := flag.String("build-users", "", "comma-separated account names allowed to submit build jobs "+
+		"(empty = nobody); prefer STARSTACK_BUILD_USERS")
 	flag.Parse()
 
 	ffx.Ffmpeg, ffx.Ffprobe = *ffmpeg, *ffprobe
@@ -51,6 +55,9 @@ func main() {
 	}
 	if *comfyhub == "" {
 		*comfyhub = os.Getenv("STARSTACK_COMFYHUB")
+	}
+	if *buildUsers == "" {
+		*buildUsers = os.Getenv("STARSTACK_BUILD_USERS")
 	}
 	*data, _ = filepath.Abs(*data)
 	os.MkdirAll(*data, 0o700)
@@ -87,6 +94,20 @@ func main() {
 		pol.MaxUploadBytes = *maxUpload << 20
 		if pol.MemoryBuffer > pol.MaxUploadBytes {
 			pol.MemoryBuffer = pol.MaxUploadBytes / 4
+		}
+	}
+	pol.AllowBuild = *allowBuild
+	if *allowBuild {
+		for _, name := range strings.Split(*buildUsers, ",") {
+			if n := strings.TrimSpace(name); n != "" {
+				pol.BuildUsers = append(pol.BuildUsers, n)
+			}
+		}
+		if len(pol.BuildUsers) == 0 {
+			log.Printf("警告：--allow-build 未配置 --build-users（或 STARSTACK_BUILD_USERS），编译任务保持关闭")
+			pol.AllowBuild = false
+		} else {
+			log.Printf("build jobs enabled for: %s", strings.Join(pol.BuildUsers, ", "))
 		}
 	}
 

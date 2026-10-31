@@ -34,7 +34,10 @@ import (
 // per-node credential it cached on disk, so the script can be double-clicked
 // again tomorrow without any code at all.
 
-const launchTTL = 10 * time.Minute
+// Installer runs (winget/apt) can take longer than a quick binary download, so
+// the ticket lives for half an hour. It still authorises exactly one node id
+// and is spent by the first accepted hello.
+const launchTTL = 30 * time.Minute
 
 type launchTicket struct {
 	Code     string    `json:"-"`
@@ -46,7 +49,21 @@ type launchTicket struct {
 	OS       string    `json:"-"` // windows | linux | darwin
 	Arch     string    `json:"-"`
 	ExpireAt time.Time `json:"-"`
+	// VM turns the same agent into a cloud-host provider. VMMax is how many
+	// tenants it may run at once; bridge/uplink are the Linux routed-mode knobs.
+	VM       bool   `json:"-"`
+	VMMax    int    `json:"-"`
+	VMBridge string `json:"-"`
+	VMUplink string `json:"-"`
+	// AllowBuild writes --allow-build into the generated launcher when the
+	// requesting account is on the build allowlist: the provider still has to
+	// double-click that script, so the consent stays explicit on the machine.
+	AllowBuild bool `json:"-"`
 }
+
+const maxLaunchVMs = 8
+
+var ifaceNameRE = regexp.MustCompile(`^[A-Za-z0-9_.-]{1,15}$`)
 
 var launchOS = map[string]string{
 	"windows": "starstack-worker-windows-%s.exe",
@@ -100,6 +117,32 @@ func (s *Server) mintLaunch(u *store.User, req launchReq) (*launchTicket, string
 	if req.Slots < 1 || req.Slots > s.policy.MaxSlots {
 		return nil, "并发槽数需在 1 ~ " + strconv.Itoa(s.policy.MaxSlots) + " 之间"
 	}
+	vmMax, bridge, uplink := 0, "", ""
+	if req.VM {
+		vmMax = req.VMMax
+		if vmMax <= 0 {
+			vmMax = 2
+		}
+		if vmMax < 1 || vmMax > maxLaunchVMs {
+			return nil, "云主机并发数需在 1 ~ " + strconv.Itoa(maxLaunchVMs) + " 之间"
+		}
+		bridge = strings.TrimSpace(req.VMBridge)
+		uplink = strings.TrimSpace(req.VMUplink)
+		if bridge != "" || uplink != "" {
+			if goos != "linux" {
+				return nil, "网桥/上联网卡只用于 Linux routed 模式；Windows/macOS 请留空使用 slirp"
+			}
+			if bridge == "" {
+				return nil, "填了上联网卡就必须同时填网桥"
+			}
+			if !ifaceNameRE.MatchString(bridge) {
+				return nil, "网桥名不合法"
+			}
+			if uplink != "" && !ifaceNameRE.MatchString(uplink) {
+				return nil, "上联网卡名不合法"
+			}
+		}
+	}
 	name := strings.TrimSpace(req.Name)
 	if name == "" {
 		name = "网页节点"
@@ -139,10 +182,11 @@ func (s *Server) mintLaunch(u *store.User, req launchReq) (*launchTicket, string
 		Code: auth.RandomHex(8), OwnerID: u.ID, NodeID: "web-" + auth.RandomHex(3),
 		Name: name, Price: req.Price, Slots: req.Slots,
 		OS: goos, Arch: arch, ExpireAt: time.Now().Add(launchTTL),
+		VM: req.VM, VMMax: vmMax, VMBridge: bridge, VMUplink: uplink,
 	}
 	s.launches[t.Code] = t
-	log.Printf("launch ticket %s minted for node %s by user %s (%s/%s, %.2f 点/秒, %d 槽)",
-		t.Code, t.NodeID, u.Name, t.OS, t.Arch, t.Price, t.Slots)
+	log.Printf("launch ticket %s minted for node %s by user %s (%s/%s, %.2f 点/秒, %d 槽, vm=%v max=%d bridge=%q)",
+		t.Code, t.NodeID, u.Name, t.OS, t.Arch, t.Price, t.Slots, t.VM, t.VMMax, t.VMBridge)
 	return t, ""
 }
 
@@ -205,11 +249,15 @@ func (s *Server) knownNode(r *http.Request, id string) bool {
 // ---- http ----
 
 type launchReq struct {
-	Price float64 `json:"price"`
-	Slots int     `json:"slots"`
-	Name  string  `json:"name"`
-	OS    string  `json:"os"`
-	Arch  string  `json:"arch"`
+	Price    float64 `json:"price"`
+	Slots    int     `json:"slots"`
+	Name     string  `json:"name"`
+	OS       string  `json:"os"`
+	Arch     string  `json:"arch"`
+	VM       bool    `json:"vm"`
+	VMMax    int     `json:"vm_max"`
+	VMBridge string  `json:"vm_bridge"`
+	VMUplink string  `json:"vm_uplink"`
 }
 
 func (s *Server) handleLaunchMint(w http.ResponseWriter, r *http.Request) {
@@ -231,6 +279,7 @@ func (s *Server) handleLaunchMint(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, jsonErr(why), http.StatusBadRequest)
 		return
 	}
+	t.AllowBuild = s.policy.buildAllowed(u.Name)
 	bin := nodeBinName(t.OS, t.Arch)
 	ready := s.nodeBinReady(t.OS, t.Arch)
 	if !ready {
@@ -243,6 +292,7 @@ func (s *Server) handleLaunchMint(w http.ResponseWriter, r *http.Request) {
 		"expires_in_sec": int(launchTTL / time.Second),
 		"script":         "/launch/" + t.Code + "/" + t.OS + "/" + t.Arch,
 		"worker":         "/dl/" + bin, "ready": ready,
+		"vm": t.VM, "vm_max": t.VMMax,
 	})
 }
 
@@ -285,6 +335,132 @@ func renderLauncher(t *launchTicket, baseURL, bin string) (string, string, strin
 	server := strings.TrimRight(baseURL, "/")
 	price := strconv.FormatFloat(t.Price, 'f', 2, 64)
 	slots := strconv.Itoa(t.Slots)
+
+	vmArgsWin, vmArgsSh, qemuWin, qemuSh := "", "", "", ""
+	buildArgs := ""
+	if t.AllowBuild {
+		// Compiling usually needs a toolchain the provider may not have. The
+		// provider already opted into running buyer commands, so provisioning the
+		// missing toolchain is the same consent and avoids a failed first run.
+		buildArgs = " --allow-build --auto-provision"
+	}
+	if t.VM {
+		vmArgsWin = " --vm --vm-max " + strconv.Itoa(t.VMMax) +
+			` --qemu "%QEMU_BIN%" --qemu-img qemu-img`
+		vmArgsSh = " --vm --vm-max " + strconv.Itoa(t.VMMax) +
+			` --qemu "$QEMU_BIN" --qemu-img qemu-img`
+		if t.VMBridge != "" {
+			vmArgsSh += ` --vm-bridge "` + t.VMBridge + `"`
+			if t.VMUplink != "" {
+				vmArgsSh += ` --vm-uplink "` + t.VMUplink + `"`
+			}
+		}
+		qemuWin = `
+set QEMU_BIN=qemu-system-x86_64
+where %QEMU_BIN% >nul 2>nul
+if errorlevel 1 if exist "%ProgramFiles%\qemu\qemu-system-x86_64.exe" set "PATH=%ProgramFiles%\qemu;%PATH%"
+where %QEMU_BIN% >nul 2>nul
+if errorlevel 1 (
+  echo.
+  echo [!] QEMU is not installed. StarStack needs it to host virtual machines.
+  echo     winget install --id SoftwareFreedomConservancy.QEMU -e
+  echo     or download: https://www.qemu.org/download/#windows
+  where winget >nul 2>nul
+  if not errorlevel 1 (
+    choice /C YN /M "Install QEMU with winget now"
+    if errorlevel 2 goto starstack_qemu_missing
+    winget install --id SoftwareFreedomConservancy.QEMU -e --accept-package-agreements --accept-source-agreements
+    if exist "%ProgramFiles%\qemu\qemu-system-x86_64.exe" set "PATH=%ProgramFiles%\qemu;%PATH%"
+    where %QEMU_BIN% >nul 2>nul
+    if errorlevel 1 goto starstack_qemu_missing
+  ) else (
+    goto starstack_qemu_missing
+  )
+)
+where qemu-img >nul 2>nul
+if errorlevel 1 (
+  echo [!] qemu-img was not found. Reinstall QEMU and make sure its folder is in PATH.
+  goto starstack_qemu_missing
+)
+echo QEMU is ready:
+%QEMU_BIN% -version | findstr /i "version"
+echo [!] Cloud hosts need inbound IPv6 TCP 5900-5999 and 20000-29999 (plus explicit ports).
+net session >nul 2>nul
+if errorlevel 1 (
+  echo     Not running as administrator; add the firewall rule manually if needed:
+  echo     netsh advfirewall firewall add rule name="StarStack VM" dir=in action=allow protocol=TCP localport=5900-5999,20000-29999
+) else (
+  choice /C YN /M "Add Windows Firewall rules for StarStack VM ports now"
+  if errorlevel 2 goto starstack_fw_ok
+  netsh advfirewall firewall delete rule name="StarStack VM" >nul 2>nul
+  netsh advfirewall firewall add rule name="StarStack VM" dir=in action=allow protocol=TCP localport=5900-5999,20000-29999
+)
+:starstack_fw_ok
+echo     Enable "Windows Hypervisor Platform" in Optional Features and reboot for WHPX acceleration.
+goto starstack_qemu_ok
+:starstack_qemu_missing
+echo.
+echo QEMU is required for cloud hosts. Install it and run this script again.
+pause
+exit /b 1
+:starstack_qemu_ok
+`
+		qemuSh = `
+QEMU_BIN=qemu-system-x86_64
+if ! command -v "$QEMU_BIN" >/dev/null 2>&1; then
+  echo "[!] 云主机需要 QEMU，但找不到 $QEMU_BIN。"
+  INSTALL=""
+  if command -v apt-get >/dev/null 2>&1; then
+    INSTALL="sudo apt-get update && sudo apt-get install -y qemu-system-x86 qemu-utils"
+  elif command -v dnf >/dev/null 2>&1; then
+    INSTALL="sudo dnf install -y @virtualization"
+  elif command -v pacman >/dev/null 2>&1; then
+    INSTALL="sudo pacman -S --noconfirm qemu-full"
+  elif command -v brew >/dev/null 2>&1; then
+    INSTALL="brew install qemu"
+  fi
+  if [ -n "$INSTALL" ]; then
+    echo "可执行：$INSTALL"
+    if [ -t 0 ]; then
+      printf "现在安装 QEMU？[y/N] "; read -r ans
+      case "$ans" in
+        y|Y) sh -c "$INSTALL" ;;
+        *) exit 1 ;;
+      esac
+    else
+      echo "非交互环境，请手动执行上面的命令后重试。"; exit 1
+    fi
+  else
+    echo "请从 https://www.qemu.org/download/ 安装 QEMU 后重试。"; exit 1
+  fi
+fi
+command -v "$QEMU_BIN" >/dev/null 2>&1 || { echo "[!] QEMU 仍未安装，退出。"; exit 1; }
+command -v qemu-img >/dev/null 2>&1 || { echo "[!] 找不到 qemu-img，请安装 qemu-utils/qemu-img。"; exit 1; }
+case "$(uname -s)" in
+  Linux)
+    if [ -e /dev/kvm ] && [ -r /dev/kvm ] && [ -w /dev/kvm ]; then
+      echo "KVM 可用"
+    else
+      echo "[!] /dev/kvm 不可用：虚拟机将以 TCG 软件模拟运行（明显变慢）。"
+      echo "    sudo usermod -aG kvm $USER 后重新登录，或在 BIOS 里开启虚拟化。"
+    fi
+    ;;
+  Darwin) echo "macOS 会使用 HVF；x86_64 模拟时可能是 TCG，速度取决于机型。" ;;
+esac
+echo "云主机需要放行 IPv6 入站 TCP 5900-5999（控制台）、20000-29999（SSH/自动端口），"
+echo "以及在配置里显式填写的其它宿主机端口。"
+`
+		if t.VMBridge != "" {
+			qemuSh += `
+echo "[!] routed 模式：需要 Linux 网桥 ` + t.VMBridge + ` 已存在，并以 root/CAP_NET_ADMIN 运行。"
+[ -d "/sys/class/net/` + t.VMBridge + `" ] || echo "[!] 找不到网桥 ` + t.VMBridge + `"
+if [ -n "` + t.VMUplink + `" ]; then
+  [ -d "/sys/class/net/` + t.VMUplink + `" ] || echo "[!] 找不到上联网卡 ` + t.VMUplink + `"
+fi
+if [ "$(id -u)" -ne 0 ]; then echo "[!] 当前不是 root，routed 会启动失败；slirp 模式不需要 root。"; fi
+`
+		}
+	}
 	if t.OS == "windows" {
 		// ASCII only, on purpose: cmd.exe reads a .cmd with the machine's OEM
 		// codepage, so UTF-8 Chinese in this file reaches the parser as mojibake on
@@ -338,11 +514,11 @@ if /i not "!GOT!"=="%WANT%" (
     exit /b 1
   )
   move /y "%BIN%.part" "%BIN%" >nul
-)
+)` + qemuWin + `
 echo Joining the compute pool as %NODE_ID%: ` + price + ` credits per video-second, ` + slots + ` slots.
 echo Keep this window open while you are sharing. Status and earnings: the web console.
 "%BIN%" --server "%SERVER%" --id "%NODE_ID%" --launch "%LAUNCH%" ^
-  --price ` + price + ` --slots ` + slots + ` --work "%DIR%\cache"
+  --price ` + price + ` --slots ` + slots + ` --work "%DIR%\cache"` + vmArgsWin + buildArgs + `
 echo.
 echo Node stopped. Double-click this file to join again - the credential in
 echo %DIR%\cache\node-%NODE_ID%.key means no launch code is needed any more.
@@ -375,10 +551,10 @@ if [ "$GOT" != "$WANT" ]; then
   GOT=$(hash_file "$BIN.tmp" || true)
   [ "$GOT" = "$WANT" ] || { rm -f "$BIN.tmp"; echo "校验失败，拒绝运行下载的程序"; exit 1; }
   chmod 0755 "$BIN.tmp" && mv -f "$BIN.tmp" "$BIN"
-fi
+fi` + qemuSh + `
 echo "以 $NODE_ID 加入算力池：` + price + ` 点/视频秒，` + slots + ` 个并发槽"
 exec "$BIN" --server "$SERVER" --id "$NODE_ID" --launch "$LAUNCH" \
-  --name "` + t.Name + `" --price ` + price + ` --slots ` + slots + ` --work "$DIR/cache"
+  --name "` + t.Name + `" --price ` + price + ` --slots ` + slots + ` --work "$DIR/cache"` + vmArgsSh + buildArgs + `
 `
 	return sh, "application/x-sh", "starstack-node-" + t.NodeID + ".sh"
 }

@@ -1,0 +1,55 @@
+<view class="wrap">
+  <h1>我的</h1>
+  <view class="lead">账户、节点与连接设置。</view>
+
+  <view class="card" wx:if="{{msg}}"><view class="err">{{msg}}</view></view>
+
+  <view class="card">
+    <view class="row">
+      <view style="flex:1">
+        <view class="kicker">账户</view>
+        <view style="font-size:34rpx;font-weight:600;color:var(--ink);margin-top:8rpx">{{me.name || '—'}}</view>
+      </view>
+      <view style="flex:1">
+        <view class="kicker">余额</view>
+        <view style="font-size:34rpx;font-weight:600;color:var(--ink);margin-top:8rpx">{{balanceText}} 点</view>
+      </view>
+    </view>
+    <view class="btn ghost" style="margin-top:24rpx" bindtap="logout">退出登录</view>
+  </view>
+
+  <view class="card">
+    <view class="card-head"><text class="kicker">Setting</text><text>界面</text></view>
+    <view style="display:flex;align-items:center;justify-content:space-between;gap:16rpx">
+      <view class="hint" style="flex:1">提交任务时显示高级选项（编码器、硬件要求、分片数）</view>
+      <switch checked="{{adv}}" color="#161616" bindchange="toggleAdv" />
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="card-head"><text class="kicker">Nodes</text><text>我的节点（{{nodes.length}}）</text></view>
+    <view class="empty" wx:if="{{loading}}">加载中…</view>
+    <view class="empty" wx:if="{{!loading && !nodes.length}}">还没有属于你的节点</view>
+    <view class="listrow" wx:for="{{nodes}}" wx:key="id" wx:for-item="n">
+      <view class="grow">
+        <view class="name">{{n.name}}</view>
+        <view class="meta">{{n.meta}}</view>
+        <view class="meta mono">编号 {{n.id}}</view>
+      </view>
+      <text class="tag {{n.online ? 'ok' : 'bad'}}">{{n.online ? '在线' : '离线'}}</text>
+    </view>
+    <view class="hint" style="margin-top:12rpx">接节点、改单价请到网页控制台的「我的节点」；小程序只做查看。</view>
+  </view>
+
+  <view class="card">
+    <view class="card-head"><text class="kicker">Connect</text><text>服务器地址</text></view>
+    <input class="in" value="{{base}}" bindinput="onBase" placeholder="https://你的已备案域名" />
+    <view class="btn ghost tiny" style="margin-top:16rpx" bindtap="saveBase">保存并重连</view>
+    <view class="hint" style="margin-top:10rpx">
+      正式版必须使用已备案的 HTTPS 域名并配到「服务器域名」白名单；开发工具里可关闭「不校验合法域名」直连演示环境。
+    </view>
+    <view class="err" wx:if="{{saveMsg}}" style="margin-top:10rpx">{{saveMsg}}</view>
+  </view>
+
+  <view class="hint" style="text-align:center;margin-top:24rpx">星栈算力 · 小程序 v1.0</view>
+</view>

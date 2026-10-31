@@ -414,6 +414,7 @@ td .tag{margin:2px 4px 2px 0}
             <option value="transcode" selected>视频转码</option>
             <option value="blender">Blender 动画渲染</option>
             <option value="pr">剪辑时间线渲染</option>
+            <option value="build">编译打包</option>
           </select></div>
           <div id="qualitybox"><label>画质</label><select id="quality">
             <option value="fast">快速</option>
@@ -463,6 +464,24 @@ td .tag{margin:2px 4px 2px 0}
 
         <div id="render-pr" style="display:none" class="hint">
           上传 zip：从 Premiere 导出 Final Cut Pro XML（或 FCPXML），连同所有素材一起打包。
+        </div>
+
+        <div id="build-fields" style="display:none">
+          <fieldset class="fieldset">
+            <legend>编译打包</legend>
+            <div class="hint" style="margin-top:0">
+              上传源码 zip；解压后的目录就是工作目录，命令在其中执行，产物按「输出目录」打包成
+              <code>result.zip</code> 回传。需要接收任务的节点以 <code>--allow-build</code> 启动，
+              且本部署把账号加入了编译白名单。
+            </div>
+            <label>编译命令</label>
+            <input name="command" placeholder='powershell -NoProfile -ExecutionPolicy Bypass -File build.ps1'>
+            <div class="row">
+              <div><label>输出目录（相对路径）</label><input name="output" value="out"></div>
+              <div><label>超时（秒）</label><input name="timeout" value="1800" inputmode="numeric"></div>
+            </div>
+            <div class="hint">按实际墙钟分钟结算，预扣 10 分钟；编译失败不结算。</div>
+          </fieldset>
         </div>
 
         <fieldset class="fieldset" id="transcode-fields">
@@ -711,12 +730,49 @@ td .tag{margin:2px 4px 2px 0}
     </div>
   </div>
 
+  <div class="card" id="vm-onboard" style="margin-top:18px">
+    <h2><span class="kicker">Host</span>一键把这台机器接入云主机</h2>
+    <div class="hint" style="margin-top:0">
+      不需要先在网页里找节点：下载脚本 → 拷到要出租的电脑上运行（Windows 双击 .cmd，
+      Linux/macOS 在终端执行 <code>sh 脚本名</code>）→ 脚本会检查/引导安装 QEMU，
+      再启动 Agent 并自动绑定到你的账户。启动后回到本页刷新，就能发布配置。
+    </div>
+    <div class="row3">
+      <div><label>机器名称</label><input id="vhlname" placeholder="例如 宿舍 3060 台式机"></div>
+      <div><label>那台机器的系统</label><select id="vhlos">
+        <option value="windows">Windows</option><option value="linux">Linux</option>
+        <option value="darwin">macOS</option></select></div>
+      <div><label>芯片</label><select id="vhlarch">
+        <option value="amd64">x86_64 / Intel·AMD</option>
+        <option value="arm64">arm64 / 苹果 M 系·麒麟</option></select></div>
+    </div>
+    <div class="row3">
+      <div><label>最多同时运行几台云主机</label><input id="vhlmax" type="number" min="1" max="8" value="2"></div>
+      <div><label>转码单价（算力点 / 视频秒）</label><input id="vhlprice" type="number" min="0.05" max="1000" step="0.05" value="0.8"></div>
+      <div><label>转码并发槽</label><input id="vhlslots" type="number" min="1" value="2"></div>
+    </div>
+    <div class="row">
+      <div><label>Linux 网桥（routed 模式可选）</label><input id="vhlbridge" placeholder="留空用 slirp，推荐"></div>
+      <div><label>上联网卡（NDP 代理可选）</label><input id="vhlup" placeholder="例如 eth0"></div>
+    </div>
+    <div class="hint">routed 需要 Linux 网桥和 root/CAP_NET_ADMIN；不填网桥就是最省事的 slirp 模式。
+      云主机需要放行 IPv6 入站 TCP 5900-5999（控制台）、20000-29999（SSH/自动端口）
+      以及你在配置里显式填写的其它端口；
+      Windows 另需启用「Windows Hypervisor Platform」，Linux 需当前用户可读写 <code>/dev/kvm</code>。</div>
+    <button class="btn" id="vmlaunchbtn" style="margin-top:16px">下载云主机启动脚本</button>
+    <div id="vmlaunchmsg" class="hint"></div>
+    <div id="vmlaunchwarn" class="hint warn"></div>
+    <div class="hint">首次运行会下载约 10MB Agent；没装 QEMU 时脚本会给出安装命令并询问是否代装。
+      脚本是一次性的，30 分钟内有效；启动后保持窗口，关掉即停止提供算力。</div>
+  </div>
+
   <div class="card" id="vm-sell" style="margin-top:18px">
     <h2><span class="kicker">Sell</span>发布我的虚拟机配置</h2>
     <div class="empty" id="vm-sell-empty" style="display:none"></div>
     <div id="vm-form">
     <div class="hint" style="margin-top:0">
-      Agent 需要以 <code>--vm</code> 启动，并装好 <code>qemu-system-x86_64</code> 与 <code>qemu-img</code>。
+      Agent 需要以 <code>--vm</code> 启动，并装好 <code>qemu-system-x86_64</code> 与 <code>qemu-img</code>；
+      可以直接用上面的「一键接入」脚本，它会处理这些检查和启动。
       发布时使用节点当前上报的 IPv6；slirp 模式跨平台可用，routed 模式需要 Linux 网桥（<code>--vm-bridge</code>）。
     </div>
     <div class="row">
@@ -1038,6 +1094,7 @@ function applyPolicy(){
   $('#deadlinenote').textContent = dl > 0
     ? `任务从提交起最多运行 max(${dl} 分钟, ${f1(POL.job_slow_factor)} × 视频时长)，超时自动失败并退还未使用的预扣。`
     : '';
+  syncVMLauncher();
 }
 
 /* ---------------- 轮询 ---------------- */
@@ -1251,9 +1308,10 @@ function syncKind(){
   $('#pathbox').style.display=k==='transcode'?'':'none';
   $('#render-blender').style.display=k==='blender'?'':'none';
   $('#render-pr').style.display=k==='pr'?'':'none';
+  $('#build-fields').style.display=k==='build'?'':'none';
   $('#baselinebox').style.display=k==='transcode'?'':'none';
   $('#durbox').style.display=k==='transcode'?'':'none';
-  $('#fileinput').accept=k==='blender'?'.blend,.zip':k==='pr'?'.zip':'video/*,audio/*';
+  $('#fileinput').accept=k==='build'?'.zip':k==='blender'?'.blend,.zip':k==='pr'?'.zip':'video/*,audio/*';
   applyMode();
   quote();
 }
@@ -1287,6 +1345,12 @@ let quoteTimer=null;
 function quote(){
   clearTimeout(quoteTimer);quoteTimer=setTimeout(async()=>{
     const kind=jobkind.value;
+    if(kind==='build'){
+      $('#quote').innerHTML=`<div>编译任务按实际墙钟分钟结算</div>
+        <div class="hint" style="margin-top:8px">预扣 10 分钟；编译失败不结算，差额自动退还。
+        只派给用 <code>--allow-build</code> 启动的节点，且本部署需把账号加入编译白名单。</div>`;
+      return;
+    }
     if(kind!=='transcode'){
       let units=1,head='';
       if(kind==='blender'){
@@ -1347,6 +1411,15 @@ $('#f').addEventListener('submit',async e=>{
   if(kind==='transcode'){
     if(!fd.get('baseline')) fd.set('baseline','0');
     ['jobkind','scene','engine','samples','from','to','percent','fps'].forEach(n=>fd.delete(n));
+  }else if(kind==='build'){
+    url='/api/jobs/build';
+    ['jobkind','scene','engine','samples','from','to','percent','fps',
+     'vcodec','preset','q','height','audio','baseline','path','duration'].forEach(n=>fd.delete(n));
+    fd.set('command',String(fd.get('command')||'').trim());
+    fd.set('output',String(fd.get('output')||'').trim());
+    fd.set('timeout',String(fd.get('timeout')||'1800').trim());
+    if(!fd.get('file')){$('#msg').textContent='请上传源码 zip';return}
+    if(!fd.get('command')){$('#msg').textContent='请填写编译命令';return}
   }else{
     url='/api/jobs/render';
     fd.set('kind',kind);
@@ -1359,7 +1432,8 @@ $('#f').addEventListener('submit',async e=>{
     const r=await fetch(url,{method:'POST',body:fd});
     const t=await r.text();let d=null;try{d=JSON.parse(t)}catch(x){}
     if(!r.ok) throw (d&&d.error)||t;
-    $('#msg').textContent=kind==='transcode'?`已入队 ${d.id}，预扣 ${f2(d.hold)} 点`
+    $('#msg').textContent=kind==='build'?`已入队 ${d.id}，预扣 ${f2(d.hold)} 点（按实际分钟结算）`
+      :kind==='transcode'?`已入队 ${d.id}，预扣 ${f2(d.hold)} 点`
       :`已入队 ${d.id}（${d.pieces} 段 / ${f1(d.units)} ${d.unit}），预扣 ${f2(d.hold)} 点`;
     $$('#nav button[data-v]').find(b=>b.dataset.v==='jobs').click();
   }catch(err){$('#msg').textContent='失败：'+err}
@@ -1397,6 +1471,13 @@ function jobHTML(j){
     <div class="stat"><b>${f2(j.credits_spent||0)}</b><span>实结算点数</span></div>`;
   if(j.released&&j.credits_hold>j.credits_spent)
     st+=`<div class="stat"><b>+${f2(j.credits_hold-j.credits_spent)}</b><span>预扣退还</span></div>`;
+  if(j.kind==='build'){
+    st=`<div class="stat"><b>${f1(j.wall||0)}s</b><span>编译耗时</span></div>
+      <div class="stat"><b>${verified}/${j.segs.length}</b><span>产物校验</span></div>
+      <div class="stat"><b>${f2(j.credits_spent||0)}</b><span>实结算点数</span></div>`;
+    if(j.released&&j.credits_hold>j.credits_spent)
+      st+=`<div class="stat"><b>+${f2(j.credits_hold-j.credits_spent)}</b><span>预扣退还</span></div>`;
+  }
   if(j.baseline){
     st+=`<div class="stat"><b>${j.baseline.status==='done'?f1(j.baseline.wall)+'s':
       j.baseline.status==='failed'?'失败':j.baseline.status==='running'?'运行中':'排队'}</b><span>单机基线</span></div>`;
@@ -1407,12 +1488,16 @@ function jobHTML(j){
   if(j.req.need_gpu) rq.push('需 GPU');
   if(j.req.min_cpus) rq.push('≥'+j.req.min_cpus+' 核');
   if(j.req.min_gpu_mem_mb) rq.push('显存≥'+j.req.min_gpu_mem_mb+'MB');
-  if(j.req.runtime) rq.push('需 '+j.req.runtime);
+  if(j.req.runtime&&j.kind!=='build') rq.push('需 '+j.req.runtime);
   if(j.req.arch) rq.push(j.req.arch);
   if(j.req.max_price) rq.push('≤'+f2(j.req.max_price)+' 点/秒');
   const blender=j.kind==='blender';
   const kindTag=blender?'Blender 渲染':j.kind==='pr'?'时间线渲染':'';
-  const specTag=blender
+  const specTag=j.kind==='build'
+    ? `<span class="tag">编译打包</span>
+       <span class="tag mono">${esc(String((j.spec&&j.spec.command)||'').slice(0,48))}</span>
+       <span class="tag">超时 ${j.spec&&j.spec.timeout_sec?j.spec.timeout_sec:1800}s</span>`
+    : blender
     ? `<span class="tag">${kindTag}${j.spec&&j.spec.engine?' · '+esc(j.spec.engine):''}${j.spec&&j.spec.samples?' · '+j.spec.samples+' spp':''}</span>
        <span class="tag">${Math.round(j.duration)} 帧 · ${j.segs.length} 段</span>`
     : j.kind==='pr'
@@ -1422,7 +1507,7 @@ function jobHTML(j){
        <span class="tag">${j.profile.height?j.profile.height+'p':'原始分辨率'}</span>
        <span class="tag">${f1(j.duration)}s · ${j.segs.length} 片</span>`;
   return `<div class="job">
-    <h3>${esc(j.name)} <span class="st ${j.status}">${ST[j.status]||j.status}</span>
+    <h3>${esc(j.name)} <span class="st ${j.status}">${j.kind==='build'&&j.status==='running'?'编译中':(ST[j.status]||j.status)}</span>
       ${specTag}
       <span class="tag">预扣 ${f2(j.credits_hold||0)} 点</span>
       ${j.resumed?'<span class="tag gpu">跨 Broker 重启恢复</span>':''}
@@ -1450,7 +1535,63 @@ async function paintJobs(){
 /* ---------------- 云主机 ---------------- */
 const VM_ST={queued:'排队中',provisioning:'启动中',running:'运行中',unreachable:'失联',
   stopping:'停机中',stopped:'已停机',failed:'失败'};
-let VM_OFFERS=[], VM_INSTANCES=[], VM_OFFER=null, VM_LAST=0, VM_NODE_SIG='';
+let VM_OFFERS=[], VM_INSTANCES=[], VM_OFFER=null, VM_LAST=0, VM_NODE_SIG='', VM_LAUNCH_BUSY=false;
+{
+  const ua=(navigator.userAgent||'').toLowerCase();
+  const guess=ua.includes('windows')?'windows':ua.includes('mac')?'darwin':'linux';
+  if($('#vhlos')) $('#vhlos').value=guess;
+  if($('#vhlarch') && /arm|aarch64/.test(ua)) $('#vhlarch').value='arm64';
+}
+function syncVMLauncher(){
+  if(!POL) return;
+  const bins={windows:'launch_windows',linux:'launch_linux',darwin:'launch_darwin'};
+  const sel=$('#vhlos');
+  if(!sel) return;
+  const cur=sel.value;
+  [...sel.options].forEach(o=>{o.disabled=!POL[bins[o.value]]});
+  if(!POL[bins[cur]]){
+    const first=[...sel.options].find(o=>POL[bins[o.value]]);
+    if(first) sel.value=first.value;
+  }
+  const linux=sel.value==='linux';
+  $('#vhlbridge').disabled=!linux;
+  $('#vhlup').disabled=!linux;
+  if(!linux){ $('#vhlbridge').value=''; $('#vhlup').value=''; }
+  const btn=$('#vmlaunchbtn');
+  btn.disabled=VM_LAUNCH_BUSY || !POL[bins[sel.value]];
+  $('#vmlaunchwarn').textContent=btn.disabled
+    ? '这台 Broker 没有配置 --node-bin-dir，服务器上没有可下发的 Agent 程序；请联系运维。'
+    : '';
+}
+$('#vhlos')?.addEventListener('change',syncVMLauncher);
+$('#vmlaunchbtn')?.addEventListener('click',async()=>{
+  const btn=$('#vmlaunchbtn'), msg=$('#vmlaunchmsg');
+  const os=$('#vhlos').value, arch=$('#vhlarch').value;
+  const bridge=$('#vhlbridge').value.trim(), uplink=$('#vhlup').value.trim();
+  const max=+$('#vhlmax').value, price=+$('#vhlprice').value, slots=+$('#vhlslots').value;
+  if(!(price>=0.05)){msg.textContent='转码单价至少 0.05 点/视频秒';return}
+  if(!(slots>=1)){msg.textContent='转码并发槽至少 1 个';return}
+  if(!(max>=1&&max<=8)){msg.textContent='云主机并发数需在 1 ~ 8 之间';return}
+  if(os!=='linux'&&(bridge||uplink)){msg.textContent='网桥/上联网卡只用于 Linux routed 模式';return}
+  VM_LAUNCH_BUSY=true; btn.disabled=true; msg.textContent='正在生成启动码…';
+  try{
+    const d=await post('/api/nodes/launch',{
+      name:$('#vhlname').value.trim()||'云主机节点',
+      price,slots,os,arch,vm:true,vm_max:max,vm_bridge:bridge,vm_uplink:uplink,
+    });
+    const a=document.createElement('a');
+    a.href=BASE+d.script;a.rel='noopener';document.body.appendChild(a);a.click();a.remove();
+    const mins=Math.max(1,Math.round(d.expires_in_sec/60));
+    msg.innerHTML=`脚本已下载（<code>${esc(d.node_id)}</code>，${mins} 分钟内有效，只能用一次）。<br>
+      拷到那台机器上运行：Windows 双击 .cmd；Linux/macOS 在终端执行 <code>sh 脚本名</code>。
+      它会先检查 QEMU（没装会询问是否安装），再启动 Agent 并绑定到你的账户。<br>
+      启动后回到本页刷新，节点就会出现在下方「发布配置」里；关掉那个窗口即停止提供算力。<br>
+      Windows 启用 WHPX 需要管理员权限并可能重启；如果脚本过期，回本页重新生成即可。`
+      +(d.ready?'':`<br><span class="warn">这台 Broker 还没有 ${esc(d.worker)}，脚本会在下载 Agent 那一步失败，请联系运维。</span>`);
+    refresh();
+  }catch(e){msg.textContent='生成失败：'+e}
+  finally{VM_LAUNCH_BUSY=false; syncVMLauncher();}
+});
 const vmTS=t=>t?new Date(t*1000).toLocaleString('zh-CN',{hour12:false}):'—';
 function fmtSecs(s){
   s=Math.max(0,Math.floor(s||0));
@@ -1566,8 +1707,8 @@ function syncVMNodes(){
   if(form) form.style.display=owned.length?'':'none';
   if(empty){
     empty.style.display=owned.length?'none':'';
-    if(!owned.length) empty.innerHTML='还没有支持虚拟机的节点。用 <code>--vm</code> 启动 Agent'+
-      '（并装好 <code>qemu-system-x86_64</code> 与 <code>qemu-img</code>），节点上线后这里会出现发布表单。';
+    if(!owned.length) empty.innerHTML='还没有支持虚拟机的节点。先用上面的「一键把这台机器接入云主机」'+
+      '生成启动脚本；节点上线后这里会出现发布表单。';
   }
   const nodes=owned.filter(w=>w.online);
   const sig=nodes.map(n=>n.id+':'+(n.ipv6||[]).join(',')).join('|');

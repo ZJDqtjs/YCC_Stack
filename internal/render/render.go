@@ -20,6 +20,11 @@ import (
 const (
 	KindBlender = "blender"
 	KindPR      = "pr"
+	// KindBuild runs a buyer-supplied build command inside an uploaded source
+	// archive. It is deliberately a single unit of work: compiling is not
+	// shardable along file boundaries without a dependency graph, so the
+	// scheduler treats the whole job as one slice.
+	KindBuild = "build"
 )
 
 // Spec is the whole render job as the broker stores it: everything an agent
@@ -44,6 +49,13 @@ type Spec struct {
 	// Bundle says the uploaded source is a zip that must be unpacked before the
 	// scene or the timeline's assets are reachable.
 	Bundle bool `json:"bundle,omitempty"`
+
+	// Build. Command runs with the unpacked bundle as its working directory;
+	// Output is the path (inside that directory) whose tree is returned to the
+	// buyer; TimeoutSec is the hard ceiling for one attempt.
+	Command    string `json:"command,omitempty"`
+	Output     string `json:"output,omitempty"`
+	TimeoutSec int    `json:"timeout_sec,omitempty"`
 }
 
 // Unit names the thing the buyer is billed for: seconds of footage, seconds of
@@ -51,6 +63,9 @@ type Spec struct {
 func (s *Spec) Unit() string {
 	if s != nil && s.Kind == KindBlender {
 		return "帧"
+	}
+	if s != nil && s.Kind == KindBuild {
+		return "分钟"
 	}
 	return "视频秒"
 }

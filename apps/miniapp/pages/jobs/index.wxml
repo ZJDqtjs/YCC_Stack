@@ -1,0 +1,43 @@
+<view class="wrap">
+  <h1>我的任务</h1>
+  <view class="lead">分片去向、进度、哈希校验与结算；跨 Broker 重启恢复的任务不计量加速比。</view>
+
+  <view class="card" wx:if="{{err}}"><view class="err">{{err}}</view></view>
+  <view class="card" wx:if="{{loading}}"><view class="empty">加载中…</view></view>
+  <view class="card" wx:if="{{!loading && !jobs.length}}"><view class="empty">还没有任务</view></view>
+
+  <view class="card" wx:for="{{jobs}}" wx:key="id" wx:for-item="j">
+    <view style="display:flex;align-items:center;flex-wrap:wrap;gap:12rpx">
+      <text style="font-size:29rpx;font-weight:600;color:var(--ink);flex:1">{{j.name}}</text>
+      <text class="tag {{j.tone === 'mute' ? '' : j.tone}}">{{j.statusText}}</text>
+    </view>
+
+    <view style="margin-top:14rpx">
+      <text class="tag" wx:for="{{j.tags}}" wx:key="*this">{{item}}</text>
+      <text class="tag vio" wx:if="{{j.rq.length}}">硬约束：{{j.rq}}</text>
+      <text class="tag vio" wx:if="{{j.resumed}}">跨重启恢复</text>
+    </view>
+
+    <view class="hint" wx:if="{{j.note}}" style="margin-top:10rpx">{{j.note}}</view>
+
+    <view class="bar"><view class="fill" style="width:{{j.progress}}%"></view></view>
+    <view class="hint" style="margin-top:8rpx">{{j.progress}}% 完成</view>
+
+    <view style="display:flex;flex-wrap:wrap;gap:10rpx;margin-top:14rpx">
+      <view class="tag" wx:for="{{j.segs}}" wx:key="id" wx:for-item="s">{{'#' + s.index}} · {{s.worker}}</view>
+    </view>
+
+    <view class="stats">
+      <view class="stat" wx:for="{{j.stats}}" wx:key="k" wx:for-item="st">
+        <text class="v">{{st.v}}</text><text class="k">{{st.k}}</text>
+      </view>
+    </view>
+
+    <view class="err" wx:if="{{j.err}}" style="margin-top:14rpx">错误：{{j.err}}</view>
+
+    <view class="btnrow">
+      <view class="btn ghost tiny" wx:if="{{j.canDownload}}" data-i="{{index}}" bindtap="download">复制下载链接</view>
+      <view class="btn ghost tiny" wx:if="{{j.baseline && j.baseline.status === 'done'}}" data-i="{{index}}" data-which="baseline" bindtap="download">复制基线链接</view>
+    </view>
+  </view>
+</view>

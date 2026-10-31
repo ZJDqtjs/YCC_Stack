@@ -6,12 +6,14 @@ import (
 	"errors"
 	"io"
 	"log"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
 	"starstack/internal/auth"
+	"starstack/internal/render"
 	"starstack/internal/store"
 )
 
@@ -21,12 +23,27 @@ var sessionTTL = 30 * 24 * time.Hour
 
 // ---- session plumbing ----
 
+// sessionToken accepts the browser's HttpOnly cookie and the Authorization:
+// Bearer header used by the Android app and the mini program, which live on
+// origins where the SameSite=Lax cookie is never sent.
+func sessionToken(r *http.Request) string {
+	if c, err := r.Cookie(sessionCookie); err == nil && c.Value != "" {
+		return c.Value
+	}
+	h := r.Header.Get("Authorization")
+	const prefix = "Bearer "
+	if len(h) > len(prefix) && strings.EqualFold(h[:len(prefix)], prefix) {
+		return strings.TrimSpace(h[len(prefix):])
+	}
+	return ""
+}
+
 func (s *Server) currentUser(r *http.Request) *store.User {
-	c, err := r.Cookie(sessionCookie)
-	if err != nil || c.Value == "" {
+	tok := sessionToken(r)
+	if tok == "" {
 		return nil
 	}
-	uid, err := s.st.Session(c.Value)
+	uid, err := s.st.Session(tok)
 	if err != nil || uid == "" {
 		return nil
 	}
@@ -145,7 +162,7 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		s.st.Ledger(&store.Entry{TS: time.Now().Unix(), Kind: store.Recharge, UserID: u.ID,
 			Amount: credit, Balance: bal, Note: "新用户赠送额度"})
 	}
-	writeJSON(w, map[string]any{"id": u.ID, "name": u.Name, "credits": bal})
+	writeJSON(w, map[string]any{"id": u.ID, "name": u.Name, "credits": bal, "token": token})
 }
 
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
@@ -179,12 +196,12 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	s.setSessionCookie(w, token)
 	log.Printf("user %s logged in", u.Name)
-	writeJSON(w, map[string]any{"id": u.ID, "name": u.Name, "credits": u.Credits})
+	writeJSON(w, map[string]any{"id": u.ID, "name": u.Name, "credits": u.Credits, "token": token})
 }
 
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
-	if c, err := r.Cookie(sessionCookie); err == nil {
-		s.st.DropSession(c.Value)
+	if tok := sessionToken(r); tok != "" {
+		s.st.DropSession(tok)
 	}
 	http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: "", Path: s.cookiePath(),
 		MaxAge: -1, Expires: time.Unix(0, 0), HttpOnly: true,
@@ -635,6 +652,19 @@ func (s *Server) settleSegment(j *Job, seg *Seg, wd *Worker) {
 		price = wd.Price
 	}
 	cost := round4(seg.Dur * price)
+	billed := seg.Dur
+	note := "分片 " + seg.ID + " 提供 " + itoa(seg.Dur) + "s 算力"
+	if j.Kind == render.KindBuild {
+		// A build has no clip length: bill the wall-clock minutes it actually
+		// occupied, rounded up, with a one-minute floor for a quick package.
+		minutes := math.Ceil(seg.Wall / 60)
+		if minutes < 1 {
+			minutes = 1
+		}
+		cost = round4(price * minutes)
+		billed = seg.Wall
+		note = "编译任务 " + j.ID + " 提供 " + itoa(minutes) + " 分钟算力"
+	}
 	if cost <= 0 {
 		return
 	}
@@ -648,11 +678,11 @@ func (s *Server) settleSegment(j *Job, seg *Seg, wd *Worker) {
 		if bal, err := s.st.AddCredits(owner, cost); err == nil {
 			s.st.Ledger(&store.Entry{TS: time.Now().Unix(), Kind: store.Earn, UserID: owner,
 				NodeID: wd.ID, JobID: j.ID, Amount: cost, Balance: bal,
-				Note: "分片 " + seg.ID + " 提供 " + itoa(seg.Dur) + "s 算力"})
+				Note: note})
 		}
-		s.st.AddNodeEarnings(wd.ID, seg.Dur, cost)
+		s.st.AddNodeEarnings(wd.ID, billed, cost)
 		wd.Earned = round4(wd.Earned + cost)
-		wd.Billed += seg.Dur
+		wd.Billed += billed
 	}
 }
 

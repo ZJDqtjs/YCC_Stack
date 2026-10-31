@@ -7,6 +7,7 @@ import (
 	"net/netip"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
@@ -100,6 +101,11 @@ func DetectVM(ctx context.Context, qemu, qemuImg, bridge, uplink string, maxVMs 
 	}
 
 	accel := detectAccel(ctx, bin)
+	// An x86_64 QEMU on an arm64 host can only emulate with TCG; advertising
+	// hvf/whpx there makes the first boot fail after a buyer has paid.
+	if runtime.GOARCH != "amd64" && strings.Contains(filepath.Base(bin), "x86_64") {
+		accel = "tcg"
+	}
 	kvm := runtime.GOOS == "linux" && accel == "kvm"
 	if maxVMs <= 0 {
 		maxVMs = 2

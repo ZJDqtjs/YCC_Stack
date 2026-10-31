@@ -30,3 +30,12 @@ __pycache__/
 deploy/comfyhub/data-local/
 deploy/comfy-split/config.local.json
 deploy/comfy-split/orchestrator-state*.json
+
+# 前端依赖与原生构建产物
+apps/node_modules/
+apps/android/.gradle/
+apps/android/build/
+apps/android/app/build/
+apps/android/local.properties
+apps/android/.idea/
+apps/android/capacitor-cordova-android-plugins/build/

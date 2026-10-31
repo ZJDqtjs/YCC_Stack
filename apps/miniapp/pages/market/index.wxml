@@ -1,0 +1,43 @@
+<view class="wrap">
+  <h1>算力市场</h1>
+  <view class="lead">按编码能力聚合的切片与全部在线节点；他人机器只展示规格与价格。</view>
+
+  <view class="card" wx:if="{{err}}"><view class="err">{{err}}</view></view>
+
+  <view class="card">
+    <view class="card-head"><text class="kicker">Capacity</text><text>按能力聚合</text></view>
+    <view class="empty" wx:if="{{!buckets.length}}">尚无在线算力</view>
+    <view class="listrow" wx:for="{{buckets}}" wx:key="encoder" wx:for-item="b">
+      <view class="grow">
+        <view class="name mono">{{b.encoder}} <text class="tag vio" wx:if="{{b.gpuTag}}">GPU</text></view>
+        <view class="meta">{{b.nodes}} 台 · 空闲 {{b.free_slots}} 槽 · {{b.gpu}} · 均速 {{b.speedText}}</view>
+      </view>
+      <view class="amount">{{b.priceText}}</view>
+    </view>
+    <view class="hint" style="margin-top:12rpx">一台机器可出现在多行；真实并发看「空闲槽位」。</view>
+  </view>
+
+  <view class="card">
+    <view class="card-head"><text class="kicker">Nodes</text><text>全部在线节点（{{nodes.length}}）</text></view>
+    <view class="empty" wx:if="{{loading}}">加载中…</view>
+    <view class="empty" wx:if="{{!loading && !nodes.length}}">尚无节点注册</view>
+    <view class="listrow" wx:for="{{nodes}}" wx:key="id" wx:for-item="w" style="display:block">
+      <view style="display:flex;align-items:center;flex-wrap:wrap;gap:10rpx">
+        <text style="font-size:28rpx;font-weight:550;color:var(--ink)">{{w.name}}</text>
+        <text class="tag ok">在线</text>
+        <text class="tag link" wx:if="{{w.mine}}">我的机器</text>
+      </view>
+      <view class="meta">{{w.spec}}</view>
+      <view style="margin-top:10rpx">
+        <text class="tag" wx:for="{{w.runtimes}}" wx:key="*this" wx:for-item="r">{{r}}</text>
+        <text class="tag vio" wx:for="{{w.encoders}}" wx:key="*this" wx:for-item="e">{{e}}</text>
+      </view>
+      <view class="stats">
+        <view class="stat"><text class="v">{{w.slots}}</text><text class="k">占用槽位</text></view>
+        <view class="stat"><text class="v">{{w.speedText}}</text><text class="k">实测吞吐</text></view>
+        <view class="stat"><text class="v">{{w.reliability}}</text><text class="k">信誉</text></view>
+        <view class="stat hl"><text class="v">{{w.priceText}}</text><text class="k">单价</text></view>
+      </view>
+    </view>
+  </view>
+</view>

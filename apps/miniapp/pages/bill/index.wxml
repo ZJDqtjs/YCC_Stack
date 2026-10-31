@@ -1,0 +1,45 @@
+<view class="wrap">
+  <h1>账单</h1>
+  <view class="lead">账户流水与按节点结算的收益明细；校验不通过的分片不结算。</view>
+
+  <view class="card" wx:if="{{err}}"><view class="err">{{err}}</view></view>
+
+  <view class="card" wx:if="{{canRecharge}}">
+    <view class="card-head"><text class="kicker">Recharge</text><text>充值算力点</text></view>
+    <view class="row">
+      <input class="in" type="digit" value="{{amount}}" bindinput="onAmount" placeholder="充值点数" style="flex:1" />
+      <view class="btn ghost" style="flex:1" bindtap="recharge">{{busy ? '处理中…' : '充值'}}</view>
+    </view>
+    <view class="hint" style="margin-top:10rpx">本部署开启了自助充值；公网演练档会关闭该入口。</view>
+    <view class="err" wx:if="{{msg}}" style="margin-top:10rpx">{{msg}}</view>
+  </view>
+
+  <view class="card">
+    <view class="card-head"><text class="kicker">Ledger</text><text>账户流水</text></view>
+    <view class="empty" wx:if="{{loading}}">加载中…</view>
+    <view class="empty" wx:if="{{!loading && !spend.length}}">暂无记录</view>
+    <view class="listrow" wx:for="{{spend}}" wx:key="index" wx:for-item="e">
+      <view class="grow">
+        <view class="name">{{e.kindText}}</view>
+        <view class="meta">{{e.tsText}}<text wx:if="{{e.note}}"> · {{e.note}}</text></view>
+      </view>
+      <view class="amount {{e.pos ? 'pos' : 'neg'}}">
+        {{e.amountText}}
+        <view class="meta" style="text-align:right">余 {{e.balanceText}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="card-head"><text class="kicker">Earnings</text><text>我的节点收益</text></view>
+    <view class="empty" wx:if="{{!loading && !earn.length}}">暂无收益</view>
+    <view class="listrow" wx:for="{{earn}}" wx:key="index" wx:for-item="e">
+      <view class="grow">
+        <view class="name mono">{{e.nodeText}}</view>
+        <view class="meta">{{e.tsText}}<text wx:if="{{e.note}}"> · {{e.note}}</text></view>
+      </view>
+      <view class="amount pos">{{e.amountText}}</view>
+    </view>
+    <view class="hint" style="margin-top:12rpx">收益只在「节点自报哈希 == broker 重算哈希」的分片上发放。</view>
+  </view>
+</view>

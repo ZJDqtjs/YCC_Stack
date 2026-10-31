@@ -156,7 +156,7 @@ GET  /dl/starstack-worker-<os>-<arch>[.exe] -> 节点程序，来自 --node-bin-
 ```
 
 启动码是比接入令牌弱得多的凭证：只授权**一个**节点 ID、只属于铸出它的那个账户、
-10 分钟内有效、Agent 注册成功那一刻就花掉。绑定完成后 Broker 发回该节点自己的
+30 分钟内有效、Agent 注册成功那一刻就花掉。绑定完成后 Broker 发回该节点自己的
 凭据，Agent 存成 `<work>/node-<id>.key`；之后重新双击同一个脚本不再需要任何码，
 `admitAgent` 认这台机器是"回来的"。文件名按节点 ID 走，因为同一台机器可能双击两个
 不同节点的脚本而共用一个 `--work` 目录——共用 `node.key` 会把 A 的凭据递给 B，
@@ -282,6 +282,45 @@ Agent 侧启动参数：
 `--vm` 会让 Agent 探测 qemu 版本、硬件加速器（KVM/WHPX/HVF，找不到就退回 TCG）和全局 IPv6，
 并把它作为节点能力上报。没有安装 qemu 时 Agent 仍然可以正常做转码，只是控制台不会给它发布入口。
 
+### 网页一键接入（推荐）
+
+不需要先有节点。登录后进「云主机 → 一键把这台机器接入云主机」，选择目标机器的系统/芯片、
+最多同时跑几台、是否用 routed 网桥，点「下载云主机启动脚本」。把脚本拷到那台机器上运行
+（Windows 双击 `.cmd`；Linux/macOS 在终端执行 `sh 脚本名`）：
+
+1. 首次会校验并下载约 10MB 的 Agent，缓存到用户目录，之后双击不再重复下载；
+2. 检查 `qemu-system-x86_64` 和 `qemu-img`。Windows 找不到时会给出
+   `winget install --id SoftwareFreedomConservancy.QEMU -e` 并询问是否代装；Linux 会按
+   apt/dnf/pacman 给命令并询问；macOS 用 brew；
+3. 提示 WHPX（Windows）或 `/dev/kvm`（Linux）状态，以及需要放行的 IPv6 入站端口
+   （控制台 5900-5999、SSH/自动端口 20000-29999，外加配置里显式填写的端口）；
+4. 以 `--vm --vm-max N` 启动 Agent，用一次性启动码自动绑定到当前账户。
+
+脚本是一次性的，30 分钟内有效；Agent 启动后回网页刷新，节点出现在「发布配置」里。
+关掉窗口即停止提供算力，下次重新双击同一个脚本会用缓存的节点凭据自动回来。
+
+**没有网桥就选 slirp**：不需要 root、不需要改网络，最省事；routed 需要 Linux 网桥、
+root/CAP_NET_ADMIN，并在启动脚本里填网桥/上联网卡。当前云主机客户机按 **x86_64** 镜像准备
+（`qemu-system-x86_64` + `q35`）；ARM 主机可以用 QEMU 的 TCG 模拟 x86，但会明显变慢。
+
+### 独立预检脚本
+
+不想通过网页生成脚本、或者已经手动放好 Agent 二进制时，可以直接用仓库里的：
+
+```bash
+# Linux / macOS
+bash scripts/vm-host-setup.sh --server http://broker:8787 --id dorm-pc \
+  --launch <网页生成的一次性码> --vm-max 2
+bash scripts/vm-host-setup.sh --server http://broker:8787 --id dorm-pc --check-only
+
+# Windows PowerShell（脚本本身保持 ASCII，避免 5.1 代码页问题）
+powershell -ExecutionPolicy Bypass -File scripts\vm-host-setup.ps1 `
+  -Server http://broker:8787 -Id dorm-pc -Launch <code> -VmMax 2
+```
+
+两个脚本都支持 `--yes/-Yes` 跳过安装确认、`--worker/-Worker` 指定 Agent 路径、
+`--bridge/--uplink` 配置 routed 模式；`--check-only` 只做预检。
+
 ### 买方：下单与计费
 
 `POST /api/vm/orders` 传 `offer_id`、可选主机名、租期小时数和 SSH 公钥。Broker 在锁内完成：
@@ -330,7 +369,8 @@ network-config v2 静态配置地址、网关和 DNS。`routed` 模式不需要�
   控制台仍可用 root + 一次性口令通过 VNC 登录；
 - QEMU 参数：q35、`-accel kvm|whpx|hvf|tcg`、virtio 磁盘/网卡、`-daemonize` 的等价 detach（Unix 用 Setsid，
   Windows 用 detached process + taskkill），`-vnc 127.0.0.1:<display>,password=on`，QMP 走
-  `127.0.0.1:<随机端口>`，串口日志落 `console.log`；
+  `127.0.0.1:<随机端口>`，串口日志落 `console.log`；硬件加速器初始化失败时会自动回退
+  `-accel tcg` 再启动一次（慢但能跑），不会因为没开 WHPX/KVM 权限就把买方订单直接判死；
 - QMP 在启动后设置 VNC 口令；没有口令就拒绝启动，避免开一个无认证控制台；
 - 每个实例目录有 `state.json`（plan/PID/QMP 端口/tap/端点）。Agent 重启后按 state + QMP
   `query-status` 重新认领正在跑的虚拟机，并重建 IPv6 转发代理，不重复下载/建盘；
@@ -401,7 +441,7 @@ internal/hub/    Broker：节点注册、两阶段匹配调度、租约回收、
                  + gateway.go：OpenAI 兼容网关、能力/上下文路由、三段计费、会话粘性、结构化输出校验
                  + vm.go：云主机配置发布、下单、IPv6/端口分配、Agent 指令通道、按秒结算与自动停机
                  + policy.go：演示/公网两套部署档位、Agent 凭证与签名源地址、登录限流、提交护栏
-                 + launch.go：启动码、按平台生成的 .cmd/.sh 启动器、/dl/ 下发节点程序、暂停派活
+                 + launch.go：启动码、按平台生成的 .cmd/.sh 启动器（可带 --vm 与 QEMU 预检）、/dl/ 下发节点程序、暂停派活
                  + scheduler_test.go：调度与结算核心逻辑的单元测试（不需要 ffmpeg）
 internal/render/ Blender 帧范围与 FCP XML/FCPXML 时间线解析、按帧/按秒的纯函数规划
 internal/vm/     云主机领域契约：IPv6 GUA/前缀校验、guest 地址与宿主机端口分配、按秒计费、
@@ -417,6 +457,7 @@ internal/hub/web 前端单页控制台（登录 + 提交任务/我的任务/模�
 deploy/          服务器部署件：systemd 单元、nginx 反代片段、env 模板、deploy.sh / enable-nginx.sh
 deploy/models/   MoE/分布式推理部署：llama.cpp rpc-server、--n-cpu-moe、vLLM TP、Ollama
 scripts/         演示与验收：run-demo.sh / fault-test.sh / smoke.sh / restart-test.py
+                 + vm-host-setup.sh / .ps1：云主机 QEMU/网桥/权限预检与 Agent 启动
 ```
 
 ## 已经实现并能演示的机制

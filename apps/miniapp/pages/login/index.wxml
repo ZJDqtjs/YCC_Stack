@@ -1,0 +1,48 @@
+<view class="wrap">
+  <view style="text-align:center; padding: 40rpx 0 20rpx">
+    <view style="width:88rpx;height:88rpx;border-radius:20rpx;background:var(--ink);color:var(--bg);display:inline-flex;align-items:center;justify-content:center;font-size:40rpx;font-weight:650">星</view>
+    <view style="font-size:48rpx;font-weight:650;color:var(--ink);margin-top:24rpx">星栈算力</view>
+    <view class="hint" style="margin-top:12rpx">把闲置的机器接进来按量计价，用别人的算力跑任务，按实测用量结算。</view>
+  </view>
+
+  <view class="card">
+    <view class="row" style="gap:8rpx">
+      <view class="btn {{mode === 'login' ? '' : 'ghost'}}" data-mode="login" bindtap="setMode" style="flex:1">登录</view>
+      <view class="btn {{mode === 'reg' ? '' : 'ghost'}}" data-mode="reg" bindtap="setMode" style="flex:1">注册</view>
+    </view>
+
+    <label class="field">
+      <text class="field-label">用户名</text>
+      <input class="in" value="{{name}}" data-k="name" bindinput="onInput" placeholder="2-24 个字符" />
+    </label>
+    <label class="field">
+      <text class="field-label">密码</text>
+      <input class="in" password value="{{pass}}" data-k="pass" bindinput="onInput" placeholder="至少 8 位" />
+    </label>
+    <block wx:if="{{mode === 'reg'}}">
+      <label class="field">
+        <text class="field-label">确认密码</text>
+        <input class="in" password value="{{pass2}}" data-k="pass2" bindinput="onInput" />
+      </label>
+      <label class="field" wx:if="{{inviteRequired}}">
+        <text class="field-label">邀请码</text>
+        <input class="in" value="{{invite}}" data-k="invite" bindinput="onInput" placeholder="向部署者索取" />
+      </label>
+    </block>
+
+    <view class="btn {{busy ? 'disabled' : ''}}" style="margin-top:32rpx" bindtap="submit">
+      {{busy ? '正在登录…' : (mode === 'reg' ? '注册并登录' : '登录')}}
+    </view>
+    <view class="err" wx:if="{{msg}}" style="margin-top:16rpx">{{msg}}</view>
+
+    <view class="hint" style="margin-top:24rpx;border-top:1rpx solid var(--hair);padding-top:20rpx">
+      口令以 PBKDF2-HMAC-SHA256 存储，服务端不保存明文。{{note}}
+    </view>
+    <view class="clip" style="margin-top:16rpx" bindtap="toggleBase">服务器地址：{{base || '当前域名'}}</view>
+    <block wx:if="{{showBase}}">
+      <input class="in" style="margin-top:14rpx" value="{{base}}" data-k="base" bindinput="onInput" placeholder="https://你的已备案域名" />
+      <view class="btn ghost tiny" style="margin-top:14rpx" bindtap="saveBase">保存并重连</view>
+      <view class="hint" style="margin-top:10rpx">正式版小程序必须使用已备案的 HTTPS 域名；开发工具里可关闭域名校验直连 HTTP 演示环境。</view>
+    </block>
+  </view>
+</view>

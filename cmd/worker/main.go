@@ -50,7 +50,13 @@ func main() {
 	vmUplink := flag.String("vm-uplink", "", "uplink interface for IPv6 NDP proxy (default: the bridge's uplink)")
 	vmMax := flag.Int("vm-max", 2, "maximum concurrent VMs this machine will host")
 	vmDir := flag.String("vm-dir", "", "VM disk/image directory (default <work>/vms)")
+	allowBuild := flag.Bool("allow-build", false, "accept compile/packaging jobs: the platform "+
+		"will run buyer-supplied commands as this user. Enable only on a machine and platform "+
+		"account you trust")
+	autoProvision := flag.Bool("auto-provision", false, "install missing toolchains automatically "+
+		"(currently the .NET SDK for build jobs) instead of failing the task")
 	flag.Parse()
+	autoProvisionEnabled = *autoProvision
 
 	ffx.Ffmpeg, ffx.Ffprobe = *ffmpeg, *ffprobe
 	blenderBin = *blender
@@ -73,6 +79,12 @@ func main() {
 	info := ffx.Detect(ctx, *work)
 	if *force != "" {
 		info.Encoders = []string{*force}
+	}
+	if *allowBuild {
+		// Advertising a "build" runtime is the provider's consent: the broker only
+		// dispatches compile jobs to nodes that say they accept them.
+		info.Runtimes = append(info.Runtimes, ffx.Runtime{Name: "build", Version: "1"})
+		log.Printf("编译任务已启用：本机将执行平台派发的买家编译命令（--allow-build）")
 	}
 	if *vmOn {
 		caps, err := ffx.DetectVM(ctx, *qemu, *qemuImg, *vmBridge, *vmUplink, *vmMax)
@@ -154,13 +166,23 @@ func main() {
 	sem := make(chan struct{}, *slots)
 
 	for {
+		// Take a slot before asking for work. Polling first and then blocking on
+		// the semaphore strands a claim the broker already leased, and a wedged
+		// job then stops the whole node from polling at all.
+		sem <- struct{}{}
 		claim := a.poll()
 		if claim == nil {
+			<-sem
 			continue
 		}
-		sem <- struct{}{}
 		go func(c *hub.Claim) {
-			defer func() { <-sem }()
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("seg %s panicked: %v", c.SegID, r)
+					a.fail(c, fmt.Sprintf("节点执行异常: %v", r))
+				}
+				<-sem
+			}()
 			a.run(c)
 		}(claim)
 	}
@@ -360,6 +382,8 @@ func (a *agent) run(c *hub.Claim) {
 		a.runBlender(c)
 	case render.KindPR:
 		a.runTimeline(c)
+	case render.KindBuild:
+		a.runBuild(c)
 	default:
 		a.runTranscode(c)
 	}
@@ -442,6 +466,11 @@ func (a *agent) fetchSource(c *hub.Claim) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	// A source URL that never finishes must not hold a slot forever: the slot is
+	// what the whole node uses to ask for more work.
+	dlCtx, dlCancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	defer dlCancel()
+	req = req.WithContext(dlCtx)
 	resp, err := a.hc.Do(req)
 	if err != nil {
 		return "", err

@@ -27,6 +27,7 @@ ExecStart=/opt/starstack/starstack-server \
   --data /var/lib/starstack \
   --public \
   --node-bin-dir /opt/starstack/dl \
+  --allow-build \
   --base-url __STARSTACK_BASE_URL__
 
 Restart=always

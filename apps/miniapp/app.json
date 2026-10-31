@@ -1,0 +1,32 @@
+{
+  "pages": [
+    "pages/login/index",
+    "pages/submit/index",
+    "pages/jobs/index",
+    "pages/market/index",
+    "pages/bill/index",
+    "pages/me/index"
+  ],
+  "window": {
+    "navigationBarTitleText": "星栈算力",
+    "navigationBarBackgroundColor": "#fbfbfa",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#fbfbfa",
+    "backgroundTextStyle": "dark"
+  },
+  "tabBar": {
+    "color": "#8b8b88",
+    "selectedColor": "#161616",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "white",
+    "list": [
+      { "pagePath": "pages/submit/index", "text": "提交" },
+      { "pagePath": "pages/jobs/index", "text": "任务" },
+      { "pagePath": "pages/market/index", "text": "市场" },
+      { "pagePath": "pages/bill/index", "text": "账单" },
+      { "pagePath": "pages/me/index", "text": "我的" }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

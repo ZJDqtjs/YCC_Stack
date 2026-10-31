@@ -1,0 +1,91 @@
+<view class="wrap">
+  <h1>提交任务</h1>
+  <view class="lead">转码按视频秒计价，渲染按帧计价；提交即预扣，完成后按实际用量结算并退还差额。</view>
+
+  <view class="card">
+    <view class="card-head"><text class="kicker">Job</text><text>任务与文件</text></view>
+    <view class="row">
+      <label class="field" style="margin-top:0">
+        <text class="field-label">任务类型</text>
+        <picker mode="selector" range="{{kinds}}" value="{{kindIndex}}" bindchange="onKind">
+          <view class="picker-in">{{kinds[kindIndex]}}</view>
+        </picker>
+      </label>
+      <label class="field" wx:if="{{kindIndex === 0}}" style="margin-top:0">
+        <text class="field-label">画质</text>
+        <picker mode="selector" range="{{qualities}}" value="{{qualityIndex}}" bindchange="onQuality">
+          <view class="picker-in">{{qualities[qualityIndex]}}</view>
+        </picker>
+      </label>
+    </view>
+
+    <view class="btn ghost" style="margin-top:22rpx" bindtap="chooseFile">
+      {{file ? '重新选择文件' : (kindIndex === 1 ? '选择 .zip / .blend' : '选择视频')}}
+    </view>
+    <view class="hint" wx:if="{{file}}" style="margin-top:12rpx">
+      {{file.name}}<text wx:if="{{duration}}"> · {{duration}} 秒</text>
+    </view>
+    <view class="hint" wx:if="{{kindIndex === 1}}" style="margin-top:12rpx">
+      小程序只接受单个文件：请把 .blend 与贴图、缓存打成 zip 再上传。
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{kindIndex === 1}}">
+    <view class="card-head"><text class="kicker">Blender</text><text>场景与输出</text></view>
+    <label class="field" style="margin-top:0">
+      <text class="field-label">渲染引擎</text>
+      <picker mode="selector" range="{{engines}}" value="{{engineIndex}}" bindchange="onEngine">
+        <view class="picker-in">{{engines[engineIndex]}}</view>
+      </picker>
+    </label>
+    <view class="row">
+      <label class="field">
+        <text class="field-label">起始帧</text>
+        <input class="in" type="number" value="{{from}}" data-k="from" bindinput="onInput" />
+      </label>
+      <label class="field">
+        <text class="field-label">结束帧</text>
+        <input class="in" type="number" value="{{to}}" data-k="to" bindinput="onInput" />
+      </label>
+    </view>
+    <view class="row">
+      <label class="field">
+        <text class="field-label">采样数（0=场景）</text>
+        <input class="in" type="number" value="{{samples}}" data-k="samples" bindinput="onInput" />
+      </label>
+      <label class="field">
+        <text class="field-label">分辨率 %（0=场景）</text>
+        <input class="in" type="number" value="{{percent}}" data-k="percent" bindinput="onInput" />
+      </label>
+    </view>
+    <label class="field">
+      <text class="field-label">场景文件（zip 内可省略）</text>
+      <input class="in" value="{{scene}}" data-k="scene" bindinput="onInput" placeholder="scene.blend" />
+    </label>
+  </view>
+
+  <view class="card">
+    <view class="card-head"><text class="kicker">Quote</text><text>预计花费</text></view>
+    <block wx:if="{{quote}}">
+      <view class="stats" style="margin-top:0">
+        <view class="stat hl"><text class="v">{{quote.holdText}}</text><text class="k">预扣</text></view>
+        <view class="stat"><text class="v">{{quote.eligible}}</text><text class="k">可派发节点</text></view>
+        <view class="stat"><text class="v">{{quote.balanceText}}</text><text class="k">当前余额</text></view>
+      </view>
+      <view class="hint" style="margin-top:14rpx" wx:if="{{quote.head}}">{{quote.head}}</view>
+      <view style="margin-top:12rpx">
+        <text class="tag {{quote.ok ? 'ok' : 'warn'}}">
+          {{quote.ok ? '余额与算力均可用' : (quote.affordable ? '暂无匹配节点，任务会排队' : '余额不足')}}
+        </text>
+        <text class="tag">{{quote.hold_basis}} {{quote.priceText}} 点/{{quote.unit}}</text>
+      </view>
+    </block>
+    <view class="hint" wx:else>{{quoteErr}}</view>
+  </view>
+
+  <view class="btn {{busy ? 'disabled' : ''}}" bindtap="submit">
+    {{busy ? msg : '开始处理'}}
+  </view>
+  <view class="bar" wx:if="{{busy}}"><view class="fill" style="width:{{progress}}%"></view></view>
+  <view class="hint" wx:if="{{!busy && msg}}" style="margin-top:16rpx">{{msg}}</view>
+</view>

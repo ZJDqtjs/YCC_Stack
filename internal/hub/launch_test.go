@@ -165,6 +165,92 @@ func TestLaunchTicketBindsOnArrival(t *testing.T) {
 	}
 }
 
+// TestLauncherCarriesVMHostOptions makes sure the one-click script grows the
+// QEMU preflight and the --vm flags instead of handing out a transcoder-only
+// script that silently never offers a cloud host.
+func TestLauncherCarriesVMHostOptions(t *testing.T) {
+	s := newTestServer(t, DefaultPolicy())
+	ck := asUser(t, s, "vmhost")
+
+	mint := func(body map[string]any, wantMax int) (*httptest.ResponseRecorder, string, string) {
+		b, _ := json.Marshal(body)
+		rec := httptest.NewRecorder()
+		r := httptest.NewRequest("POST", "/api/nodes/launch", strings.NewReader(string(b)))
+		r.AddCookie(ck)
+		s.handleLaunchMint(rec, r)
+		if rec.Code != 200 {
+			t.Fatalf("mint: %d %s", rec.Code, rec.Body.String())
+		}
+		var out struct {
+			NodeID string `json:"node_id"`
+			Script string `json:"script"`
+			VM     bool   `json:"vm"`
+			VMMax  int    `json:"vm_max"`
+		}
+		if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+			t.Fatal(err)
+		}
+		if !out.VM || out.VMMax != wantMax {
+			t.Fatalf("mint response lost VM options: %+v", out)
+		}
+		rec = httptest.NewRecorder()
+		s.handleLaunchScript(rec, httptest.NewRequest("GET", out.Script, nil))
+		if rec.Code != 200 {
+			t.Fatalf("script: %d %s", rec.Code, rec.Body.String())
+		}
+		return rec, out.NodeID, rec.Body.String()
+	}
+
+	// Linux routed: bridge and uplink are carried and the script explains root.
+	_, _, sh := mint(map[string]any{
+		"name": "vm-linux", "price": 0.8, "slots": 2, "os": "linux", "arch": "amd64",
+		"vm": true, "vm_max": 3, "vm_bridge": "br0", "vm_uplink": "eth0",
+	}, 3)
+	for _, want := range []string{
+		`--vm --vm-max 3`, `--qemu "$QEMU_BIN"`, `--vm-bridge "br0"`,
+		`--vm-uplink "eth0"`, "qemu-system-x86_64", "apt-get install", "/dev/kvm",
+	} {
+		if !strings.Contains(sh, want) {
+			t.Errorf("linux VM script missing %q", want)
+		}
+	}
+	if strings.Contains(sh, "netsh") {
+		t.Error("linux script should not contain Windows firewall instructions")
+	}
+
+	// Windows slirp: winget preflight and batch continuation must both be present.
+	_, _, cmd := mint(map[string]any{
+		"name": "vm-win", "price": 0.8, "slots": 2, "os": "windows", "arch": "amd64",
+		"vm": true, "vm_max": 2,
+	}, 2)
+	for _, want := range []string{
+		`--vm --vm-max 2`, `--qemu "%QEMU_BIN%"`, "winget install --id SoftwareFreedomConservancy.QEMU",
+		"qemu-img", "netsh advfirewall", "where %QEMU_BIN%",
+	} {
+		if !strings.Contains(cmd, want) {
+			t.Errorf("windows VM script missing %q", want)
+		}
+	}
+	for i := 0; i < len(cmd); i++ {
+		if cmd[i] >= 0x80 {
+			t.Fatalf("windows VM launcher is not ASCII at byte %d", i)
+		}
+	}
+
+	// Routed parameters on Windows are refused at mint time.
+	b, _ := json.Marshal(map[string]any{
+		"price": 0.8, "slots": 1, "os": "windows", "arch": "amd64",
+		"vm": true, "vm_bridge": "br0",
+	})
+	rec := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/api/nodes/launch", strings.NewReader(string(b)))
+	r.AddCookie(ck)
+	s.handleLaunchMint(rec, r)
+	if rec.Code != 400 {
+		t.Fatalf("windows bridge mint = %d, want 400", rec.Code)
+	}
+}
+
 func TestNodeBinChecksum(t *testing.T) {
 	s := newTestServer(t, DefaultPolicy())
 	dir := t.TempDir()

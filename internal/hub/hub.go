@@ -571,6 +571,7 @@ func (s *Server) Handlers() http.Handler {
 	mux.HandleFunc("/api/upload", s.handleUpload)
 	mux.HandleFunc("/api/jobs", s.handleJobs)
 	mux.HandleFunc("/api/jobs/render", s.handleCreateRender)
+	mux.HandleFunc("/api/jobs/build", s.handleCreateBuild)
 	mux.HandleFunc("/api/estimate", s.handleEstimate)
 	mux.HandleFunc("/api/state", s.handleState)
 	mux.HandleFunc("/api/jobs/", s.handleJobFile)
@@ -640,7 +641,7 @@ func (s *Server) Handlers() http.Handler {
 		}
 	}
 	mux.HandleFunc("/", handleIndex)
-	return logWrap(mux)
+	return logWrap(corsWrap(mux))
 }
 
 // chatter are the agent's heartbeat paths: they fire every few seconds per
@@ -908,6 +909,15 @@ func (s *Server) dispatchLocked(seg *Seg, wd *Worker) bool {
 	if lease < 30*time.Second {
 		lease = 30 * time.Second
 	}
+	// A build is measured in minutes, not clip seconds: size its lease from the
+	// job's own timeout or a 20-minute compile would be reclaimed while it runs.
+	if j.Kind == render.KindBuild {
+		limit := 1800
+		if j.Spec != nil && j.Spec.TimeoutSec > 0 {
+			limit = j.Spec.TimeoutSec
+		}
+		lease = s.leaseBase + time.Duration(limit+120)*time.Second
+	}
 	seg.Status = "leased"
 	seg.Worker = wd.ID
 	seg.Pct = 0
@@ -1072,6 +1082,8 @@ func (s *Server) tick() {
 				break
 			}
 			if !s.dispatchLocked(seg, wd) {
+				log.Printf("dispatch: seg %s -> %s rejected (inbox cap=%d len=%d)",
+					seg.ID, wd.ID, cap(wd.inbox), len(wd.inbox))
 				break
 			}
 			s.saveSegLocked(seg)
@@ -1108,6 +1120,15 @@ func (s *Server) dispatchBudgetLocked(liveJobs int) int {
 // footage so a long video is not killed mid-flight, floored so a short one still
 // gets a reasonable grace period for queueing and failover.
 func (s *Server) deadlineLocked(j *Job) time.Duration {
+	if j.Kind == render.KindBuild {
+		// Compiling is wall-clock bound by the command's own timeout, so the
+		// footage-shaped formula would kill a legitimate build mid-restore.
+		limit := 30 * time.Minute
+		if j.Spec != nil && j.Spec.TimeoutSec > 0 {
+			limit = time.Duration(j.Spec.TimeoutSec)*time.Second + 10*time.Minute
+		}
+		return limit
+	}
 	d := time.Duration(j.Duration * s.policy.JobSlowFactor * float64(time.Second))
 	if d < s.policy.MinJobDeadline {
 		d = s.policy.MinJobDeadline
@@ -1163,6 +1184,11 @@ func jobReq(j *Job) (Req, string) {
 	case render.KindPR:
 		r.Runtime = "ffmpeg"
 		v = "libx264"
+	case render.KindBuild:
+		// A build is its own service: only agents that explicitly opted in
+		// advertise it, so a transcoding node is never scored for a compile.
+		r.Runtime = "build"
+		v = ""
 	default:
 		if r.Runtime != "" {
 			r.Runtime = "ffmpeg"
@@ -1213,7 +1239,12 @@ func (s *Server) pickWorkerLocked(req Req, vcodec string, seg *Seg) *Worker {
 		}
 		conf := 0.5
 		if wd.OK+wd.Bad > 0 {
-			conf = float64(wd.OK) / float64(wd.OK+wd.Bad)
+			// Laplace smoothing, not OK/(OK+Bad): a node that has one failed
+			// slice and no success yet would score 0 and then never be offered
+			// another slice, so it could never earn a success. Three consecutive
+			// failures still park it in punishLocked; this only keeps the trial
+			// period open.
+			conf = float64(wd.OK+1) / float64(wd.OK+wd.Bad+2)
 		}
 		cost := 1.0
 		if s.policy.CostWeight > 0 && wd.Price > 0 && ref > 0 {
@@ -1286,7 +1317,13 @@ func (s *Server) jobsOrdered() []*Job {
 
 func (s *Server) merge(j *Job) {
 	var err error
-	if j.Kind == render.KindBlender || j.Kind == render.KindPR {
+	if j.Kind == render.KindBuild {
+		// The provider returned exactly the tree the buyer asked for; there is
+		// nothing to stitch, so the uploaded artifact becomes the job output.
+		if len(j.Segs) == 1 {
+			j.out = j.Segs[0].path
+		}
+	} else if j.Kind == render.KindBlender || j.Kind == render.KindPR {
 		err = s.mergeRender(j)
 	} else {
 		parts := make([]string, len(j.Segs))
@@ -1319,7 +1356,11 @@ func (s *Server) merge(j *Job) {
 	}
 	j.SumWall = sum
 	if j.Wall > 0 {
-		j.Speed = j.Duration / j.Wall
+		if j.Kind != render.KindBuild {
+			j.Speed = j.Duration / j.Wall
+		} else {
+			j.Speed = 0
+		}
 	}
 	// providers are paid only for what actually ran; the rest of the hold comes back
 	s.releaseHold(j, "任务完成，预扣差额退还")
@@ -1488,7 +1529,13 @@ func (s *Server) handleReport(w http.ResponseWriter, r *http.Request) {
 			seg.ID, rep.Worker, seg.Wall, seg.Match, seg.Cost, rep.SHA)
 	case "failed":
 		seg.Attempt++
-		why := clip(rep.Err, 200)
+		// A build failure is a toolchain error, not an ffmpeg one-word failure:
+		// the buyer needs the tail of the compiler output to fix their command.
+		limit := 200
+		if j := s.jobs[seg.JobID]; j != nil && j.Kind == render.KindBuild {
+			limit = 1500
+		}
+		why := clip(rep.Err, limit)
 		seg.Err = why
 		seg.exclude(rep.Worker)
 		s.punishLocked(s.workers[rep.Worker])
@@ -1869,26 +1916,39 @@ func (s *Server) handleJobFile(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimPrefix(r.URL.Path, "/download/")
 	u := s.currentUser(r)
+	which := r.URL.Query().Get("which")
 	s.mu.Lock()
 	j, out := s.jobs[id], ""
-	if j != nil && u != nil && j.OwnerID == u.ID {
+	allowed := j != nil && u != nil && j.OwnerID == u.ID
+	if allowed {
 		out = j.out
-		if r.URL.Query().Get("which") == "baseline" && j.Baseline != nil {
+		if which == "baseline" && j.Baseline != nil {
 			out = filepath.Join(s.dataDir, "jobs", id, "baseline.mp4")
-		}
-		if out == "" {
-			// a job finished before the last broker restart lives only in
-			// SQLite, but its merged file is still on disk under a known name
-			for _, name := range []string{"out.mp4", "out.zip"} {
-				p := filepath.Join(s.dataDir, "jobs", id, name)
-				if _, err := os.Stat(p); err == nil {
-					out = p
-					break
-				}
-			}
 		}
 	}
 	s.mu.Unlock()
+
+	// A finished job is not kept in memory across a restart: its row is still in
+	// SQLite and its artifact is still on disk, so authorise from the row and
+	// resolve the known file name.
+	if !allowed && u != nil {
+		if row, err := s.st.Job(id); err == nil && row.OwnerID == u.ID {
+			allowed = true
+		}
+	}
+	if allowed && out == "" {
+		names := []string{"out.mp4", "out.zip", "result.zip"}
+		if which == "baseline" {
+			names = []string{"baseline.mp4"}
+		}
+		for _, name := range names {
+			p := filepath.Join(s.dataDir, "jobs", id, name)
+			if _, err := os.Stat(p); err == nil {
+				out = p
+				break
+			}
+		}
+	}
 	if out == "" {
 		http.NotFound(w, r)
 		return

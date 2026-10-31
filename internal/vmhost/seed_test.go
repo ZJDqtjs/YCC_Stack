@@ -2,6 +2,7 @@ package vmhost
 
 import (
 	"bytes"
+	"errors"
 	"net"
 	"strconv"
 	"strings"
@@ -72,6 +73,29 @@ func TestQEMUArgsSlirpAndRouted(t *testing.T) {
 	}
 	if strings.Contains(args, "hostfwd=") {
 		t.Fatal("routed plan must not NAT ports")
+	}
+}
+
+func TestAccelFailureRecognition(t *testing.T) {
+	for _, msg := range []string{
+		"WHPX: failed to initialize", "Could not access KVM kernel module",
+		"HVF: hypervisor not available", "accelerator initialization failed",
+	} {
+		if !accelFailure(errors.New(msg)) {
+			t.Errorf("%q should be recognized as an accelerator failure", msg)
+		}
+	}
+	if accelFailure(errors.New("could not open disk image: no such file")) {
+		t.Fatal("a disk error must not trigger a TCG retry")
+	}
+	h := New(t.TempDir(), "qemu-system-x86_64", "qemu-img", "", "", "kvm", 2)
+	args := strings.Join(h.qemuArgsAccel("kvm", &vm.Plan{InstanceID: "vmi1", Network: vm.Network{ConsolePort: 5900}}, "/tmp/x", "", "", false, 1234), " ")
+	if !strings.Contains(args, "-accel kvm") || !strings.Contains(args, "-cpu host") {
+		t.Fatalf("kvm args: %s", args)
+	}
+	args = strings.Join(h.qemuArgsAccel("tcg", &vm.Plan{InstanceID: "vmi1", Network: vm.Network{ConsolePort: 5900}}, "/tmp/x", "", "", false, 1234), " ")
+	if !strings.Contains(args, "-accel tcg") || !strings.Contains(args, "-cpu max") {
+		t.Fatalf("tcg args: %s", args)
 	}
 }
 

@@ -1,0 +1,6 @@
+{
+  "name": "starstack-miniapp",
+  "private": true,
+  "description": "星栈算力原生微信小程序；module type 仅影响 Node 侧的校验脚本，微信编译器按 CommonJS 处理 .js",
+  "type": "commonjs"
+}

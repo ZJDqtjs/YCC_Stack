@@ -1,0 +1,18 @@
+{
+  "description": "星栈算力小程序：需求方遥控器（提交、任务、市场、账单、我的）",
+  "projectname": "starstack-miniapp",
+  "appid": "touristappid",
+  "compileType": "miniprogram",
+  "miniprogramRoot": "./",
+  "libVersion": "3.6.0",
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "coverView": true,
+    "showShadowRootInWxmlPanel": true
+  },
+  "condition": {}
+}

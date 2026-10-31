@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -49,6 +50,9 @@ type Host struct {
 func New(dir, qemu, qemuImg, bridge, uplink, accel string, maxVMs int) *Host {
 	if maxVMs <= 0 {
 		maxVMs = 2
+	}
+	if strings.TrimSpace(accel) == "" {
+		accel = "tcg"
 	}
 	return &Host{
 		Dir: dir, QEMU: qemu, QEMUImg: qemuImg, Bridge: bridge,
@@ -188,15 +192,50 @@ func (h *Host) boot(ctx context.Context, plan *vm.Plan, dir, tap string, reuse b
 			h.cleanupRouted(plan, tap)
 		}
 	}()
-	qmpPort, err := freePort()
-	if err != nil {
-		return nil, err
-	}
 	base := ""
 	if plan.ImageFormat == "iso" && !reuse {
 		base, _ = h.imagePath(plan)
 	}
-	args := h.qemuArgs(plan, dir, tap, base, reuse, qmpPort)
+	accels := []string{h.Accel}
+	if h.Accel != "tcg" {
+		accels = append(accels, "tcg")
+	}
+	var lastErr error
+	for i, accel := range accels {
+		qmpPort, err := freePort()
+		if err != nil {
+			return nil, err
+		}
+		ep, err := h.bootOnce(ctx, plan, dir, tap, base, reuse, qmpPort, accel, p)
+		if err == nil {
+			success = true
+			return ep, nil
+		}
+		lastErr = err
+		if i == 0 && len(accels) > 1 {
+			if !accelFailure(err) {
+				break
+			}
+			log.Printf("vm %s: accelerator %s unavailable (%v); retrying with tcg",
+				plan.InstanceID, accel, err)
+			p(90, "硬件加速不可用，回退到 TCG 软件模拟（会慢一些）")
+		}
+	}
+	return nil, lastErr
+}
+
+func accelFailure(err error) bool {
+	s := strings.ToLower(err.Error())
+	for _, k := range []string{"whpx", "hvf", "kvm", "accelerat", "hypervisor"} {
+		if strings.Contains(s, k) {
+			return true
+		}
+	}
+	return false
+}
+
+func (h *Host) bootOnce(ctx context.Context, plan *vm.Plan, dir, tap, base string, reuse bool, qmpPort int, accel string, p Progress) (*vm.Endpoints, error) {
+	args := h.qemuArgsAccel(accel, plan, dir, tap, base, reuse, qmpPort)
 	logPath := filepath.Join(dir, "qemu.log")
 	logf, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 	if err != nil {
@@ -275,17 +314,20 @@ func (h *Host) boot(ctx context.Context, plan *vm.Plan, dir, tap string, reuse b
 		h.cleanupStateNet(st)
 		return nil, err
 	}
-	success = true
 	return ep, nil
 }
 
 func (h *Host) qemuArgs(plan *vm.Plan, dir, tap, base string, reuse bool, qmpPort int) []string {
+	return h.qemuArgsAccel(h.Accel, plan, dir, tap, base, reuse, qmpPort)
+}
+
+func (h *Host) qemuArgsAccel(accel string, plan *vm.Plan, dir, tap, base string, reuse bool, qmpPort int) []string {
 	disk := filepath.Join(dir, "disk.qcow2")
 	seed := filepath.Join(dir, "seed.iso")
 	args := []string{
 		"-name", "starstack-" + plan.InstanceID,
 		"-machine", "q35",
-		"-accel", h.Accel,
+		"-accel", accel,
 		"-smp", strconv.Itoa(plan.CPUs),
 		"-m", strconv.Itoa(plan.MemMB),
 		"-drive", "file=" + disk + ",if=virtio,format=qcow2,cache=writeback",
@@ -297,7 +339,7 @@ func (h *Host) qemuArgs(plan *vm.Plan, dir, tap, base string, reuse bool, qmpPor
 		"-serial", "file:" + filepath.Join(dir, "console.log"),
 		"-pidfile", filepath.Join(dir, "qemu.pid"),
 	}
-	if h.Accel == "kvm" || h.Accel == "hvf" {
+	if accel == "kvm" || accel == "hvf" {
 		args = append(args, "-cpu", "host")
 	} else {
 		args = append(args, "-cpu", "max")

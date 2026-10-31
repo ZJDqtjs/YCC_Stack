@@ -40,6 +40,13 @@ type Policy struct {
 	ShowPending    bool    // list unclaimed agents with their pairing codes
 	Recharge       bool    // allow /api/me/recharge
 	SignupCredit   float64 // free credits for a fresh account
+	// AllowBuild exposes the compile/packaging job kind. A build job runs a
+	// buyer-supplied command on a provider machine, so it is off by default and
+	// restricted to named accounts even when on: the provider still has to opt in
+	// with --allow-build on its own agent, which is what makes the trust explicit
+	// on both sides.
+	AllowBuild bool
+	BuildUsers []string
 	secureCookie   bool    // set the Secure flag on session cookies (TLS / reverse proxy)
 	CookiePath     string  // Path the session cookie is scoped to ("/starstack/" behind a proxy)
 	TrustProxy     bool    // believe X-Forwarded-For for the client address
@@ -101,6 +108,7 @@ func (s *Server) policyView() map[string]any {
 		"public": s.policy.Public, "recharge": s.policy.Recharge,
 		"local_path": s.policy.AllowLocalPath, "pending": s.policy.ShowPending,
 		"signup_credit": s.policy.SignupCredit, "signup_invite_required": s.policy.SignupInvite != "",
+		"allow_build":     s.policy.AllowBuild,
 		"max_segs":        s.policy.MaxSegs,
 		"max_active_jobs": s.policy.MaxActiveJobs, "max_active_vms": s.policy.MaxActiveVMs,
 		"cost_weight":          s.policy.CostWeight,
@@ -343,4 +351,20 @@ func (s *Server) countLiveJobsLocked(uid string) int {
 		}
 	}
 	return n
+}
+
+// buildAllowed gates the compile job kind twice: the deployment must turn it on
+// and the account must be named. An empty BuildUsers list therefore means "nobody",
+// never "everybody" — a public broker must not hand arbitrary command execution
+// to every freshly registered account.
+func (p Policy) buildAllowed(userName string) bool {
+	if !p.AllowBuild || len(p.BuildUsers) == 0 {
+		return false
+	}
+	for _, name := range p.BuildUsers {
+		if strings.EqualFold(strings.TrimSpace(name), userName) {
+			return true
+		}
+	}
+	return false
 }

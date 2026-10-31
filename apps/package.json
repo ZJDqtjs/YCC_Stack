@@ -1,0 +1,30 @@
+{
+  "name": "starstack-apps",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "sync:core": "esbuild shared/index.js --bundle --format=cjs --platform=neutral --target=es2017 --outfile=miniapp/utils/core.js",
+    "typecheck": "tsc --noEmit",
+    "verify:miniapp": "node scripts/verify-miniapp.cjs",
+    "cap:sync": "cap sync android",
+    "cap:open": "cap open android",
+    "apk": "npm run build && cap sync android && cd android && ./gradlew assembleDebug"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.2.0",
+    "@capacitor/core": "^6.2.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.2.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "esbuild": "^0.24.2",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11"
+  }
+}
