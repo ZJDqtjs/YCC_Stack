@@ -135,3 +135,6 @@ h3 { font-size: 29rpx; font-weight: 600; color: var(--ink); margin: 0; }
   line-height: 1.65; word-break: break-all; white-space: pre-wrap;
 }
 .clip { color: var(--link); font-size: 24rpx; }
+
+/* 自定义 tabBar 占位：内容不被底部导航遮住 */
+.tabpage { padding-bottom: calc(env(safe-area-inset-bottom) + 210rpx); }

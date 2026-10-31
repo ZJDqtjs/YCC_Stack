@@ -1,4 +1,4 @@
-<view class="wrap">
+<view class="wrap tabpage">
   <h1>算力市场</h1>
   <view class="lead">按编码能力聚合的切片与全部在线节点；他人机器只展示规格与价格。</view>
 

@@ -1,4 +1,4 @@
-<view class="wrap">
+<view class="wrap tabpage">
   <h1>账单</h1>
   <view class="lead">账户流水与按节点结算的收益明细；校验不通过的分片不结算。</view>
 

@@ -1,4 +1,4 @@
-<view class="wrap">
+<view class="wrap tabpage">
   <h1>提交任务</h1>
   <view class="lead">转码按视频秒计价，渲染按帧计价；提交即预扣，完成后按实际用量结算并退还差额。</view>
 

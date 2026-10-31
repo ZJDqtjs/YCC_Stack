@@ -4,6 +4,9 @@ Page({
   data: { spend: [], earn: [], loading: true, err: '', amount: '100', canRecharge: false, msg: '', busy: false },
 
   onShow() {
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar().setData({ selected: 3 })
+    }
     if (!getToken()) {
       wx.reLaunch({ url: '/pages/login/index' })
       return

@@ -1,4 +1,4 @@
-<view class="wrap">
+<view class="wrap tabpage">
   <h1>我的任务</h1>
   <view class="lead">分片去向、进度、哈希校验与结算；跨 Broker 重启恢复的任务不计量加速比。</view>
 

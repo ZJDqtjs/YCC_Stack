@@ -41,7 +41,8 @@
         "pagePath": "pages/me/index",
         "text": "我的"
       }
-    ]
+    ],
+    "custom": true
   },
   "style": "v2",
   "sitemapLocation": "sitemap.json"

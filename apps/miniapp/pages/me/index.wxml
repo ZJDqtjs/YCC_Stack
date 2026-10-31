@@ -1,4 +1,4 @@
-<view class="wrap">
+<view class="wrap tabpage">
   <h1>我的</h1>
   <view class="lead">账户、节点与连接设置。</view>
 
