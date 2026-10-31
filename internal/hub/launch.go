@@ -384,6 +384,18 @@ func (s *Server) serveLaunchBundle(w http.ResponseWriter, t *launchTicket) {
 	if err == nil {
 		_, err = io.Copy(dst, f)
 	}
+	if err == nil && t.OS != "windows" {
+		// Double-click does not exist on Linux/macOS: one command after unzip.
+		sh := "#!/bin/sh\ncd \"$(dirname \"$0\")\" || exit 1\nchmod +x ./starstack-node 2>/dev/null || true\nexec ./starstack-node\n"
+		shHdr := &zip.FileHeader{Name: "start.sh", Method: zip.Deflate}
+		shHdr.SetMode(0o755)
+		shHdr.Modified = time.Now()
+		var out io.Writer
+		out, err = zw.CreateHeader(shHdr)
+		if err == nil {
+			_, err = io.WriteString(out, sh)
+		}
+	}
 	if err == nil {
 		var out io.Writer
 		out, err = zw.Create("starstack-node.json")

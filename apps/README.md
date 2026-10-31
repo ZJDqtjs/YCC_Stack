@@ -110,3 +110,24 @@ dotnet publish StarStack.Desktop.csproj -c Release -r win-x64 \
 ```
 
 产物目录里只有一个 `StarStack.Desktop.exe`（约 70–90 MB），**双击即可运行**，不需要预装 .NET 运行时，也不需要先解压一堆 DLL。`install.bat` / `install.ps1` 只在需要开始菜单快捷方式和固定安装目录时使用，属于备选。
+
+## Linux 支持
+
+| 能力 | Linux | 说明 |
+|---|---|---|
+| 节点 Agent | ✅ | 静态二进制 `starstack-node`；节点包含 `start.sh`，解压后 `sh start.sh` 即加入 |
+| 一键接入启动脚本 | ✅ | 控制台会按目标系统生成 `.sh` |
+| 编译任务（build） | ✅ | worker 用 `sh -c` 执行命令；解压后会自动给 `.sh` 加执行位 |
+| Android 打包 | ✅ | `apps/android/apk.sh`：缺 JDK 17 / Android SDK 时自动下载到 `out/`，Gradle 走腾讯镜像 |
+| Web/小程序 | ✅ | Node/Vite 与微信开发者工具无关平台 |
+| Windows 桌面端 | ❌ | WPF + WebView2 只能 Windows 构建；如需 Linux 桌面端，应改 Avalonia（另起项目） |
+
+Linux 上跑 Android 的编译任务：
+
+```bash
+# 源码包根目录放 apk.sh（从 apps/android/apk.sh 复制），任务命令填:
+./apk.sh          # 解压时已自动 chmod +x；也可写 sh apk.sh
+# 输出目录 out 会得到 StarStack.apk
+```
+
+前置条件：`curl`、`unzip`、`tar`、网络可访问 dl.google.com / api.adoptium.net / 腾讯 Gradle 镜像。

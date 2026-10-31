@@ -48,6 +48,17 @@ func (a *agent) runBuild(c *hub.Claim) {
 			a.fail(c, "解压源码包: "+err.Error())
 			return
 		}
+		if runtime.GOOS != "windows" {
+			// A Linux build script usually arrives through a zip that did not keep
+			// the executable bit; make shell scripts runnable without asking the
+			// buyer to prefix every command with `sh`.
+			filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+				if err == nil && !d.IsDir() && strings.HasSuffix(strings.ToLower(d.Name()), ".sh") {
+					os.Chmod(p, 0o755)
+				}
+				return nil
+			})
+		}
 	} else if err := copyFile(src, filepath.Join(root, "source.zip")); err != nil {
 		a.fail(c, err.Error())
 		return
