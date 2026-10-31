@@ -9,11 +9,15 @@ function decorate(j) {
   const rq = []
   if (req.need_gpu) rq.push('需 GPU')
   if (req.min_cpus) rq.push('≥' + req.min_cpus + ' 核')
-  if (req.runtime) rq.push('需 ' + req.runtime)
+  if (req.runtime && j.kind !== 'build') rq.push('需 ' + req.runtime)
   if (req.max_price) rq.push('≤' + f2(req.max_price) + ' 点/秒')
 
   const tags = []
-  if (j.kind === 'blender') {
+  if (j.kind === 'build') {
+    tags.push('编译打包')
+    if (j.spec && j.spec.command) tags.push(String(j.spec.command).slice(0, 40))
+    tags.push('超时 ' + ((j.spec && j.spec.timeout_sec) || 1800) + 's')
+  } else if (j.kind === 'blender') {
     tags.push('Blender' + (j.spec && j.spec.engine ? ' · ' + j.spec.engine : ''))
     tags.push(Math.round(j.duration) + ' 帧 · ' + segs.length + ' 段')
   } else if (j.kind === 'pr') {
@@ -26,13 +30,18 @@ function decorate(j) {
     tags.push(f1(j.duration) + 's · ' + segs.length + ' 片')
   }
 
-  const stats = [
+  let stats = [
     { k: '墙钟', v: f1(j.wall) + 's' },
     { k: '分片完成', v: done + '/' + segs.length },
     { k: '哈希一致', v: verified + '/' + segs.length },
     { k: '并行比', v: speedup > 0 ? f2(speedup) + 'x' : '—' },
     { k: '实结算', v: f2(j.credits_spent) },
     { k: '预扣', v: f2(j.credits_hold) },
+  ]
+  if (j.kind === 'build') stats = [
+    { k: '编译耗时', v: f1(j.wall) + 's' },
+    { k: '产物校验', v: verified + '/' + segs.length },
+    { k: '实结算', v: f2(j.credits_spent) },
   ]
   if (j.released && j.credits_hold > j.credits_spent) stats.push({ k: '退还', v: '+' + f2(j.credits_hold - j.credits_spent) })
   if (j.baseline) {
@@ -41,7 +50,7 @@ function decorate(j) {
 
   return {
     ...j,
-    statusText: JOB_ST[j.status] || j.status,
+    statusText: j.kind === 'build' && j.status === 'running' ? '编译中' : (JOB_ST[j.status] || j.status),
     tone: toneOf(j.status),
     progress: segs.length ? Math.round((done / segs.length) * 100) : 0,
     tags,
@@ -85,6 +94,10 @@ Page({
     } catch (e) {
       this.setData({ loading: false, err: e.message || String(e) })
     }
+  },
+
+  openLogs(e) {
+    wx.navigateTo({ url: '/pages/commlog/index?type=job&id=' + encodeURIComponent(e.currentTarget.dataset.id) })
   },
 
   download(e) {

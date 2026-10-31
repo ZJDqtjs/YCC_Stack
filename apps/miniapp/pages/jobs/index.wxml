@@ -36,6 +36,7 @@
     <view class="err" wx:if="{{j.err}}" style="margin-top:14rpx">错误：{{j.err}}</view>
 
     <view class="btnrow">
+      <view class="btn ghost tiny" data-id="{{j.id}}" bindtap="openLogs">通讯日志</view>
       <view class="btn ghost tiny" wx:if="{{j.canDownload}}" data-i="{{index}}" bindtap="download">复制下载链接</view>
       <view class="btn ghost tiny" wx:if="{{j.baseline && j.baseline.status === 'done'}}" data-i="{{index}}" data-which="baseline" bindtap="download">复制基线链接</view>
     </view>

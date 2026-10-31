@@ -54,6 +54,10 @@ Page({
     }
   },
 
+  openNodeLogs(e) {
+    wx.navigateTo({ url: '/pages/commlog/index?type=node&id=' + encodeURIComponent(e.currentTarget.dataset.id) })
+  },
+
   onBase(e) {
     this.setData({ base: e.detail.value, saveMsg: '' })
   },

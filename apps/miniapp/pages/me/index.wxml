@@ -36,7 +36,10 @@
         <view class="meta">{{n.meta}}</view>
         <view class="meta mono">编号 {{n.id}}</view>
       </view>
-      <text class="tag {{n.online ? 'ok' : 'bad'}}">{{n.online ? '在线' : '离线'}}</text>
+      <view style="display:flex;flex-direction:column;gap:8rpx;align-items:flex-end">
+        <text class="tag {{n.online ? 'ok' : 'bad'}}">{{n.online ? '在线' : '离线'}}</text>
+        <view class="btn ghost tiny" data-id="{{n.id}}" bindtap="openNodeLogs">通讯日志</view>
+      </view>
     </view>
     <view class="hint" style="margin-top:12rpx">接节点、改单价请到网页控制台的「我的节点」；小程序只做查看。</view>
   </view>

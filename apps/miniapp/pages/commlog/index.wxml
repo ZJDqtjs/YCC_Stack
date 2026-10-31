@@ -1,0 +1,18 @@
+<view class="wrap">
+  <h1>{{title}}</h1>
+  <view class="lead">卖方与买方的交互记录由平台持久化，双方可据此核对问题。</view>
+
+  <view class="card" wx:if="{{err}}"><view class="err">{{err}}</view></view>
+  <view class="card" wx:if="{{loading}}"><view class="empty">加载中…</view></view>
+  <view class="card" wx:if="{{!loading && !logs.length}}"><view class="empty">暂无通讯记录</view></view>
+
+  <view class="card" wx:for="{{logs}}" wx:key="id">
+    <view style="display:flex;gap:10rpx;align-items:center;flex-wrap:wrap">
+      <text style="font-size:28rpx;font-weight:600;color:var(--ink)">{{item.eventText}}</text>
+      <text class="tag {{item.tone}}">{{item.actorText}}</text>
+      <text class="tag" wx:if="{{item.node_id}}">{{item.node_id}}</text>
+    </view>
+    <view class="hint" style="margin-top:6rpx">{{item.timeText}}<text wx:if="{{item.seg_id}}"> · {{item.seg_id}}</text></view>
+    <view class="hint" wx:if="{{item.detailText}}" style="margin-top:4rpx">{{item.detailText}}</view>
+  </view>
+</view>
