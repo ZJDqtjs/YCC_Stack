@@ -34,7 +34,7 @@ const DEFAULTS = {
 }
 
 export default function Submit() {
-  const { api, policy, setView, showToast } = useApp()
+  const { api, policy, setView, showToast, targetNode, setTargetNode } = useApp()
   const [kind, setKind] = useState('transcode')
   const [quality, setQuality] = useState('balanced')
   const [adv, setAdv] = useState(false)
@@ -84,6 +84,7 @@ export default function Submit() {
     if (Number(f.max_price) > 0) r.max_price = Number(f.max_price)
     if (f.runtime) r.runtime = f.runtime
     if (f.arch) r.arch = f.arch
+    if (targetNode) r.node_id = targetNode.id
     return r
   }
 
@@ -151,6 +152,7 @@ export default function Submit() {
         fd.set('timeout', String(f.timeout || '1800'))
         const r = await api.submitBuild(fd)
         setMsg(`已入队 ${r.id}，预扣 ${f2(r.hold)} 点（按实际分钟结算）`)
+        setTargetNode(null)
         showToast('编译任务已提交')
         setTimeout(() => setView('jobs'), 500)
         return
@@ -184,6 +186,7 @@ export default function Submit() {
         const r = await api.submitRender(fd)
         setMsg(`已入队 ${r.id}（${r.pieces} 段 / ${f1(r.units)} ${r.unit}），预扣 ${f2(r.hold)} 点`)
       }
+      setTargetNode(null)
       showToast('任务已提交')
       setTimeout(() => setView('jobs'), 500)
     } catch (e: any) {
@@ -202,6 +205,19 @@ export default function Submit() {
         <h1>提交任务</h1>
         <p>转码按视频秒计价，渲染按帧计价；提交即预扣，完成后按实际用量结算并退还差额。</p>
       </div>
+
+      {targetNode && (
+        <Card kicker="Target" title="已指定节点">
+          <div className="hint">
+            本次任务只会派发给 <b>{targetNode.name || targetNode.id}</b>（{targetNode.id}）。它离线时会排队等待上线。
+          </div>
+          <div className="btnrow">
+            <Btn variant="ghost" tiny onClick={() => setTargetNode(null)}>
+              取消指定
+            </Btn>
+          </div>
+        </Card>
+      )}
 
       <Card kicker="Job" title="任务与文件">
         <div className="row">

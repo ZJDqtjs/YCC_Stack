@@ -3,11 +3,11 @@ import { useApp } from '../ctx'
 import { Btn, Card, Empty, Field, Loader, Sheet, Stats, Tag } from '../ui'
 import { f1, f2, memGB } from '../../../shared/index.js'
 
-function NodeCard({ w, onPrice, onPause }: any) {
+function NodeCard({ w, onPrice, onPause, onOpen }: any) {
   const reliability = w.ok + w.bad > 0 ? Math.round((100 * w.ok) / (w.ok + w.bad)) + '%' : '—'
   const gpus = (w.gpus || []).map((g: any) => `${g.name} ${Math.round(g.mem_mb / 1024)}G`).join(' + ') || '无独显'
   return (
-    <Card>
+    <Card onClick={() => onOpen(w)}>
       <h3 style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
         {w.name || w.id}
         <Tag tone={w.online ? 'ok' : 'bad'}>{w.online ? '在线' : '离线'}</Tag>
@@ -38,10 +38,10 @@ function NodeCard({ w, onPrice, onPause }: any) {
       {w.parked_sec > 0 && <div className="hint warn" style={{ marginTop: 8 }}>连续失败，停派 {w.parked_sec}s</div>}
       {w.mine && (
         <div className="btnrow">
-          <Btn variant="ghost" tiny onClick={() => onPrice(w)}>
+          <Btn variant="ghost" tiny onClick={(e: any) => { e.stopPropagation(); onPrice(w) }}>
             调整单价
           </Btn>
-          <Btn variant="ghost" tiny onClick={() => onPause(w, !w.paused)}>
+          <Btn variant="ghost" tiny onClick={(e: any) => { e.stopPropagation(); onPause(w, !w.paused) }}>
             {w.paused ? '恢复派活' : '暂停派活'}
           </Btn>
         </div>
@@ -51,10 +51,11 @@ function NodeCard({ w, onPrice, onPause }: any) {
 }
 
 export default function Market() {
-  const { api, workers, showToast } = useApp()
+  const { api, workers, showToast, setTargetNode, setView } = useApp()
   const [buckets, setBuckets] = useState<any[] | null>(null)
   const [editing, setEditing] = useState<any>(null)
   const [price, setPrice] = useState('')
+  const [detail, setDetail] = useState<any>(null)
 
   useEffect(() => {
     let alive = true
@@ -93,6 +94,14 @@ export default function Market() {
     } catch (e: any) {
       showToast('操作失败：' + (e.message || e), 'bad')
     }
+  }
+
+  const assign = () => {
+    if (!detail) return
+    setTargetNode(detail)
+    setView('submit')
+    setDetail(null)
+    showToast('已指定节点：' + (detail.name || detail.id))
   }
 
   const online = workers.filter((w: any) => w.online)
@@ -134,12 +143,45 @@ export default function Market() {
       </Card>
 
       <Card kicker="Mine" title={`我的在网节点（${mine.length}）`}>
-        {mine.length === 0 ? <Empty>还没有属于你的节点</Empty> : mine.map((w: any) => <NodeCard key={w.id} w={w} onPrice={(n: any) => { setEditing(n); setPrice(String(n.price)) }} onPause={pause} />)}
+        {mine.length === 0 ? <Empty>还没有属于你的节点</Empty> : mine.map((w: any) => <NodeCard key={w.id} w={w} onOpen={setDetail} onPrice={(n: any) => { setEditing(n); setPrice(String(n.price)) }} onPause={pause} />)}
       </Card>
 
       <Card kicker="Nodes" title={`全部在线节点（${online.length}）`}>
-        {online.length === 0 ? <Empty>尚无节点注册</Empty> : online.map((w: any) => <NodeCard key={w.id} w={w} onPrice={(n: any) => { setEditing(n); setPrice(String(n.price)) }} onPause={pause} />)}
+        {online.length === 0 ? <Empty>尚无节点注册</Empty> : online.map((w: any) => <NodeCard key={w.id} w={w} onOpen={setDetail} onPrice={(n: any) => { setEditing(n); setPrice(String(n.price)) }} onPause={pause} />)}
       </Card>
+
+      <Sheet open={!!detail} title="节点详情" onClose={() => setDetail(null)}>
+        {detail && (
+          <>
+            <h3 style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              {detail.name || detail.id}
+              <Tag tone={detail.online ? 'ok' : 'bad'}>{detail.online ? '在线' : '离线'}</Tag>
+              {detail.mine && <Tag tone="link">我的机器</Tag>}
+            </h3>
+            <div className="hint" style={{ marginTop: 6 }}>
+              {detail.os} · {detail.cpus} 核 · {memGB(detail.mem_mb)} · 单价 {f2(detail.price)} 点/秒
+            </div>
+            <div className="tags">
+              {(detail.runtimes || []).map((r: any) => <Tag key={r.name}>{r.name}</Tag>)}
+              {(detail.encoders || []).map((e: any) => <Tag key={e} tone="vio">{e}</Tag>)}
+            </div>
+            <Stats
+              items={[
+                { v: `${detail.active}/${detail.slots}`, k: '占用槽位' },
+                { v: detail.speed > 0 ? f2(detail.speed) + '×' : '—', k: '实测吞吐' },
+                { v: detail.ok + detail.bad > 0 ? Math.round((100 * detail.ok) / (detail.ok + detail.bad)) + '%' : '—', k: `信誉 ✓${detail.ok} ✗${detail.bad}` },
+              ]}
+            />
+            <div className="hint mono" style={{ marginTop: 8 }}>编号 {detail.id}</div>
+            <div className="hint" style={{ marginTop: 6 }}>
+              指定后，任务只会派给这台节点；它离线时会排队等待上线。
+            </div>
+            <div className="btnrow">
+              <Btn block onClick={assign}>给这台节点派任务</Btn>
+            </div>
+          </>
+        )}
+      </Sheet>
 
       <Sheet open={!!editing} title="调整单价" onClose={() => setEditing(null)}>
         <div className="hint">{editing?.name || editing?.id} 当前 {f2(editing?.price)} 点/视频秒</div>

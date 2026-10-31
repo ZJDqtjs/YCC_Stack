@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { copyText } from './api'
 
-export function Card({ kicker, title, children, actions }: any) {
+export function Card({ kicker, title, children, actions, onClick }: any) {
   return (
-    <section className="card">
+    <section className={'card' + (onClick ? ' tap' : '')} onClick={onClick}>
       {(title || kicker) && (
         <h2>
           {kicker && <span className="kicker">{kicker}</span>}

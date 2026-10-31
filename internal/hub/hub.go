@@ -50,6 +50,10 @@ type Req struct {
 	MinMemMB  int     `json:"min_mem_mb,omitempty"`
 	MinDiskMB int     `json:"min_disk_mb,omitempty"`
 	MaxPrice  float64 `json:"max_price,omitempty"` // 算力点/视频秒, 0 = 不限
+	// NodeID pins the job to one provider, chosen from the market. It is a hard
+	// constraint like any other: the scheduler will leave the job queued rather
+	// than quietly place it somewhere else.
+	NodeID string `json:"node_id,omitempty"`
 }
 
 type Seg struct {
@@ -252,6 +256,9 @@ func (w *Worker) hasRuntime(name string) bool {
 // demonstrated, otherwise "needs 8 GB of VRAM" silently matches a node that
 // reported nothing at all.
 func (w *Worker) meets(r Req, vcodec string) bool {
+	if r.NodeID != "" && w.ID != r.NodeID {
+		return false
+	}
 	// render jobs have no target codec; their hard requirement is a runtime
 	// (Blender), which the caller puts in Req.Runtime instead
 	if vcodec != "" && !has(w.Encoders, vcodec) {

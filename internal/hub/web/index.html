@@ -406,6 +406,7 @@ td .tag{margin:2px 4px 2px 0}
   <div class="viewhead">
     <h1>提交任务</h1>
   </div>
+  <div id="targetchip" class="hint" style="display:none"></div>
   <div class="grid">
     <div class="card">
       <form id="f">
@@ -965,6 +966,17 @@ td .tag{margin:2px 4px 2px 0}
 </main>
 </div>
 
+<div id="nodepanel" style="display:none;position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.42);padding:16px">
+  <div class="card" style="max-width:620px;margin:8vh auto;max-height:78vh;overflow:auto">
+    <h2 id="np-title" style="margin-bottom:6px"></h2>
+    <div id="np-body"></div>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="btn auto" id="np-assign">派任务给这台节点</button>
+      <button class="ghost" id="np-close">关闭</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 // A reverse proxy may mount the broker under a prefix (nginx: /starstack/).
@@ -1328,6 +1340,7 @@ function reqFromForm(){
   if(+g('max_price')>0) r.max_price=+g('max_price');
   if(g('runtime')) r.runtime=g('runtime');
   if(g('arch')) r.arch=g('arch');
+  if(TARGET) r.node_id=TARGET;
   return r;
 }
 $('#f').addEventListener('change',e=>{
@@ -1432,6 +1445,7 @@ $('#f').addEventListener('submit',async e=>{
     const r=await fetch(url,{method:'POST',body:fd});
     const t=await r.text();let d=null;try{d=JSON.parse(t)}catch(x){}
     if(!r.ok) throw (d&&d.error)||t;
+    TARGET=null;updateTargetChip();
     $('#msg').textContent=kind==='build'?`已入队 ${d.id}，预扣 ${f2(d.hold)} 点（按实际分钟结算）`
       :kind==='transcode'?`已入队 ${d.id}，预扣 ${f2(d.hold)} 点`
       :`已入队 ${d.id}（${d.pieces} 段 / ${f1(d.units)} ${d.unit}），预扣 ${f2(d.hold)} 点`;
@@ -1843,7 +1857,7 @@ function spec(w){
 function poolRow(w){
   const rel=w.ok+w.bad>0? Math.round(100*w.ok/(w.ok+w.bad))+'%':'—';
   const who=w.mine?`<span class="tag mine">我的机器</span>`:'';
-  return `<tr>
+  return `<tr class="tap" style="cursor:pointer" onclick="openNode('${esc(w.id)}')">
     <td><b>${esc(w.name||w.id)}</b><span class="sub-line">${esc(w.os)}</span>
       ${who}<br><span class="tag ${w.online?'on':'off'}">${w.online?'在线':'离线 '+f1(w.since)+'s'}</span></td>
     <td>${spec(w)}</td>
@@ -1854,9 +1868,37 @@ function poolRow(w){
     <td>${rel}<span class="sub-line">✓${w.ok} ✗${w.bad}</span>
       ${w.parked_sec?`<br><span class="tag off">连续失败，停派 ${w.parked_sec}s</span>`:''}
       ${w.paused&&w.mine?`<br><span class="tag off">你已停止派活</span>`:''}</td>
-    <td class="num">${f2(w.price)} 点/秒${w.mine?`<br><button class="ghost tiny" onclick="reprice('${esc(w.id)}',${w.price})">改价</button>`:''}</td>
+    <td class="num">${f2(w.price)} 点/秒${w.mine?`<br><button class="ghost tiny" onclick="event.stopPropagation();reprice('${esc(w.id)}',${w.price})">改价</button>`:''}</td>
   </tr>`;
 }
+let TARGET=null;
+function openNode(id){
+  const w=POOL.find(x=>x.id===id); if(!w) return;
+  TARGET=w.id;
+  const gpus=(w.gpus||[]).map(g=>g.name+' '+g.mem_mb+'MB').join('、')||'无独显';
+  const rel=w.ok+w.bad>0?Math.round(100*w.ok/(w.ok+w.bad))+'%':'—';
+  $('#np-title').innerHTML=esc(w.name||w.id)+' <span class="tag '+(w.online?'on':'off')+'">'+(w.online?'在线':'离线')+'</span>'+(w.mine?' <span class="tag mine">我的机器</span>':'');
+  $('#np-body').innerHTML='<div class="hint">'+esc(w.os)+' · '+w.cpus+' 核 · '+(w.mem_mb?Math.round(w.mem_mb/1024)+'GB':'内存未知')+' · '+esc(gpus)+'</div>'+
+    '<div style="margin-top:8px">'+(w.runtimes||[]).map(r=>'<span class="tag">'+esc(r.name)+'</span>').join('')+(w.encoders||[]).map(e=>'<span class="tag">'+esc(e)+'</span>').join('')+'</div>'+
+    '<div class="stats"><div class="stat"><b>'+w.active+'/'+w.slots+'</b><span>占用槽位</span></div>'+
+    '<div class="stat"><b>'+(w.speed>0?f2(w.speed)+'×':'—')+'</b><span>实测吞吐</span></div>'+
+    '<div class="stat"><b>'+rel+'</b><span>成功率 ✓'+w.ok+' ✗'+w.bad+'</span></div>'+
+    '<div class="stat"><b>'+f2(w.price)+'</b><span>点/秒</span></div></div>'+
+    '<div class="hint" style="margin-top:10px">指定后任务只会派给这台节点；它离线时会排队等待上线。</div>'+
+    '<div class="hint mono" style="margin-top:6px">编号 '+esc(w.id)+'</div>';
+  $('#nodepanel').style.display='block';
+}
+$('#np-close').onclick=()=>{$('#nodepanel').style.display='none'};
+$('#np-assign').onclick=()=>{$('#nodepanel').style.display='none';showView('submit');updateTargetChip()};
+function updateTargetChip(){
+  const el=$('#targetchip'); if(!el) return;
+  if(!TARGET){el.style.display='none';el.innerHTML='';return}
+  const w=POOL.find(x=>x.id===TARGET);
+  el.style.display='';el.style.marginTop='8px';
+  el.innerHTML='仅派发到 <b>'+esc(w?w.name||w.id:TARGET)+'</b> <button class="ghost tiny" id="cleartarget">取消指定</button>';
+  $('#cleartarget').onclick=()=>{TARGET=null;updateTargetChip();quote()};
+}
+
 function paintMarket(){
   const on=POOL.filter(w=>w.online);
   $('#pool tbody').innerHTML=on.length? POOL.map(poolRow).join('')

@@ -263,11 +263,37 @@ code { font: 500 11.5px var(--mono); background: var(--soft); padding: 1px 5px; 
 .grid2 { display: grid; grid-template-columns: 1fr; gap: 12px; }
 @media (min-width: 720px) { .grid2 { grid-template-columns: 1fr 1fr; } }
 
-/* ---------- desktop window (WPF WebView2) ---------- */
-@media (min-width: 960px) {
-  .main { max-width: 1120px; margin: 0 auto; width: 100%; }
-  .header-row, .tabs { max-width: 1120px; margin-left: auto; margin-right: auto; }
-  .tabs { padding: 0; }
-  .tabs button { padding: 0 14px; }
+/* ---------- desktop: sidebar layout, matching the web console ---------- */
+.sidebar { display: none; }
+
+@media (min-width: 900px) {
+  .app { display: grid; grid-template-columns: 232px minmax(0, 1fr); min-height: 100vh; }
+  .sidebar {
+    display: flex; flex-direction: column; gap: 12px;
+    position: sticky; top: 0; height: 100vh; padding: 18px 12px;
+    border-right: 1px solid var(--hair); background: var(--bg);
+  }
+  .side-brand { padding: 2px 8px 10px; }
+  .side-nav { display: flex; flex-direction: column; gap: 2px; }
+  .side-nav button {
+    height: 36px; padding: 0 12px; border-radius: 7px; text-align: left;
+    color: var(--mute); font-size: 13.5px;
+  }
+  .side-nav button.on { background: var(--soft); color: var(--ink); font-weight: 550; }
+  .side-nav button:hover { color: var(--ink); }
+  .side-foot {
+    margin-top: auto; display: flex; flex-direction: column; gap: 10px;
+    padding: 12px 8px 4px; border-top: 1px solid var(--hair);
+  }
+  .side-foot .wallet { margin-left: 0; text-align: center; }
+  .side-row { display: flex; align-items: center; gap: 8px; }
+  .side-row .iconbtn { width: 32px; height: 32px; }
+  .avatar {
+    width: 32px; height: 32px; border-radius: 999px; background: var(--soft);
+    color: var(--ink); display: grid; place-items: center; font-weight: 600; font-size: 13px;
+  }
+  .header { display: none; }
+  .content { min-width: 0; }
+  .main { max-width: 1120px; margin: 0 auto; width: 100%; padding: 28px 32px 56px; }
   .stats { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
 }
