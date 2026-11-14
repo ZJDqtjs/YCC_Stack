@@ -817,6 +817,30 @@ tr.tap{cursor:pointer}
 .menu-btn{display:none;width:32px;height:32px;place-items:center;border:1px solid var(--hair);
   border-radius:var(--r-ctl);background:var(--card);color:var(--body);cursor:pointer;flex:0 0 auto}
 .menu-btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round}
+/* ---------- Agent 聊天（试聊升级） ---------- */
+.agent-wrap{display:flex;flex-direction:column;min-height:420px}
+.agent-wrap.convo{min-height:320px}
+.agent-hero{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;gap:10px;padding:32px 16px}
+.agent-hero h2{font-size:22px;font-weight:700;letter-spacing:-.5px}
+.agent-hero p{margin:0;max-width:560px;font-size:12.5px;color:var(--mute);line-height:1.7}
+.agent-suggest{justify-content:center;margin-top:8px}
+.agent-msgs{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:6px 2px 14px}
+.agent-composer{flex:0 0 auto;border-top:1px solid var(--hair);padding:12px 2px 10px;background:var(--bg)}
+.agent-composer textarea{width:100%;border:1px solid var(--hair2);border-radius:10px;background:var(--card);
+  padding:10px 12px;font:13px/1.6 var(--sans);color:var(--ink);resize:vertical;min-height:52px}
+.agent-composer textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-ring)}
+.agent-composer-row{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap}
+.agent-composer-row select{height:30px;width:auto;max-width:240px;font-size:12px}
+.agent-card{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:1px solid var(--hair);
+  border-left:3px solid var(--accent);border-radius:10px;background:var(--inset)}
+.agent-card-ic{width:28px;height:28px;flex:0 0 28px;border-radius:8px;display:grid;place-items:center;
+  background:var(--accent-soft);color:var(--accent)}
+.agent-card-main{min-width:0;flex:1;display:flex;flex-direction:column;gap:3px}
+.agent-card-main b{font-size:13px;font-weight:650;color:var(--ink)}
+.agent-card-main span{font-size:12px;color:var(--body);line-height:1.6}
+.agent-card-main code{align-self:flex-start;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.agent-card-main pre{margin:4px 0 0;font-size:11px}
 </style>
 </head>
 <body>
@@ -1394,26 +1418,23 @@ tr.tap{cursor:pointer}
   </div>
 
   <div id="api-pane-try">
-    <div class="try-hero">
-      <form class="try-panel" id="hub-form">
-        <textarea id="api-prompt" rows="2" placeholder="输入问题，例如：你是什么模型？（Ctrl+Enter 发送）"></textarea>
-        <div class="try-row">
-          <div class="chips sm" style="flex:1">
-            <button type="button" class="chip" data-apifocus="keyname">创建 API Key</button>
-            <button type="button" class="chip" data-apifocus="cat">可用模型</button>
-            <button type="button" class="chip" data-apifocus="upname">接入上游</button>
-            <button type="button" class="chip" data-apifocus="curlsnippet">调用示例</button>
-          </div>
-          <button class="btn" id="hub-send" type="submit">发送</button>
-        </div>
-        <div class="try-meta">
-          <label for="try-model">测试模型</label>
-          <select id="try-model"><option value="">读取模型目录…</option></select>
-          <span class="hint" id="try-meta" style="margin:0">按实际 token 从当前登录账户结算</span>
-          <button type="button" class="ghost tiny" id="try-clear">清空对话</button>
+    <div class="agent-wrap" id="agent-wrap">
+      <div class="agent-hero" id="agent-hero">
+        <span class="eyebrow">Starstack Agent</span>
+        <h2>一句话，直达你想做的事</h2>
+        <p>输入自然语言指令：导航到任意界面、预填创作参数、搜索市场、充值、查余额/任务/节点；识别不了时自动回落模型对话。</p>
+        <div class="chips sm agent-suggest" id="agent-suggest"></div>
+      </div>
+      <div class="agent-msgs" id="agent-msgs" style="display:none" aria-live="polite"></div>
+      <form class="agent-composer" id="agent-form">
+        <textarea id="agent-input" rows="2" placeholder="一句话下达指令，例如：生成一张赛博城市图 / 查看我的任务 / 充值 100 点；也可以直接提问模型"></textarea>
+        <div class="agent-composer-row">
+          <select id="agent-model" aria-label="回落模型"><option value="">读取模型目录…</option></select>
+          <span class="hint" style="margin:0">Enter 发送 · Shift+Enter 换行</span>
+          <button type="button" class="ghost tiny" id="agent-clear">清空</button>
+          <button class="btn" id="agent-send" type="submit" style="margin-left:auto">发送</button>
         </div>
       </form>
-      <div id="api-result" class="chatbox" style="margin-top:16px" aria-live="polite"></div>
     </div>
   </div>
 
@@ -2057,6 +2078,7 @@ tr.tap{cursor:pointer}
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
 <script src="assets/comfy.js"></script>
+<script src="assets/agent.js"></script>
 <script>
 'use strict';
 /* ==================================================================
@@ -2850,7 +2872,7 @@ function apiFocus(id){
 }
 
 /* ---------------- 模型 API：免密钥试聊 ---------------- */
-let TRY_MSGS=[],TRY_MODEL='',TRY_BUSY=false,TRY_LOADING=false,TRY_NOTICE='';
+let AGENT_MSGS=[],AGENT_MODEL='',AGENT_BUSY=false;
 function tryErr(err){
   const e=err&&err.error;
   const msg=typeof e==='string'?e:(e&&e.message)||(err&&err.message)||String(err||'调用失败');
@@ -2863,72 +2885,108 @@ async function tryPost(body){
   if(!r.ok)throw (d&&d.error!==undefined?{error:d.error}:t||('HTTP '+r.status));
   return d||{};
 }
-function renderTryChat(){
-  const box=$('#api-result');
-  let html=TRY_MSGS.length?TRY_MSGS.map(m=>
-    '<div class="bubble '+(m.role==='user'?'me':'')+'">'+
-    '<span class="who-line">'+(m.role==='user'?'我':esc(TRY_MODEL||'模型'))+'</span>'+
-    esc(m.content)+(m.usage?'<span class="usage">'+esc(m.usage)+'</span>':'')+'</div>').join('')
-    :'<div class="empty inline">选好当前模型后直接输入问题，即可开始试聊</div>';
-  if(TRY_LOADING)html+='<div class="bubble"><span class="who-line">模型</span>正在响应…</div>';
-  if(TRY_NOTICE)html+='<div class="bubble error"><span class="who-line">提示</span>'+esc(TRY_NOTICE)+'</div>';
-  box.innerHTML=html;
+function agentFit(){
+  const wrap=$('#agent-wrap');if(!wrap)return;
+  const convo=AGENT_MSGS.length>0;
+  wrap.classList.toggle('convo',convo);
+  if(!convo){wrap.style.height='';return}
+  const top=wrap.getBoundingClientRect().top;
+  wrap.style.height=Math.max(320,window.innerHeight-top-16)+'px';
+}
+function renderAgent(){
+  const convo=AGENT_MSGS.length>0;
+  $('#agent-hero').style.display=convo?'none':'';
+  const box=$('#agent-msgs');box.style.display=convo?'':'none';
+  box.innerHTML=AGENT_MSGS.map(m=>{
+    if(m.role==='user')return '<div class="bubble me"><span class="who-line">我</span>'+esc(m.content)+'</div>';
+    if(m.role==='assistant')return '<div class="bubble"><span class="who-line">'+esc(m.model||AGENT_MODEL||'模型')+'</span>'+esc(m.content)+(m.usage?'<span class="usage">'+esc(m.usage)+'</span>':'')+'</div>';
+    if(m.role==='error')return '<div class="bubble error"><span class="who-line">提示</span>'+esc(m.content)+'</div>';
+    return '<div class="agent-card"><span class="agent-card-ic">⚙</span><div class="agent-card-main"><b>'+esc(m.title)+'</b><span>'+esc(m.detail)+'</span>'+
+      (m.detail2?'<code>'+esc(m.detail2)+'</code>':'')+(m.secret?'<pre>'+esc(m.secret)+'</pre>':'')+'</div>'+
+      (m.view?'<button class="ghost tiny" data-agent-open="'+esc(m.view)+'">打开 →</button>':'')+'</div>';
+  }).join('')+(AGENT_BUSY?'<div class="bubble"><span class="who-line">agent</span>正在执行…</div>':'');
+  box.querySelectorAll('[data-agent-open]').forEach(b=>b.onclick=()=>showView(b.dataset.agentOpen));
+  agentFit();
+  box.scrollTop=box.scrollHeight;
 }
 function renderTryModels(){
-  const sel=$('#try-model');
-  const cur=sel.value||TRY_MODEL;
-  if(!CATALOG.length){
-    sel.innerHTML='<option value="">（暂无可用模型）</option>';
-    TRY_MODEL='';$('#try-meta').textContent='先登记一个 OpenAI 兼容上游';
-    return;
-  }
+  const sel=$('#agent-model');
+  const cur=sel.value||AGENT_MODEL;
+  if(!CATALOG.length){sel.innerHTML='<option value="">（暂无可用模型）</option>';AGENT_MODEL='';return}
   sel.innerHTML=CATALOG.map(m=>'<option value="'+esc(m.id)+'">'+esc(m.id)+' · '+f2(m.price_per_1k)+' 点/千 token'+(m.official?' · 官方':'')+'</option>').join('');
   const keep=CATALOG.some(m=>m.id===cur)?cur:(CATALOG.find(m=>m.official)||CATALOG[0]).id;
-  sel.value=keep;TRY_MODEL=keep;
-  const m=CATALOG.find(x=>x.id===keep);
-  $('#try-meta').textContent=m?'当前 '+m.providers+' 家上游 · 无需 API Key，按实际 token 结算':'按实际 token 结算';
+  sel.value=keep;AGENT_MODEL=keep;
 }
-$('#try-model').addEventListener('change',()=>{
-  if(TRY_BUSY)return;
-  TRY_MODEL=$('#try-model').value;TRY_MSGS=[];TRY_NOTICE='';renderTryChat();
-});
-$('#try-clear').onclick=()=>{
-  if(TRY_BUSY)return;
-  TRY_MSGS=[];TRY_NOTICE='';renderTryChat();
-};
-$('#api-prompt').addEventListener('keydown',e=>{
-  if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();$('#hub-form').requestSubmit()}
-});
-$('#hub-form').addEventListener('submit',async e=>{
-  e.preventDefault();
-  if(TRY_BUSY)return;
-  const input=$('#api-prompt'),text=input.value.trim();
-  if(!text){TRY_NOTICE='先写下你想问的问题。';renderTryChat();return}
-  const model=$('#try-model').value;
-  if(!model){TRY_NOTICE='当前没有可用模型，请先在「上游接入」登记一个 OpenAI 兼容上游。';renderTryChat();return}
-  TRY_MODEL=model;TRY_NOTICE='';
-  TRY_MSGS.push({role:'user',content:text});
-  TRY_BUSY=true;TRY_LOADING=true;
-  $('#hub-send').disabled=true;$('#hub-send').textContent='响应中…';
-  $('#try-model').disabled=true;$('#try-clear').disabled=true;
-  renderTryChat();
+const AGENT_SUGGEST=['生成一张赛博朋克城市夜景的图','查看我的任务进度','充值 100 点','在市场搜索 Flux','租一台云主机','我的节点在线吗'];
+function agentPush(m){AGENT_MSGS.push(m);renderAgent()}
+function agentCard(title,detail,extra){agentPush(Object.assign({role:'agent',title,detail},extra||{}))}
+async function agentModelChat(text){
+  if(!AGENT_MODEL){agentPush({role:'error',content:'当前没有可用模型，请先在「上游接入」登记一个 OpenAI 兼容上游。'});return}
+  const hist=AGENT_MSGS.filter(m=>m.role==='user'||m.role==='assistant');
+  AGENT_BUSY=true;renderAgent();
   try{
-    const d=await tryPost({model,messages:TRY_MSGS.map(m=>({role:m.role,content:m.content}))});
+    const d=await tryPost({model:AGENT_MODEL,messages:hist.map(m=>({role:m.role,content:m.content}))});
     const msg=d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content;
     const usage=d.usage?'输入 '+(d.usage.prompt_tokens||0)+' · 输出 '+(d.usage.completion_tokens||0)+' tokens':'';
-    TRY_MSGS.push({role:'assistant',content:msg||'（模型没有返回文本内容）',usage});
-    if(TRY_MSGS.length>12)TRY_MSGS=TRY_MSGS.slice(-12);
-    input.value='';
-  }catch(err){
-    TRY_MSGS.pop();
-    TRY_NOTICE=tryErr(err);
-  }finally{
-    TRY_BUSY=false;TRY_LOADING=false;
-    $('#hub-send').disabled=false;$('#hub-send').textContent='发送';
-    $('#try-model').disabled=false;$('#try-clear').disabled=false;
-    renderTryChat();
+    agentPush({role:'assistant',content:msg||'（模型没有返回文本内容）',usage,model:AGENT_MODEL});
+  }catch(err){agentPush({role:'error',content:tryErr(err)})}
+  finally{AGENT_BUSY=false;renderAgent()}
+}
+async function agentRun(text){
+  agentPush({role:'user',content:text});
+  const it=window.SSAgent.parseIntent(text);
+  const T=window.SSAgent.VIEW_TITLE;
+  switch(it.type){
+    case 'nav': agentCard('导航','已打开「'+T[it.view]+'」',{view:it.view}); showView(it.view); if(it.tab==='vm')setMarketTab('vm'); return;
+    case 'image': $('#img-prompt').value=it.prompt; agentCard('生图','已预填画面描述并打开生图工作台',{detail2:it.prompt,view:'image'}); showView('image'); return;
+    case 'video': $('#vid-prompt').value=it.prompt; agentCard('生视频','已预填镜头描述并打开生视频工作台',{detail2:it.prompt,view:'video'}); showView('video'); return;
+    case 'render': $('#jobkind').value=it.kind; syncKind(); agentCard('渲染','已打开渲染工作台（'+(it.kind==='blender'?'Blender':'视频转码')+'），上传素材即可提交',{view:'render'}); showView('render'); return;
+    case 'build': agentCard('编排','已打开任务编排，上传源码 zip 并填写命令即可提交',{view:'build'}); showView('build'); return;
+    case 'marketSearch': MK_Q=it.q;MK_CAT='all';$('#mk-q').value=it.q; agentCard('搜索','已在服务市场搜索「'+(it.q||'全部')+'」',{view:'market'}); showView('market'); renderMarketGrid(); return;
+    case 'vmRent': agentCard('云主机','已打开云主机租用列表，选择配置即可下单',{view:'market'}); showView('market'); setMarketTab('vm'); return;
+    case 'sellPublish': $('#st-title').value=it.title; agentCard('发布','已打开我的发布并预填标题，补充配置后即可上架',{view:'sell'}); showView('sell'); setSellTab('publish'); return;
+    case 'forumPost': $('#fp-title').value=it.title; agentCard('发帖','已打开论坛并预填标题，补充正文后即可发布',{view:'forum'}); showView('forum'); return;
+    case 'createKey': {
+      if(!await confirmDlg('创建 API Key「'+(it.name||'默认密钥')+'」？密钥只显示一次。','创建 API Key')){agentCard('已取消','未创建密钥');return}
+      try{const d=await post('/api/keys',{name:it.name||'默认密钥',daily_quota:0});agentCard('密钥已创建','请立即复制保存（仅显示一次）',{secret:d.key});loadApi()}catch(e){agentPush({role:'error',content:'创建失败：'+e})}
+      return;
+    }
+    case 'recharge': {
+      if(!await confirmDlg('充值 '+f2(it.amount)+' 算力点？','充值')){agentCard('已取消','未充值');return}
+      try{await post('/api/me/recharge',{amount:it.amount});agentCard('充值成功','已充值 '+f2(it.amount)+' 算力点');refresh()}catch(e){agentPush({role:'error',content:'充值失败：'+e})}
+      return;
+    }
+    case 'balance': agentCard('余额','当前账户余额 '+f2(ME?ME.credits:0)+' 算力点',{view:'wallet'}); return;
+    case 'tasks': {
+      const r=STATE_JOBS.filter(j=>['queued','running','pending'].includes(j.status)).length;
+      const d=STATE_JOBS.filter(j=>j.status==='done').length;
+      const f=STATE_JOBS.filter(j=>j.status==='failed').length;
+      agentCard('任务概览','共 '+STATE_JOBS.length+' 个任务：进行中 '+r+' · 完成 '+d+' · 失败 '+f,{view:'jobs'}); return;
+    }
+    case 'nodes': {
+      const mine=POOL.filter(w=>w.mine);const on=mine.filter(w=>w.online).length;
+      const earn=mine.reduce((a,w)=>a+Number(w.earned||0),0);
+      agentCard('节点概览','我的节点 '+mine.length+' 台，在线 '+on+' 台，累计贡献 '+f2(earn)+' 点',{view:'nodes'}); return;
+    }
+    default: await agentModelChat(text);
   }
+}
+$('#agent-model').addEventListener('change',()=>{AGENT_MODEL=$('#agent-model').value});
+$('#agent-clear').onclick=()=>{AGENT_MSGS=[];renderAgent()};
+$('#agent-input').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('#agent-form').requestSubmit()}});
+$('#agent-form').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const input=$('#agent-input'),text=input.value.trim();
+  if(!text||AGENT_BUSY)return;
+  input.value='';
+  await agentRun(text);
 });
+window.addEventListener('resize',agentFit);
+(function(){
+  const box=$('#agent-suggest');
+  box.innerHTML=AGENT_SUGGEST.map(s=>'<button type="button" class="chip" data-sug="'+esc(s)+'">'+esc(s)+'</button>').join('');
+  box.querySelectorAll('[data-sug]').forEach(b=>b.onclick=()=>{$('#agent-input').value=b.dataset.sug;$('#agent-input').focus()});
+})();
 
 /* ---------------- 模型 API：密钥 / 上游 / 目录 / 对账 ---------------- */
 let API_LAST=0,APIKEY='',CATALOG=[];
@@ -3265,7 +3323,7 @@ function applyOfferUse(o){
   const prompt=tpl.prompt||tpl.scene||'';
   if(view==='image'&&prompt)$('#img-prompt').value=prompt;
   if(view==='video'&&prompt)$('#vid-prompt').value=prompt;
-  if(view==='api'&&prompt)$('#api-prompt').value=prompt;
+  if(view==='api'&&prompt)$('#agent-input').value=prompt;
   showView(view);
   if(view==='render'||view==='build')syncKind();
   if(o.node_id)updateTargetChip();
@@ -4291,7 +4349,7 @@ $('#fd-send').onclick=async()=>{
     const me=await api('/api/me');
     if(me.signed_in){ME=me;enter()}
   }catch(e){/* 停留在登录页 */}
-  renderTryChat();
+  renderAgent();
 })();
 </script>
 </body>

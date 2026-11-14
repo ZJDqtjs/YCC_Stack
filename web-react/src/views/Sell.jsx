@@ -20,9 +20,12 @@ const parsePorts = s => {
   return out
 }
 export default function Sell({ tab }) {
-  const { workers, policy, toast, confirm } = useApp()
+  const { workers, policy, toast, confirm, prefill, setPrefill } = useApp()
   const [t, setT] = useState(tab || 'publish')
   useEffect(() => { if (tab) setT(tab) }, [tab])
+  useEffect(() => {
+    if (prefill && prefill.view === 'sell') { setF(x => ({ ...x, title: (prefill.tpl && prefill.tpl.title) || x.title })); setPrefill(null) }
+  }, [prefill, setPrefill])
   const [offers, setOffers] = useState([])
   const [cat, setCat] = useState('api')
   const [f, setF] = useState({ title: '', price: '0.8', unit: '点/次', spec: '', body: '', auto: false, node: '', scene: '', frames: '', samples: '' })

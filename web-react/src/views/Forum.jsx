@@ -9,10 +9,13 @@ const Media = ({ list }) => !list || !list.length ? null : (
     : <img key={f.id} src={href('/api/forum/media/' + f.id)} alt={f.name} loading="lazy" onClick={() => window.open(href('/api/forum/media/' + f.id), '_blank')} />)}</div>
 )
 export default function Forum() {
-  const { toast } = useApp()
+  const { toast, prefill, setPrefill } = useApp()
   const [posts, setPosts] = useState([])
   const [q, setQ] = useState('')
   const [title, setTitle] = useState('')
+  useEffect(() => {
+    if (prefill && prefill.view === 'forum') { setTitle((prefill.tpl && prefill.tpl.title) || ''); setPrefill(null) }
+  }, [prefill, setPrefill])
   const [body, setBody] = useState('')
   const [files, setFiles] = useState(null)
   const [msg, setMsg] = useState('')

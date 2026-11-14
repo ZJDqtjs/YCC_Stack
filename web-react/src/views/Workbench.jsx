@@ -32,7 +32,8 @@ export default function Workbench({ svc }) {
   useEffect(() => {
     if (prefill && (prefill.view === 'render' || prefill.view === 'build') && prefill.view === svc) {
       const tpl = prefill.tpl || {}
-      if (svc === 'render' && (tpl.scene || tpl.from || tpl.to || tpl.samples)) setKind('blender')
+      if (prefill.kind) setKind(prefill.kind)
+      else if (svc === 'render' && (tpl.scene || tpl.from || tpl.to || tpl.samples)) setKind('blender')
       setTimeout(() => {
         const names = svc === 'build' ? ['command', 'output', 'timeout'] : ['scene', 'engine', 'samples', 'from', 'to', 'fps', 'percent']
         names.forEach(n => { if (tpl[n] !== undefined && tpl[n] !== null && tpl[n] !== '') { const el = formRef.current && formRef.current.querySelector('[name=' + n + ']'); if (el) el.value = tpl[n] } })
