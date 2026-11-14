@@ -841,6 +841,49 @@ tr.tap{cursor:pointer}
 .agent-card-main span{font-size:12px;color:var(--body);line-height:1.6}
 .agent-card-main code{align-self:flex-start;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .agent-card-main pre{margin:4px 0 0;font-size:11px}
+/* ---------- 试聊：历史对话 + 新对话 ---------- */
+.try-layout{display:grid;grid-template-columns:minmax(0,236px) minmax(0,1fr);gap:14px;align-items:start}
+.try-side{position:sticky;top:calc(var(--topbar-h) + 16px);padding:14px;margin:0}
+.try-side-head{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:13px;font-weight:650;color:var(--ink)}
+.try-count{margin-left:auto;padding:4px 7px;border-radius:5px;background:var(--soft);
+  font:600 10px/1 var(--mono);color:var(--mute)}
+.try-conv-list{display:flex;flex-direction:column;gap:6px;margin-top:12px;
+  max-height:min(58vh,520px);overflow:auto}
+.try-conv{display:flex;align-items:stretch;border:1px solid var(--hair);border-radius:9px;
+  background:var(--card);transition:border-color .13s,background .13s}
+.try-conv:hover{border-color:var(--hair2);background:var(--inset)}
+.try-conv.on{border-color:var(--accent);background:var(--accent-soft)}
+.try-conv-main{min-width:0;flex:1;display:flex;flex-direction:column;gap:4px;
+  padding:9px 4px 9px 11px;border:0;background:transparent;text-align:left;color:inherit}
+.try-conv-top{display:flex;align-items:center;gap:6px;min-width:0}
+.try-conv-top b{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-size:12.5px;font-weight:600;color:var(--ink)}
+.try-conv-time{flex:0 0 auto;font-size:10px;color:var(--mute)}
+.try-conv-last{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:var(--mute)}
+.try-conv-del{flex:0 0 26px;align-self:center;display:grid;place-items:center;width:22px;height:22px;
+  margin-right:5px;border:0;border-radius:6px;background:transparent;color:var(--faint);opacity:0;
+  transition:opacity .13s,color .13s,background .13s}
+.try-conv:hover .try-conv-del,.try-conv.on .try-conv-del,.try-conv-del:focus-visible{opacity:1}
+.try-conv-del:hover{color:var(--bad);background:var(--bad-soft)}
+.try-side-foot{margin-top:12px;padding-top:10px;border-top:1px solid var(--hair);
+  font-size:10.5px;line-height:1.6;color:var(--faint)}
+.try-main{min-width:0;background:var(--card);border:1px solid var(--hair);
+  border-radius:var(--r-card);box-shadow:var(--shadow-sm);padding:0 16px}
+.try-main .agent-composer{background:var(--card)}
+.try-chat-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:12px 2px;border-bottom:1px solid var(--hair)}
+.try-chat-meta{display:flex;align-items:center;gap:8px;min-width:0;flex:1;color:var(--mute)}
+.try-chat-meta b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-size:13px;font-weight:650;color:var(--ink)}
+.try-chat-meta>span{flex:0 0 auto;font-size:11px;color:var(--mute)}
+.try-chat-meta .try-chat-model{max-width:180px;padding:4px 7px;border-radius:5px;background:var(--soft);
+  font:10.5px/1 var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:1080px){
+  .try-layout{grid-template-columns:1fr}
+  .try-side{position:static}
+  .try-conv-list{max-height:180px}
+}
+@media(hover:none){.try-conv-del{opacity:1}}
 </style>
 </head>
 <body>
@@ -1418,23 +1461,37 @@ tr.tap{cursor:pointer}
   </div>
 
   <div id="api-pane-try">
-    <div class="agent-wrap" id="agent-wrap">
-      <div class="agent-hero" id="agent-hero">
-        <span class="eyebrow">Starstack Agent</span>
-        <h2>一句话，直达你想做的事</h2>
-        <p>输入自然语言指令：导航到任意界面、预填创作参数、搜索市场、充值、查余额/任务/节点；识别不了时自动回落模型对话。</p>
-        <div class="chips sm agent-suggest" id="agent-suggest"></div>
+    <div class="try-layout">
+      <div class="card try-side">
+        <div class="try-side-head"><b>历史对话</b><span class="try-count" id="try-count">0</span></div>
+        <button class="btn block" type="button" id="try-new">+ 新建对话</button>
+        <div class="try-conv-list" id="try-conv-list"></div>
+        <div class="try-side-foot">对话记录仅保存在本浏览器；长对话自动裁剪为最近 12 条上下文。</div>
       </div>
-      <div class="agent-msgs" id="agent-msgs" style="display:none" aria-live="polite"></div>
-      <form class="agent-composer" id="agent-form">
-        <textarea id="agent-input" rows="2" placeholder="一句话下达指令，例如：生成一张赛博城市图 / 查看我的任务 / 充值 100 点；也可以直接提问模型"></textarea>
-        <div class="agent-composer-row">
-          <select id="agent-model" aria-label="回落模型"><option value="">读取模型目录…</option></select>
-          <span class="hint" style="margin:0">Enter 发送 · Shift+Enter 换行</span>
-          <button type="button" class="ghost tiny" id="agent-clear">清空</button>
-          <button class="btn" id="agent-send" type="submit" style="margin-left:auto">发送</button>
+      <div class="try-main">
+        <div class="try-chat-head">
+          <div class="try-chat-meta"><b id="try-title">新对话</b><span id="try-msgcount">0 条消息</span><span class="try-chat-model" id="try-model-tag"></span></div>
+          <button class="ghost tiny" type="button" id="try-new-2">+ 新对话</button>
         </div>
-      </form>
+        <div class="agent-wrap" id="agent-wrap">
+          <div class="agent-hero" id="agent-hero">
+            <span class="eyebrow">Starstack Agent</span>
+            <h2>一句话，直达你想做的事</h2>
+            <p>输入自然语言指令：导航到任意界面、预填创作参数、搜索市场、充值、查余额/任务/节点；识别不了时自动回落模型对话。</p>
+            <div class="chips sm agent-suggest" id="agent-suggest"></div>
+          </div>
+          <div class="agent-msgs" id="agent-msgs" style="display:none" aria-live="polite"></div>
+          <form class="agent-composer" id="agent-form">
+            <textarea id="agent-input" rows="2" maxlength="2000" placeholder="一句话下达指令，例如：生成一张赛博城市图 / 查看我的任务 / 充值 100 点；也可以直接提问模型"></textarea>
+            <div class="agent-composer-row">
+              <select id="agent-model" aria-label="回落模型"><option value="">读取模型目录…</option></select>
+              <span class="hint" style="margin:0">Enter 发送 · Shift+Enter 换行</span>
+              <button type="button" class="ghost tiny" id="agent-clear">清空</button>
+              <button class="btn" id="agent-send" type="submit" style="margin-left:auto">发送</button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -2871,8 +2928,70 @@ function apiFocus(id){
   },90);
 }
 
-/* ---------------- 模型 API：免密钥试聊 ---------------- */
-let AGENT_MSGS=[],AGENT_MODEL='',AGENT_BUSY=false;
+/* ---------------- 模型 API：免密钥试聊（含历史对话） ---------------- */
+// 与 React 版共用同一个 key 与数据结构，切换前端也能接着聊
+const TRY_KEY='ss-agent-chats-v1',TRY_MAX_SESSIONS=50,TRY_MAX_MSGS=200;
+// /api/models/try 服务端限制：最多 12 条、单条 2000 字、合计 8000 字、末条必须是 user
+const TRY_CTX_MSGS=12,TRY_CTX_CHARS=8000,TRY_CTX_ONE=2000;
+let AGENT_MODEL='',AGENT_DEFAULT_MODEL='',AGENT_STATE=null;
+const AGENT_BUSY={};                    // sid -> true，切换对话不互相阻塞
+const tryNow=()=>Date.now()/1000;   // 秒（带小数），保证同秒内新建的对话也能正确排序
+const tryUid=()=>'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+function trySession(model){const t=tryNow();return {id:tryUid(),title:'新对话',model:model||'',msgs:[],createdAt:t,updatedAt:t}}
+function tryTitle(t){const s=String(t||'').replace(/\s+/g,' ').trim();return s?(s.length>22?s.slice(0,22)+'…':s):'新对话'}
+function trySummary(list){
+  for(let i=list.length-1;i>=0;i--){const m=list[i];
+    if((m.role==='user'||m.role==='assistant')&&m.content)
+      return (m.role==='user'?'我：':'')+String(m.content).replace(/\s+/g,' ')}
+  return '还没有消息'
+}
+function tryContext(list){
+  const arr=list.filter(m=>(m.role==='user'||m.role==='assistant')&&String(m.content||'').trim())
+    .map(m=>({role:m.role,content:String(m.content).slice(0,TRY_CTX_ONE)}));
+  const out=arr.slice(-TRY_CTX_MSGS);
+  while(out.length>1&&out.reduce((n,m)=>n+m.content.length,0)>TRY_CTX_CHARS)out.shift();
+  while(out.length&&out[out.length-1].role!=='user')out.pop();
+  while(out.length&&out[0].role!=='user')out.shift();
+  return out;
+}
+function tryLoad(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(TRY_KEY)||'null');
+    if(!raw||!Array.isArray(raw.sessions))return null;
+    const sessions=raw.sessions.filter(s=>s&&typeof s.id==='string'&&Array.isArray(s.msgs))
+      .slice(-TRY_MAX_SESSIONS)
+      .map(s=>({id:s.id,title:String(s.title||'新对话'),model:String(s.model||''),
+        msgs:s.msgs.slice(-TRY_MAX_MSGS),
+        createdAt:Number(s.createdAt)||tryNow(),updatedAt:Number(s.updatedAt)||tryNow()}));
+    if(!sessions.length)return null;
+    return {v:1,activeId:sessions.some(s=>s.id===raw.activeId)?raw.activeId:sessions[0].id,sessions};
+  }catch(e){return null}
+}
+function trySave(){
+  const write=s=>{try{localStorage.setItem(TRY_KEY,JSON.stringify(s));return true}catch(e){return false}};
+  if(write(AGENT_STATE))return;
+  // 配额不足时丢弃最旧的会话再试，避免历史记录静默丢失
+  let keep=AGENT_STATE.sessions.slice().sort((a,b)=>b.updatedAt-a.updatedAt);
+  for(let n=0;n<3&&keep.length>1;n++){
+    keep=keep.slice(0,Math.max(1,Math.floor(keep.length/2)));
+    const alt={...AGENT_STATE,sessions:keep,
+      activeId:keep.some(s=>s.id===AGENT_STATE.activeId)?AGENT_STATE.activeId:keep[0].id};
+    if(write(alt)){AGENT_STATE=alt;return}
+  }
+}
+function curTry(){return AGENT_STATE.sessions.find(s=>s.id===AGENT_STATE.activeId)||AGENT_STATE.sessions[0]}
+function tryUpdate(sid,fn){
+  const i=AGENT_STATE.sessions.findIndex(s=>s.id===sid);
+  if(i<0)return false;
+  const s=fn(AGENT_STATE.sessions[i]);if(!s)return false;
+  AGENT_STATE.sessions[i]=s;trySave();return true;
+}
+function tryInit(){
+  const s=trySession('');
+  AGENT_STATE=tryLoad()||{v:1,activeId:s.id,sessions:[s]};
+  AGENT_MODEL=curTry().model||'';
+}
+tryInit();
 function tryErr(err){
   const e=err&&err.error;
   const msg=typeof e==='string'?e:(e&&e.message)||(err&&err.message)||String(err||'调用失败');
@@ -2887,52 +3006,129 @@ async function tryPost(body){
 }
 function agentFit(){
   const wrap=$('#agent-wrap');if(!wrap)return;
-  const convo=AGENT_MSGS.length>0;
+  const convo=curTry().msgs.length>0;
   wrap.classList.toggle('convo',convo);
   if(!convo){wrap.style.height='';return}
   const top=wrap.getBoundingClientRect().top;
   wrap.style.height=Math.max(320,window.innerHeight-top-16)+'px';
 }
+function renderTryList(){
+  const box=$('#try-conv-list');if(!box)return;
+  const list=AGENT_STATE.sessions.slice().sort((a,b)=>b.updatedAt-a.updatedAt);
+  $('#try-count').textContent=String(list.length);
+  box.innerHTML=list.map(s=>
+    '<div class="try-conv'+(s.id===AGENT_STATE.activeId?' on':'')+'">'+
+      '<button class="try-conv-main" type="button" data-open="'+esc(s.id)+'" title="'+esc(s.title)+'">'+
+        '<span class="try-conv-top"><b>'+esc(s.title)+'</b><span class="try-conv-time">'+esc(relTime(s.updatedAt))+'</span></span>'+
+        '<span class="try-conv-last">'+esc(trySummary(s.msgs))+'</span></button>'+
+      '<button class="try-conv-del" type="button" data-del="'+esc(s.id)+'" title="删除对话" aria-label="删除对话">✕</button></div>'
+  ).join('')+(list.length===1&&!list[0].msgs.length?'<div class="empty">还没有历史对话，发第一条消息后会自动保存。</div>':'');
+  box.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>switchTry(b.dataset.open));
+  box.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>deleteTry(b.dataset.del));
+}
+function renderTryHead(){
+  const s=curTry();
+  $('#try-title').textContent=s.title;
+  $('#try-msgcount').textContent=s.msgs.length+' 条消息';
+  const tag=$('#try-model-tag');tag.textContent=s.model||'';tag.style.display=s.model?'':'none';
+  const busy=!!AGENT_BUSY[AGENT_STATE.activeId],btn=$('#agent-send');
+  btn.disabled=busy;btn.textContent=busy?'执行中…':'发送';
+  $('#agent-clear').disabled=!s.msgs.length;
+}
 function renderAgent(){
-  const convo=AGENT_MSGS.length>0;
+  const s=curTry(),convo=s.msgs.length>0;
   $('#agent-hero').style.display=convo?'none':'';
   const box=$('#agent-msgs');box.style.display=convo?'':'none';
-  box.innerHTML=AGENT_MSGS.map(m=>{
+  box.innerHTML=s.msgs.map(m=>{
     if(m.role==='user')return '<div class="bubble me"><span class="who-line">我</span>'+esc(m.content)+'</div>';
     if(m.role==='assistant')return '<div class="bubble"><span class="who-line">'+esc(m.model||AGENT_MODEL||'模型')+'</span>'+esc(m.content)+(m.usage?'<span class="usage">'+esc(m.usage)+'</span>':'')+'</div>';
     if(m.role==='error')return '<div class="bubble error"><span class="who-line">提示</span>'+esc(m.content)+'</div>';
     return '<div class="agent-card"><span class="agent-card-ic">⚙</span><div class="agent-card-main"><b>'+esc(m.title)+'</b><span>'+esc(m.detail)+'</span>'+
       (m.detail2?'<code>'+esc(m.detail2)+'</code>':'')+(m.secret?'<pre>'+esc(m.secret)+'</pre>':'')+'</div>'+
       (m.view?'<button class="ghost tiny" data-agent-open="'+esc(m.view)+'">打开 →</button>':'')+'</div>';
-  }).join('')+(AGENT_BUSY?'<div class="bubble"><span class="who-line">agent</span>正在执行…</div>':'');
+  }).join('')+(AGENT_BUSY[AGENT_STATE.activeId]?'<div class="bubble"><span class="who-line">agent</span>正在执行…</div>':'');
   box.querySelectorAll('[data-agent-open]').forEach(b=>b.onclick=()=>showView(b.dataset.agentOpen));
-  agentFit();
+  renderTryHead();renderTryList();agentFit();
   box.scrollTop=box.scrollHeight;
 }
 function renderTryModels(){
-  const sel=$('#agent-model');
-  const cur=sel.value||AGENT_MODEL;
-  if(!CATALOG.length){sel.innerHTML='<option value="">（暂无可用模型）</option>';AGENT_MODEL='';return}
+  const sel=$('#agent-model');if(!sel)return;
+  if(!CATALOG.length){sel.innerHTML='<option value="">（暂无可用模型）</option>';AGENT_DEFAULT_MODEL='';AGENT_MODEL='';return}
   sel.innerHTML=CATALOG.map(m=>'<option value="'+esc(m.id)+'">'+esc(m.id)+' · '+f2(m.price_per_1k)+' 点/千 token'+(m.official?' · 官方':'')+'</option>').join('');
-  const keep=CATALOG.some(m=>m.id===cur)?cur:(CATALOG.find(m=>m.official)||CATALOG[0]).id;
-  sel.value=keep;AGENT_MODEL=keep;
+  AGENT_DEFAULT_MODEL=(CATALOG.find(m=>m.official)||CATALOG[0]).id;
+  const s=curTry();
+  AGENT_MODEL=CATALOG.some(m=>m.id===s.model)?s.model:AGENT_DEFAULT_MODEL;
+  s.model=AGENT_MODEL;trySave();sel.value=AGENT_MODEL;
+  renderTryHead();
 }
 const AGENT_SUGGEST=['生成一张赛博朋克城市夜景的图','查看我的任务进度','充值 100 点','在市场搜索 Flux','租一台云主机','我的节点在线吗'];
-function agentPush(m){AGENT_MSGS.push(m);renderAgent()}
-function agentCard(title,detail,extra){agentPush(Object.assign({role:'agent',title,detail},extra||{}))}
-async function agentModelChat(text){
-  if(!AGENT_MODEL){agentPush({role:'error',content:'当前没有可用模型，请先在「上游接入」登记一个 OpenAI 兼容上游。'});return}
-  const hist=AGENT_MSGS.filter(m=>m.role==='user'||m.role==='assistant');
-  AGENT_BUSY=true;renderAgent();
+function agentPushTo(sid,m){
+  tryUpdate(sid,s=>({...s,
+    msgs:s.msgs.concat([m]).slice(-TRY_MAX_MSGS),
+    title:(!s.msgs.length&&m.role==='user')?tryTitle(m.content):s.title,
+    updatedAt:tryNow()}));
+  renderAgent();
+}
+function switchTry(sid){
+  if(!AGENT_STATE.sessions.some(s=>s.id===sid))return;
+  AGENT_STATE.activeId=sid;trySave();
+  const s=curTry(),sel=$('#agent-model');
+  // 历史会话里记录的模型可能已下架，回落到当前目录里的官方模型
+  const valid=!CATALOG.length||(!!s.model&&!!sel&&[...sel.options].some(o=>o.value===s.model));
+  AGENT_MODEL=valid?(s.model||AGENT_DEFAULT_MODEL):AGENT_DEFAULT_MODEL;
+  if(sel&&[...sel.options].some(o=>o.value===AGENT_MODEL))sel.value=AGENT_MODEL;
+  if(!valid){s.model=AGENT_MODEL;trySave()}
+  $('#agent-input').value='';
+  renderAgent();
+}
+function newTry(){
+  const cur=curTry();
+  if(!cur.msgs.length){$('#agent-input').value='';$('#agent-input').focus();return}
+  const s=trySession(AGENT_MODEL||AGENT_DEFAULT_MODEL);
+  AGENT_STATE.sessions=AGENT_STATE.sessions.concat([s]).slice(-TRY_MAX_SESSIONS);
+  AGENT_STATE.activeId=s.id;trySave();
+  $('#agent-input').value='';
+  const sel=$('#agent-model');if(sel&&s.model)sel.value=s.model;
+  renderAgent();$('#agent-input').focus();
+}
+async function clearTry(){
+  const s=curTry();if(!s.msgs.length)return;
+  if(!await confirmDlg('清空当前对话的全部消息？历史列表会保留这条对话。','清空对话'))return;
+  tryUpdate(s.id,x=>({...x,msgs:[],title:'新对话',updatedAt:tryNow()}));
+  renderAgent();
+}
+async function deleteTry(sid){
+  const s=AGENT_STATE.sessions.find(x=>x.id===sid);if(!s)return;
+  if(!await confirmDlg('删除对话「'+s.title+'」？消息将无法恢复。','删除对话'))return;
+  AGENT_STATE.sessions=AGENT_STATE.sessions.filter(x=>x.id!==sid);
+  if(!AGENT_STATE.sessions.length){
+    const n=trySession(AGENT_MODEL||AGENT_DEFAULT_MODEL);
+    AGENT_STATE.sessions=[n];AGENT_STATE.activeId=n.id;
+  }else if(AGENT_STATE.activeId===sid){
+    AGENT_STATE.activeId=AGENT_STATE.sessions.slice().sort((a,b)=>b.updatedAt-a.updatedAt)[0].id;
+  }
+  delete AGENT_BUSY[sid];trySave();
+  const c=curTry();AGENT_MODEL=c.model||AGENT_DEFAULT_MODEL;
+  const sel=$('#agent-model');if(sel&&[...sel.options].some(o=>o.value===AGENT_MODEL))sel.value=AGENT_MODEL;
+  renderAgent();
+}
+async function agentModelChat(sid,hist,mdl){
+  if(!mdl){agentPushTo(sid,{role:'error',content:'当前没有可用模型，请先在「上游接入」登记一个 OpenAI 兼容上游。'});return}
+  AGENT_BUSY[sid]=true;renderAgent();
   try{
-    const d=await tryPost({model:AGENT_MODEL,messages:hist.map(m=>({role:m.role,content:m.content}))});
+    const d=await tryPost({model:mdl,messages:hist});
     const msg=d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content;
     const usage=d.usage?'输入 '+(d.usage.prompt_tokens||0)+' · 输出 '+(d.usage.completion_tokens||0)+' tokens':'';
-    agentPush({role:'assistant',content:msg||'（模型没有返回文本内容）',usage,model:AGENT_MODEL});
-  }catch(err){agentPush({role:'error',content:tryErr(err)})}
-  finally{AGENT_BUSY=false;renderAgent()}
+    agentPushTo(sid,{role:'assistant',content:msg||'（模型没有返回文本内容）',usage,model:mdl});
+  }catch(err){agentPushTo(sid,{role:'error',content:tryErr(err)})}
+  finally{delete AGENT_BUSY[sid];renderAgent()}
 }
-async function agentRun(text){
+async function agentRun(sid,text){
+  const cur=AGENT_STATE.sessions.find(x=>x.id===sid)||curTry();
+  const hist=tryContext(cur.msgs.concat([{role:'user',content:text}]));
+  const mdl=AGENT_MODEL;
+  const agentPush=m=>agentPushTo(sid,m);
+  const agentCard=(title,detail,extra)=>agentPush(Object.assign({role:'agent',title,detail},extra||{}));
   agentPush({role:'user',content:text});
   const it=window.SSAgent.parseIntent(text);
   const T=window.SSAgent.VIEW_TITLE;
@@ -2968,18 +3164,24 @@ async function agentRun(text){
       const earn=mine.reduce((a,w)=>a+Number(w.earned||0),0);
       agentCard('节点概览','我的节点 '+mine.length+' 台，在线 '+on+' 台，累计贡献 '+f2(earn)+' 点',{view:'nodes'}); return;
     }
-    default: await agentModelChat(text);
+    default: await agentModelChat(sid,hist,mdl);
   }
 }
-$('#agent-model').addEventListener('change',()=>{AGENT_MODEL=$('#agent-model').value});
-$('#agent-clear').onclick=()=>{AGENT_MSGS=[];renderAgent()};
+$('#agent-model').addEventListener('change',()=>{
+  AGENT_MODEL=$('#agent-model').value;
+  tryUpdate(AGENT_STATE.activeId,s=>({...s,model:AGENT_MODEL}));
+  renderTryHead();
+});
+$('#agent-clear').onclick=clearTry;
+$('#try-new').onclick=newTry;
+$('#try-new-2').onclick=newTry;
 $('#agent-input').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('#agent-form').requestSubmit()}});
 $('#agent-form').addEventListener('submit',async e=>{
   e.preventDefault();
   const input=$('#agent-input'),text=input.value.trim();
-  if(!text||AGENT_BUSY)return;
+  if(!text||AGENT_BUSY[AGENT_STATE.activeId])return;
   input.value='';
-  await agentRun(text);
+  await agentRun(AGENT_STATE.activeId,text);
 });
 window.addEventListener('resize',agentFit);
 (function(){
